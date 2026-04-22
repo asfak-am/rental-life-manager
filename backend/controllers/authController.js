@@ -202,7 +202,7 @@ const updateProfile = async (req, res, next) => {
 		if (!currentUser) return res.status(404).json({ message: 'User not found' })
 
 		const updates = {}
-		const updatableFields = ['displayName', 'bio', 'name']
+		const updatableFields = ['displayName', 'bio', 'name', 'currency']
 		updatableFields.forEach(key => {
 			if (req.body[key] !== undefined) updates[key] = req.body[key]
 		})

@@ -48,6 +48,10 @@ const getBalances = async (houseId) => {
 				return
 			}
 
+			if (participantId === paidBy) {
+				return
+			}
+
 			const key = `${participantId}:${paidBy}`
 			rawDebts.set(key, (rawDebts.get(key) || 0) + amount)
 		})

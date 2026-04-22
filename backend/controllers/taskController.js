@@ -20,11 +20,17 @@ const addTask = async (req, res, next) => {
 		const house = await getHouseForUser(req.user._id)
 		if (!house) return res.status(400).json({ message: 'Join a house first' })
 
+		const memberIds = house.members.map(member => String(member.userId))
+		const assignedTo = req.body.assignedTo ? String(req.body.assignedTo) : ''
+		if (assignedTo && !memberIds.includes(assignedTo)) {
+			return res.status(400).json({ message: 'Task can only be assigned to a house member' })
+		}
+
 		const task = await Task.create({
 			houseId: house._id,
 			title: req.body.title,
 			description: req.body.description,
-			assignedTo: req.body.assignedTo || null,
+			assignedTo: assignedTo || null,
 			status: req.body.status || 'pending',
 			priority: req.body.priority || 'low',
 			dueDate: req.body.dueDate || null,
@@ -44,8 +50,8 @@ const addTask = async (req, res, next) => {
 			})
 		}
 
-		const memberIds = await getTaskHouseMembers(house._id)
-		memberIds
+		const houseMemberIds = await getTaskHouseMembers(house._id)
+		houseMemberIds
 			.filter(memberId => String(memberId) !== String(req.user._id) && String(memberId) !== String(task.assignedTo || ''))
 			.forEach(memberId => {
 				notifications.push({
@@ -85,6 +91,13 @@ const updateTask = async (req, res, next) => {
 
 		const task = await Task.findOne({ _id: req.params.id, houseId: house._id })
 		if (!task) return res.status(404).json({ message: 'Task not found' })
+
+		if (req.body.assignedTo !== undefined && req.body.assignedTo) {
+			const memberIds = house.members.map(member => String(member.userId))
+			if (!memberIds.includes(String(req.body.assignedTo))) {
+				return res.status(400).json({ message: 'Task can only be assigned to a house member' })
+			}
+		}
 
 		;['title', 'description', 'assignedTo', 'priority', 'dueDate', 'repeat'].forEach(key => {
 			if (req.body[key] !== undefined) task[key] = req.body[key]

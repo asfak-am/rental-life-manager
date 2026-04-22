@@ -1,5 +1,10 @@
 import { useMemo } from 'react'
 import DesktopAppShell from './DesktopAppShell'
+import { formatCurrency } from '../../utils/currency'
+
+function getMemberName(member) {
+  return member?.displayName?.trim() || member?.name?.trim() || 'Unknown'
+}
 
 export default function DesktopDashboardView({
   user,
@@ -11,12 +16,16 @@ export default function DesktopDashboardView({
   settledPercent = 0,
   taskCompletion = 0,
   tasks = [],
+  currency = 'LKR',
   inviteCode = '',
   inviteQrSrc = '',
   onViewLedger,
   onTransferFunds,
   onOpenInvite,
   onCopyInvite,
+  rentStatus,
+  onPayRent,
+  payingRent,
 }) {
   const displayName = user?.displayName || user?.name || 'Manager'
   const shortName = displayName.split(' ')[0]
@@ -36,10 +45,11 @@ export default function DesktopDashboardView({
 
   const balanceLabel =
     netAmount > 0.5
-      ? `Owed to you: ₹${Math.abs(netAmount).toLocaleString('en-IN')}`
+      ? `Owed to you: ${formatCurrency(Math.abs(netAmount), currency)}`
       : netAmount < -0.5
-      ? `You owe: ₹${Math.abs(netAmount).toLocaleString('en-IN')}`
+      ? `You owe: ${formatCurrency(Math.abs(netAmount), currency)}`
       : 'All settled up'
+  const rentPaid = rentStatus?.myRent?.status === 'paid'
 
   return (
     <DesktopAppShell
@@ -82,14 +92,14 @@ export default function DesktopDashboardView({
                 <p className="text-xs text-slate-400 uppercase tracking-widest">
                   Settled
                 </p>
-                <p className="text-3xl font-black mt-1">{settledLabel}</p>
+                <p className="text-2xl font-black mt-1 leading-tight break-words">{settledLabel}</p>
               </div>
 
               <div className="bg-[#f4f5f9] rounded-2xl p-4">
                 <p className="text-xs text-slate-400 uppercase tracking-widest">
                   Tasks
                 </p>
-                <p className="text-3xl font-black mt-1">{taskLabel}</p>
+                <p className="text-2xl font-black mt-1 leading-tight break-words">{taskLabel}</p>
               </div>
             </div>
           </div>
@@ -99,7 +109,7 @@ export default function DesktopDashboardView({
         <section className="col-span-5 bg-white rounded-[30px] p-5 border border-slate-200">
           <p className="text-xs uppercase text-slate-400">House Balance</p>
 
-          <h3 className="text-4xl font-black mt-3">{balanceLabel}</h3>
+          <h3 className="text-[clamp(2rem,2.6vw,3rem)] leading-tight font-black mt-3 break-words">{balanceLabel}</h3>
 
           <div className="mt-5 flex gap-3">
             <button onClick={onTransferFunds} className="px-5 py-3 signature-gradient rounded-xl text-white font-semibold">
@@ -121,22 +131,23 @@ export default function DesktopDashboardView({
               members.slice(0, 3).map(member => {
                 const memberBalance = balances.find(b => b.userId === member._id)
                 const amount = memberBalance?.net ?? 0
+                const memberName = getMemberName(member)
 
                 return (
                   <div key={member._id} className="bg-[#f7f8fb] p-3 rounded-xl text-center">
                     <div className="w-10 h-10 mx-auto bg-[#d9dbff] rounded-full flex items-center justify-center text-[#5f52f2] font-bold">
-                      {(member.name || 'R')[0]}
+                      {(memberName || 'R')[0]}
                     </div>
 
                     <p className="text-xs mt-2">
-                      {(member.name || '').split(' ')[0]}
+                      {(memberName || '').split(' ')[0]}
                     </p>
 
                     <p className="text-[10px] mt-1">
                       {amount > 0
-                        ? `Owes ₹${amount}`
+                        ? `Owes ${formatCurrency(amount, currency)}`
                         : amount < 0
-                        ? `Gets ₹${Math.abs(amount)}`
+                        ? `Gets ${formatCurrency(Math.abs(amount), currency)}`
                         : 'Settled'}
                     </p>
                   </div>
@@ -153,7 +164,7 @@ export default function DesktopDashboardView({
           {recent.map(exp => (
             <div key={exp._id} className="bg-[#f7f8fb] p-4 rounded-xl flex justify-between mb-2">
               <p>{exp.title}</p>
-              <p>₹{exp.amount}</p>
+              <p>{formatCurrency(exp.amount, currency)}</p>
             </div>
           ))}
         </section>
@@ -167,6 +178,50 @@ export default function DesktopDashboardView({
               {task.title}
             </div>
           ))}
+        </section>
+
+        {/* Rent */}
+        <section className="col-span-12 bg-white rounded-3xl p-6 border border-slate-200">
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <div>
+              <p className="text-xs uppercase tracking-widest text-slate-400">Monthly Rent</p>
+              <h4 className="text-2xl font-black mt-1">{formatCurrency(rentStatus?.myRent?.amountDue || 0, currency)}</h4>
+              <p className="text-sm text-slate-500 mt-1">{rentStatus?.month || 'Current month'} · {rentStatus?.myRent?.status === 'paid' ? 'Paid' : 'Pending'}</p>
+              {rentStatus?.warningVisible ? <p className="text-xs text-red-600 mt-1">Payment overdue. Please pay before month end.</p> : null}
+            </div>
+            <button
+              type="button"
+              onClick={onPayRent}
+              disabled={payingRent || rentStatus?.myRent?.status === 'paid' || !rentStatus?.earlyPayAllowed}
+              className="px-5 py-3 rounded-xl signature-gradient text-white font-semibold disabled:opacity-60"
+            >
+              {rentStatus?.myRent?.status === 'paid' ? 'Rent Paid' : payingRent ? 'Paying...' : 'Pay Monthly Rent'}
+            </button>
+          </div>
+
+          <div className="mt-5 grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
+            {(rentStatus?.memberStatuses || []).map(member => {
+              const paid = member.status === 'paid'
+              return (
+                <div
+                  key={member.userId}
+                  className={`p-3 rounded-xl border ${paid ? 'bg-emerald-50 border-emerald-300' : 'bg-red-50 border-red-300'}`}
+                >
+                  <div className="flex items-center gap-2">
+                    <div className={`w-6 h-6 rounded border-2 grid place-items-center ${paid ? 'border-emerald-600 bg-emerald-600 text-white' : 'border-red-500 bg-white text-red-500'}`}>
+                      <span className="material-symbols-outlined text-[14px]" style={{ fontVariationSettings: "'FILL' 1" }}>
+                        {paid ? 'check' : 'close'}
+                      </span>
+                    </div>
+                    <p className="font-bold text-sm truncate">{member.name}</p>
+                  </div>
+                  <p className={`text-xs font-semibold mt-1 ${paid ? 'text-emerald-700' : 'text-red-700'}`}>
+                    {paid ? 'Paid' : 'Pending'}
+                  </p>
+                </div>
+              )
+            })}
+          </div>
         </section>
 
       </div>

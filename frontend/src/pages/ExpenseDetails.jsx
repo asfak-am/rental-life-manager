@@ -5,6 +5,7 @@ import { expenseService } from '../services'
 import { useHouse } from '../context/HouseContext'
 import { useAuth } from '../context/AuthContext'
 import BottomNav from '../components/BottomNav'
+import { formatCurrency } from '../utils/currency'
 
 export default function ExpenseDetails() {
   const { id } = useParams()
@@ -12,6 +13,7 @@ export default function ExpenseDetails() {
   const { members } = useHouse()
   const { user } = useAuth()
   const qc = useQueryClient()
+  const preferredCurrency = user?.currency || 'LKR'
 
   const { data, isLoading } = useQuery({
     queryKey: ['expense', id],
@@ -62,13 +64,13 @@ export default function ExpenseDetails() {
                 <div className="flex items-center gap-3 text-outline mt-2">
                   <span className="material-symbols-outlined text-sm">calendar_today</span>
                   <span className="text-sm font-medium">
-                    {new Date(exp.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
+                    {exp.billMonth || new Date(exp.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
                   </span>
                 </div>
               </div>
               <div className="text-right flex-shrink-0">
                 <p className="text-xs uppercase tracking-widest text-outline mb-1">Total Amount</p>
-                <p className="text-3xl font-black text-on-surface tracking-tighter">₹{exp.amount.toLocaleString()}</p>
+                <p className="text-3xl font-black text-on-surface tracking-tighter">{formatCurrency(exp.amount, preferredCurrency)}</p>
               </div>
             </div>
 
@@ -110,7 +112,7 @@ export default function ExpenseDetails() {
                       </div>
                       <div className="text-right">
                         <p className={`text-lg font-black tracking-tight ${p.settled ? 'text-secondary' : 'text-error'}`}>
-                          ₹{p.amountOwed.toFixed(2)}
+                          {formatCurrency(p.amountOwed, preferredCurrency)}
                         </p>
                         <span className="material-symbols-outlined text-sm" style={{ color: p.settled ? '#006a65' : '#ba1a1a', fontVariationSettings: "'FILL' 1" }}>
                           {p.settled ? 'check_circle' : 'pending'}

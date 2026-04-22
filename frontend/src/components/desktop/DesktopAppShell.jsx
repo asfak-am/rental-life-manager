@@ -28,8 +28,8 @@ export default function DesktopAppShell({
     .slice(0, 2)
 
   return (
-    <div className="min-h-screen bg-[#f2f4f8] text-slate-900 flex">
-      <aside className="w-[220px] bg-[#f7f8fb] border-r border-slate-200 px-5 py-6 flex flex-col">
+    <div className="h-screen bg-[#f2f4f8] text-slate-900 flex overflow-hidden">
+      <aside className="w-[220px] h-screen sticky top-0 bg-[#f7f8fb] border-r border-slate-200 px-5 py-6 flex flex-col overflow-y-auto">
         <div>
           <h1 className="text-[28px] font-black tracking-tight text-[#6a5df6] leading-none">Rental Life</h1>
           <p className="text-[10px] uppercase tracking-[0.25em] text-slate-400 mt-1">Elevated Living</p>
@@ -79,7 +79,7 @@ export default function DesktopAppShell({
         </div>
       </aside>
 
-      <div className="flex-1 px-8 py-6">
+      <div className="flex-1 h-screen overflow-y-auto px-8 py-6">
         <header className="flex items-center gap-4 mb-8">
           <div className="relative flex-1 max-w-[420px]">
             <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">search</span>

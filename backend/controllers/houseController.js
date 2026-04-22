@@ -2,6 +2,8 @@ const House = require('../models/House')
 const User = require('../models/User')
 const Notification = require('../models/Notification')
 const { generateInviteCode } = require('../utils/inviteCode')
+const RentPayment = require('../models/RentPayment')
+const { getRentStatusForUser, runRentRemindersForMonth, toMonthKey } = require('../services/rentService')
 
 const getPublicUser = (user) => {
 	const plain = typeof user.toObject === 'function' ? user.toObject() : user
@@ -137,8 +139,90 @@ const getHouse = async (req, res, next) => {
 		const house = await requireHouse(req.user._id)
 		if (!house) return res.status(404).json({ message: 'No house found' })
 
+		await runRentRemindersForMonth({ now: new Date(), houseIds: [house._id] })
+
 		const payload = await buildHousePayload(house)
 		return res.json(payload)
+	} catch (error) {
+		next(error)
+	}
+}
+
+const updateMonthlyRent = async (req, res, next) => {
+	try {
+		const house = await requireHouse(req.user._id)
+		if (!house) return res.status(404).json({ message: 'No house found' })
+
+		const membership = house.members.find(member => String(member.userId) === String(req.user._id))
+		if (membership?.role !== 'admin') {
+			return res.status(403).json({ message: 'Only house admins can set monthly rent' })
+		}
+
+		const monthlyRentAmount = Number(req.body.monthlyRentAmount)
+		if (!Number.isFinite(monthlyRentAmount) || monthlyRentAmount < 0) {
+			return res.status(400).json({ message: 'monthlyRentAmount must be a valid non-negative number' })
+		}
+
+		house.monthlyRentAmount = monthlyRentAmount
+		await house.save()
+
+		return res.json({ monthlyRentAmount: house.monthlyRentAmount, house })
+	} catch (error) {
+		next(error)
+	}
+}
+
+const getRentStatus = async (req, res, next) => {
+	try {
+		const house = await requireHouse(req.user._id)
+		if (!house) return res.status(404).json({ message: 'No house found' })
+
+		const month = req.query.month ? String(req.query.month) : toMonthKey()
+		const now = new Date()
+
+		await runRentRemindersForMonth({ month, now, houseIds: [house._id] })
+		const status = await getRentStatusForUser({ house, userId: req.user._id, month, now })
+
+		return res.json(status)
+	} catch (error) {
+		next(error)
+	}
+}
+
+const payMonthlyRent = async (req, res, next) => {
+	try {
+		const house = await requireHouse(req.user._id)
+		if (!house) return res.status(404).json({ message: 'No house found' })
+
+		const month = req.body.month ? String(req.body.month) : toMonthKey()
+		const status = await getRentStatusForUser({ house, userId: req.user._id, month, now: new Date() })
+
+		const rentRecord = await RentPayment.findOne({ houseId: house._id, userId: req.user._id, month })
+		if (!rentRecord) return res.status(404).json({ message: 'Rent record not found' })
+		if (rentRecord.status === 'paid') {
+			return res.json({ message: 'Rent already paid', rentStatus: status })
+		}
+
+		rentRecord.status = 'paid'
+		rentRecord.paidAt = new Date()
+		await rentRecord.save()
+
+		const notifications = house.members
+			.filter(member => String(member.userId) !== String(req.user._id))
+			.map(member => ({
+				userId: member.userId,
+				houseId: house._id,
+				type: 'payment',
+				title: 'Rent payment received',
+				body: `${req.user.name} paid rent for ${month}`,
+				amount: rentRecord.amountDue,
+				link: '/',
+			}))
+
+		if (notifications.length > 0) await Notification.insertMany(notifications)
+
+		const nextStatus = await getRentStatusForUser({ house, userId: req.user._id, month, now: new Date() })
+		return res.json({ message: 'Rent paid successfully', rentStatus: nextStatus })
 	} catch (error) {
 		next(error)
 	}
@@ -216,4 +300,7 @@ module.exports = {
 	getInviteCode,
 	refreshInviteCode,
 	leaveHouse,
+	updateMonthlyRent,
+	getRentStatus,
+	payMonthlyRent,
 }

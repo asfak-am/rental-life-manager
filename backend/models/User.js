@@ -22,6 +22,7 @@ const userSchema = new mongoose.Schema({
     task:    { type: Boolean, default: true },
     payment: { type: Boolean, default: true },
   },
+  currency: { type: String, enum: ['LKR', 'INR', 'USD', 'EUR', 'GBP'], default: 'LKR' },
 }, { timestamps: true })
 
 userSchema.pre('save', async function () {

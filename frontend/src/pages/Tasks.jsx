@@ -6,7 +6,7 @@ import { taskService } from '../services'
 import { useHouse } from '../context/HouseContext'
 import TopBar from '../components/TopBar'
 import BottomNav from '../components/BottomNav'
-import DesktopTasksView from '../components/desktop/DesktopTasksView'
+import DesktopAppShell from '../components/desktop/DesktopAppShell'
 
 const PRIORITY_STYLES = {
   high:   { bg: 'bg-error-container',     text: 'text-on-error-container',   label: 'High Priority'   },
@@ -104,102 +104,122 @@ export default function Tasks() {
   // Rotation: who's up this week
   const weekAssignee = members[new Date().getWeekNumber?.() % members.length] || members[0]
 
+  const boardContent = (
+    <>
+      {/* Weekly rotation banner */}
+      {weekAssignee && (
+        <section className="mb-10">
+          <div className="relative overflow-hidden rounded-xl bg-gradient-to-r from-primary to-primary-container p-1 shadow-lg">
+            <div className="bg-surface-container-lowest/10 backdrop-blur-md rounded-[1.25rem] px-6 py-4 flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="bg-white/20 p-2 rounded-full">
+                  <span className="material-symbols-outlined text-white">auto_awesome</span>
+                </div>
+                <div>
+                  <p className="text-white/80 text-xs font-bold uppercase tracking-widest mb-0.5">Weekly Rotation</p>
+                  <h2 className="text-white text-lg font-bold font-headline">
+                    This week: {weekAssignee.name?.split(' ')[0]}'s turn for common area
+                  </h2>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Header */}
+      <div className="flex items-end justify-between mb-8 lg:hidden">
+        <div>
+          <h1 className="text-4xl font-extrabold tracking-tight text-on-surface mb-2">Chore Ledger</h1>
+          <p className="text-on-surface-variant font-medium">Coordinate, execute, and track shared responsibilities.</p>
+        </div>
+        <button
+          onClick={() => setShowAdd(true)}
+          className="signature-gradient text-on-primary px-5 py-3 rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-primary/20 active:scale-95"
+        >
+          <span className="material-symbols-outlined">add</span>
+          Add Task
+        </button>
+      </div>
+
+      {/* Kanban */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+        {/* Pending */}
+        <section>
+          <div className="flex items-center justify-between mb-6 px-2">
+            <div className="flex items-center gap-3">
+              <div className="w-2 h-6 bg-primary rounded-full" />
+              <h3 className="text-xl font-bold font-headline">Pending</h3>
+              <span className="bg-primary-fixed text-on-primary-fixed text-xs font-bold px-2.5 py-0.5 rounded-full">{pending.length}</span>
+            </div>
+          </div>
+          <div className="flex flex-col gap-4">
+            {isLoading && [1,2].map(i => <div key={i} className="bg-surface-container-lowest p-6 rounded-xl h-40 animate-pulse" />)}
+            {pending.length === 0 && !isLoading && (
+              <div className="bg-surface-container-lowest p-8 rounded-xl text-center text-on-surface-variant">
+                <span className="material-symbols-outlined text-4xl block mb-2 text-secondary" style={{ fontVariationSettings: "'FILL' 1" }}>task_alt</span>
+                All tasks done!
+              </div>
+            )}
+            {pending.map(t => (
+              <TaskCard key={t._id} task={t} members={members} onToggle={task => toggleMutation.mutate(task)} onDelete={id => deleteMutation.mutate(id)} />
+            ))}
+          </div>
+        </section>
+
+        {/* Completed */}
+        <section>
+          <div className="flex items-center justify-between mb-6 px-2">
+            <div className="flex items-center gap-3">
+              <div className="w-2 h-6 bg-secondary rounded-full" />
+              <h3 className="text-xl font-bold font-headline">Completed</h3>
+              <span className="bg-secondary-container text-on-secondary-container text-xs font-bold px-2.5 py-0.5 rounded-full">{completed.length}</span>
+            </div>
+          </div>
+          <div className="flex flex-col gap-4">
+            {completed.length === 0 && (
+              <div className="bg-surface-container-lowest p-8 rounded-xl text-center text-on-surface-variant">
+                <span className="material-symbols-outlined text-4xl block mb-2">pending</span>
+                No completed tasks yet.
+              </div>
+            )}
+            {completed.map(t => (
+              <div key={t._id} className="opacity-60">
+                <TaskCard task={t} members={members} onToggle={task => toggleMutation.mutate(task)} onDelete={id => deleteMutation.mutate(id)} />
+              </div>
+            ))}
+          </div>
+        </section>
+      </div>
+    </>
+  )
+
   return (
     <>
       <div className="hidden lg:block">
-        <DesktopTasksView tasks={tasks} />
+        <DesktopAppShell
+          title="Chore Ledger"
+          subtitle="Coordinate, execute, and track shared responsibilities"
+          searchPlaceholder="Search tasks..."
+          rightActions={(
+            <button
+              onClick={() => setShowAdd(true)}
+              className="signature-gradient text-on-primary px-5 py-3 rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-primary/20 active:scale-95"
+            >
+              <span className="material-symbols-outlined">add</span>
+              Add Task
+            </button>
+          )}
+        >
+          {boardContent}
+        </DesktopAppShell>
       </div>
 
       <div className="lg:hidden bg-surface font-body text-on-surface min-h-screen pb-32">
         <TopBar />
-
-      <main className="max-w-screen-xl mx-auto px-6 pt-6 pb-32">
-        {/* Weekly rotation banner */}
-        {weekAssignee && (
-          <section className="mb-10">
-            <div className="relative overflow-hidden rounded-xl bg-gradient-to-r from-primary to-primary-container p-1 shadow-lg">
-              <div className="bg-surface-container-lowest/10 backdrop-blur-md rounded-[1.25rem] px-6 py-4 flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="bg-white/20 p-2 rounded-full">
-                    <span className="material-symbols-outlined text-white">auto_awesome</span>
-                  </div>
-                  <div>
-                    <p className="text-white/80 text-xs font-bold uppercase tracking-widest mb-0.5">Weekly Rotation</p>
-                    <h2 className="text-white text-lg font-bold font-headline">
-                      This week: {weekAssignee.name?.split(' ')[0]}'s turn for common area
-                    </h2>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </section>
-        )}
-
-        {/* Header */}
-        <div className="flex items-end justify-between mb-8">
-          <div>
-            <h1 className="text-4xl font-extrabold tracking-tight text-on-surface mb-2">Chore Ledger</h1>
-            <p className="text-on-surface-variant font-medium">Coordinate, execute, and track shared responsibilities.</p>
-          </div>
-          <button
-            onClick={() => setShowAdd(true)}
-            className="signature-gradient text-on-primary px-5 py-3 rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-primary/20 active:scale-95"
-          >
-            <span className="material-symbols-outlined">add</span>
-            Add Task
-          </button>
-        </div>
-
-        {/* Kanban */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-          {/* Pending */}
-          <section>
-            <div className="flex items-center justify-between mb-6 px-2">
-              <div className="flex items-center gap-3">
-                <div className="w-2 h-6 bg-primary rounded-full" />
-                <h3 className="text-xl font-bold font-headline">Pending</h3>
-                <span className="bg-primary-fixed text-on-primary-fixed text-xs font-bold px-2.5 py-0.5 rounded-full">{pending.length}</span>
-              </div>
-            </div>
-            <div className="flex flex-col gap-4">
-              {isLoading && [1,2].map(i => <div key={i} className="bg-surface-container-lowest p-6 rounded-xl h-40 animate-pulse" />)}
-              {pending.length === 0 && !isLoading && (
-                <div className="bg-surface-container-lowest p-8 rounded-xl text-center text-on-surface-variant">
-                  <span className="material-symbols-outlined text-4xl block mb-2 text-secondary" style={{ fontVariationSettings: "'FILL' 1" }}>task_alt</span>
-                  All tasks done!
-                </div>
-              )}
-              {pending.map(t => (
-                <TaskCard key={t._id} task={t} members={members} onToggle={task => toggleMutation.mutate(task)} onDelete={id => deleteMutation.mutate(id)} />
-              ))}
-            </div>
-          </section>
-
-          {/* Completed */}
-          <section>
-            <div className="flex items-center justify-between mb-6 px-2">
-              <div className="flex items-center gap-3">
-                <div className="w-2 h-6 bg-secondary rounded-full" />
-                <h3 className="text-xl font-bold font-headline">Completed</h3>
-                <span className="bg-secondary-container text-on-secondary-container text-xs font-bold px-2.5 py-0.5 rounded-full">{completed.length}</span>
-              </div>
-            </div>
-            <div className="flex flex-col gap-4">
-              {completed.length === 0 && (
-                <div className="bg-surface-container-lowest p-8 rounded-xl text-center text-on-surface-variant">
-                  <span className="material-symbols-outlined text-4xl block mb-2">pending</span>
-                  No completed tasks yet.
-                </div>
-              )}
-              {completed.map(t => (
-                <div key={t._id} className="opacity-60">
-                  <TaskCard task={t} members={members} onToggle={task => toggleMutation.mutate(task)} onDelete={id => deleteMutation.mutate(id)} />
-                </div>
-              ))}
-            </div>
-          </section>
-        </div>
-      </main>
+        <main className="max-w-screen-xl mx-auto px-6 pt-6 pb-32">{boardContent}</main>
+        <BottomNav />
+      </div>
 
       {/* Add Task modal */}
       {showAdd && (
@@ -274,9 +294,6 @@ export default function Tasks() {
           </div>
         </div>
       )}
-
-        <BottomNav />
-      </div>
     </>
   )
 }

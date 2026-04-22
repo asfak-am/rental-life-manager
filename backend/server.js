@@ -2,6 +2,7 @@ const express = require('express')
 const cors    = require('cors')
 const dotenv  = require('dotenv')
 const connectDB = require('./config/db')
+const { startRentReminderCron } = require('./services/rentService')
 
 dotenv.config()
 connectDB()
@@ -26,6 +27,8 @@ app.use('/api/chat',         require('./routes/chatRoutes'))
 app.get('/', (_, res) => res.json({ message: 'Rental Life API running' }))
 
 app.use(require('./middleware/errorMiddleware'))
+
+startRentReminderCron()
 
 const PORT = process.env.PORT || 5000
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`))

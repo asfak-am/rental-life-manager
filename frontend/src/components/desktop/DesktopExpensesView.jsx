@@ -1,6 +1,7 @@
 import DesktopAppShell from './DesktopAppShell'
+import { formatCurrency } from '../../utils/currency'
 
-export default function DesktopExpensesView({ expenses = [], summaryData, onAdd }) {
+export default function DesktopExpensesView({ expenses = [], summaryData, onAdd, currency = 'LKR' }) {
   const categoryBreakdown = summaryData?.categoryBreakdown
     ? Object.entries(summaryData.categoryBreakdown).map(([name, value]) => ({ name, value }))
     : []
@@ -23,15 +24,15 @@ export default function DesktopExpensesView({ expenses = [], summaryData, onAdd 
       <div className="grid grid-cols-12 gap-4 mb-6">
         <div className="col-span-3 bg-white rounded-2xl p-5 border border-slate-200">
           <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Total Outflow</p>
-          <p className="text-4xl font-black mt-2">₹{Number(totalExpenses).toLocaleString('en-IN')}</p>
+          <p className="text-[clamp(1.75rem,2.4vw,2.6rem)] font-black mt-2 leading-tight break-words">{formatCurrency(totalExpenses, currency)}</p>
         </div>
         <div className="col-span-3 bg-white rounded-2xl p-5 border border-slate-200">
           <p className="text-xs uppercase tracking-[0.2em] text-slate-400">My Share</p>
-          <p className="text-4xl font-black mt-2">₹{Number(myShare).toLocaleString('en-IN')}</p>
+          <p className="text-[clamp(1.75rem,2.4vw,2.6rem)] font-black mt-2 leading-tight break-words">{formatCurrency(myShare, currency)}</p>
         </div>
         <div className="col-span-6 signature-gradient rounded-2xl p-5 text-white">
           <p className="text-xs uppercase tracking-[0.2em] opacity-80">House Savings</p>
-          <p className="text-4xl font-black mt-2">₹{Number(savings).toLocaleString('en-IN')}</p>
+          <p className="text-[clamp(1.9rem,2.6vw,3rem)] font-black mt-2 leading-tight break-words">{formatCurrency(savings, currency)}</p>
         </div>
       </div>
 
@@ -65,9 +66,9 @@ export default function DesktopExpensesView({ expenses = [], summaryData, onAdd 
               {expenses.slice(0, 5).map(exp => (
                 <tr key={exp._id} className="border-b border-slate-100">
                   <td className="px-5 py-4 font-semibold">{exp.title}</td>
-                  <td className="px-5 py-4 text-slate-500">{new Date(exp.date).toLocaleDateString()}</td>
+                  <td className="px-5 py-4 text-slate-500">{exp.billMonth || new Date(exp.date).toLocaleDateString()}</td>
                   <td className="px-5 py-4"><span className="px-2 py-1 rounded-full text-[10px] uppercase tracking-widest bg-[#ecebff] text-[#5f52f2]">{exp.category || 'Other'}</span></td>
-                  <td className="px-5 py-4 font-black">₹{Number(exp.amount || 0).toLocaleString('en-IN')}</td>
+                  <td className="px-5 py-4 font-black">{formatCurrency(exp.amount || 0, currency)}</td>
                   <td className="px-5 py-4 text-emerald-600 text-xs font-semibold uppercase tracking-widest">Recorded</td>
                 </tr>
               ))}

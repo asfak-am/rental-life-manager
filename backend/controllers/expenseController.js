@@ -17,10 +17,18 @@ const toNum = (value) => {
 const normalizeParticipantId = (participant) => String(participant.userId || participant._id || participant)
 
 const roundMoney = (value) => Math.round((Number(value) + Number.EPSILON) * 100) / 100
+const BILL_MONTH_REGEX = /^\d{4}-(0[1-9]|1[0-2])$/
 
 const calculateEqualSplit = (amount, participants) => {
 	const share = roundMoney(amount / participants.length)
 	return participants.map(userId => ({ userId, amountOwed: share }))
+}
+
+const extractParticipantIds = (participantsInput) => {
+	const ids = participantsInput
+		.map(participant => String(participant.userId || participant._id || '').trim())
+		.filter(Boolean)
+	return [...new Set(ids)]
 }
 
 const aggregateByCategory = (expenses) => expenses.reduce((accumulator, expense) => {
@@ -108,21 +116,43 @@ const addExpense = async (req, res, next) => {
 			return res.status(400).json({ message: 'Paid by must be a house member' })
 		}
 
+		const billMonth = req.body.billMonth ? String(req.body.billMonth).trim() : ''
+		if (billMonth && !BILL_MONTH_REGEX.test(billMonth)) {
+			return res.status(400).json({ message: 'billMonth must be in YYYY-MM format' })
+		}
+
 		let participants
 		if (req.body.splitType === 'custom') {
-			participants = participantsInput.map(participant => ({
-				userId: participant.userId,
-				amountOwed: roundMoney(participant.amountOwed),
-				settled: Boolean(participant.settled),
-				settledAt: participant.settledAt || null,
+			const participantIds = extractParticipantIds(participantsInput)
+			if (participantIds.length === 0) {
+				return res.status(400).json({ message: 'Select at least one participant for custom split' })
+			}
+			if (participantIds.some(id => !memberIds.includes(id))) {
+				return res.status(400).json({ message: 'Participants must be house members' })
+			}
+			const amountMap = new Map(participantsInput.map(participant => [
+				String(participant.userId || participant._id),
+				roundMoney(participant.amountOwed),
+			]))
+			participants = participantIds.map(userId => ({
+				userId,
+				amountOwed: amountMap.get(userId) || 0,
+				settled: false,
+				settledAt: null,
 			}))
+
+			if (participants.some(participant => !Number.isFinite(participant.amountOwed) || participant.amountOwed < 0)) {
+				return res.status(400).json({ message: 'Custom split amounts must be valid non-negative numbers' })
+			}
 		} else if (participantsInput.length > 0) {
-			participants = participantsInput.map(participant => ({
-				userId: participant.userId,
-				amountOwed: roundMoney(participant.amountOwed),
-				settled: Boolean(participant.settled),
-				settledAt: participant.settledAt || null,
-			}))
+			const participantIds = extractParticipantIds(participantsInput)
+			if (participantIds.length === 0) {
+				return res.status(400).json({ message: 'Select at least one participant' })
+			}
+			if (participantIds.some(id => !memberIds.includes(id))) {
+				return res.status(400).json({ message: 'Participants must be house members' })
+			}
+			participants = calculateEqualSplit(amount, participantIds)
 		} else {
 			participants = calculateEqualSplit(amount, memberIds)
 		}
@@ -140,6 +170,7 @@ const addExpense = async (req, res, next) => {
 			splitType: req.body.splitType || 'equal',
 			participants,
 			category: req.body.category || 'Other',
+			billMonth: billMonth || undefined,
 			date: req.body.date || Date.now(),
 			recurring: Boolean(req.body.recurring),
 			recurrenceRule: req.body.recurrenceRule,
@@ -167,11 +198,12 @@ const getAllExpenses = async (req, res, next) => {
 		const house = await getHouseForUser(req.user._id)
 		if (!house) return res.json({ expenses: [] })
 
-		const { category, search, limit } = req.query
+		const { category, search, billMonth, limit } = req.query
 		const query = { houseId: house._id }
 
 		if (category) query.category = category
 		if (search) query.title = { $regex: search, $options: 'i' }
+		if (billMonth && BILL_MONTH_REGEX.test(String(billMonth))) query.billMonth = String(billMonth)
 
 		const expenses = await Expense.find(query)
 			.sort({ date: -1, createdAt: -1 })
@@ -204,6 +236,14 @@ const updateExpense = async (req, res, next) => {
 
 		const expense = await Expense.findOne({ _id: req.params.id, houseId: house._id })
 		if (!expense) return res.status(404).json({ message: 'Expense not found' })
+
+		if (req.body.billMonth !== undefined) {
+			const nextBillMonth = String(req.body.billMonth || '').trim()
+			if (nextBillMonth && !BILL_MONTH_REGEX.test(nextBillMonth)) {
+				return res.status(400).json({ message: 'billMonth must be in YYYY-MM format' })
+			}
+			expense.billMonth = nextBillMonth || undefined
+		}
 
 		;['title', 'amount', 'paidBy', 'splitType', 'participants', 'category', 'date', 'recurring', 'recurrenceRule'].forEach(key => {
 			if (req.body[key] !== undefined) expense[key] = req.body[key]

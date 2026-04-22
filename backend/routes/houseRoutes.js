@@ -8,6 +8,9 @@ const {
 	getInviteCode,
 	refreshInviteCode,
 	leaveHouse,
+	updateMonthlyRent,
+	getRentStatus,
+	payMonthlyRent,
 } = require('../controllers/houseController')
 
 const router = express.Router()
@@ -19,6 +22,9 @@ router.post('/invite-member', inviteMember)
 router.post('/join', joinHouse)
 router.get('/invite-code', getInviteCode)
 router.post('/refresh-code', refreshInviteCode)
+router.put('/rent-config', updateMonthlyRent)
+router.get('/rent-status', getRentStatus)
+router.post('/pay-rent', payMonthlyRent)
 router.delete('/leave', leaveHouse)
 
 module.exports = router

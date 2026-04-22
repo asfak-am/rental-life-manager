@@ -18,6 +18,7 @@ export default function HouseSettings() {
   const [copied, setCopied] = useState(false)
   const [inviteOpen, setInviteOpen] = useState(false)
   const [inviteEmail, setInviteEmail] = useState('')
+  const [monthlyRentInput, setMonthlyRentInput] = useState('')
   const [notificationPrefs, setNotificationPrefs] = useState(user?.notifications || { expense: true, task: true, payment: true })
 
   const syncNotificationPrefs = async (nextPrefs) => {
@@ -46,8 +47,26 @@ export default function HouseSettings() {
   })
 
   const inviteCode = codeData?.inviteCode || house?.inviteCode || ''
+  const inviteLink = inviteCode
+    ? `${typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5173'}/invite/${inviteCode}`
+    : ''
+  const { data: rentStatus } = useQuery({
+    queryKey: ['rent-status'],
+    queryFn: () => houseService.getRentStatus().then(r => r.data),
+    enabled: !!house,
+  })
+
+  const updateRentMutation = useMutation({
+    mutationFn: (value) => houseService.updateRentConfig(value),
+    onSuccess: () => {
+      toast.success('Monthly rent updated')
+      qc.invalidateQueries(['house'])
+      qc.invalidateQueries(['rent-status'])
+    },
+    onError: (err) => toast.error(err.response?.data?.message || 'Failed to update monthly rent'),
+  })
   const inviteQrSrc = inviteCode
-    ? `https://api.qrserver.com/v1/create-qr-code/?size=248x248&data=${encodeURIComponent(inviteCode)}`
+    ? `https://api.qrserver.com/v1/create-qr-code/?size=248x248&data=${encodeURIComponent(inviteLink)}`
     : ''
 
   const refreshMutation = useMutation({
@@ -102,6 +121,7 @@ export default function HouseSettings() {
         <DesktopSettingsView
           members={members}
           inviteCode={inviteCode}
+          inviteQrSrc={inviteQrSrc}
           onInvite={() => setInviteOpen(true)}
           onCopyInvite={copyCode}
           onLeave={handleLeaveHouse}
@@ -111,6 +131,18 @@ export default function HouseSettings() {
           isAdmin={isAdmin}
           notificationPrefs={notificationPrefs}
           onToggleNotification={toggleNotification}
+          monthlyRentAmount={rentStatus?.totalRentAmount || house?.monthlyRentAmount || 0}
+          monthlyRentInput={monthlyRentInput}
+          onMonthlyRentInput={setMonthlyRentInput}
+          onUpdateMonthlyRent={() => {
+            const value = Number(monthlyRentInput || rentStatus?.totalRentAmount || 0)
+            if (!Number.isFinite(value) || value < 0) {
+              toast.error('Enter a valid rent amount')
+              return
+            }
+            updateRentMutation.mutate(value)
+          }}
+          updatingMonthlyRent={updateRentMutation.isPending}
         />
       </div>
 
@@ -156,7 +188,7 @@ export default function HouseSettings() {
                 )}
               </div>
               <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-600">
-                Scan to share invite code
+                Scan to open invite link
               </p>
             </div>
             <p className="text-xs opacity-70">Share this code with new roommates.</p>
@@ -235,6 +267,40 @@ export default function HouseSettings() {
             </div>
           ))}
         </section>
+
+        {isAdmin && (
+          <section className="space-y-4">
+            <h2 className="text-2xl font-bold tracking-tight">Monthly Rent</h2>
+            <div className="p-5 bg-surface-container-lowest rounded-2xl border border-outline-variant/10 space-y-3">
+              <p className="text-sm text-on-surface-variant">Set the house default monthly rent. Only admins can edit this amount.</p>
+              <div className="flex gap-3">
+                <input
+                  type="number"
+                  min="0"
+                  value={monthlyRentInput}
+                  onChange={e => setMonthlyRentInput(e.target.value)}
+                  placeholder={`${rentStatus?.totalRentAmount || house?.monthlyRentAmount || 0}`}
+                  className="flex-1 bg-surface-container-low border-none rounded-xl px-4 py-3 text-on-surface"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    const value = Number(monthlyRentInput || rentStatus?.totalRentAmount || 0)
+                    if (!Number.isFinite(value) || value < 0) {
+                      toast.error('Enter a valid rent amount')
+                      return
+                    }
+                    updateRentMutation.mutate(value)
+                  }}
+                  disabled={updateRentMutation.isPending}
+                  className="px-5 py-3 signature-gradient text-on-primary font-bold rounded-xl disabled:opacity-60"
+                >
+                  {updateRentMutation.isPending ? 'Saving...' : 'Save Rent'}
+                </button>
+              </div>
+            </div>
+          </section>
+        )}
 
         {/* Danger zone */}
         <section className="space-y-4 pb-8">

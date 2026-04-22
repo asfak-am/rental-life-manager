@@ -3,24 +3,30 @@ import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { expenseService } from '../services'
 import { useHouse } from '../context/HouseContext'
+import { useAuth } from '../context/AuthContext'
 import TopBar from '../components/TopBar'
 import BottomNav from '../components/BottomNav'
 import DesktopExpensesView from '../components/desktop/DesktopExpensesView'
+import { formatCurrency } from '../utils/currency'
 
-const CATEGORIES = ['All', 'Food', 'Rent', 'Utilities', 'Other']
+const CATEGORIES = ['All', 'Food', 'Rent', 'Utilities', 'Water Bill', 'Electricity Bill', 'Other']
 
 const catStyle = {
   Food:      { icon: 'shopping_basket', bg: 'bg-amber-100',  text: 'text-amber-700'  },
   Rent:      { icon: 'home',            bg: 'bg-blue-100',   text: 'text-blue-700'   },
   Utilities: { icon: 'bolt',            bg: 'bg-purple-100', text: 'text-purple-700' },
+  'Water Bill': { icon: 'water_drop',   bg: 'bg-cyan-100',   text: 'text-cyan-700'   },
+  'Electricity Bill': { icon: 'electric_bolt', bg: 'bg-yellow-100', text: 'text-yellow-700' },
   Other:     { icon: 'more_horiz',      bg: 'bg-gray-100',   text: 'text-gray-700'   },
 }
 
 export default function ExpensesList() {
   const navigate = useNavigate()
   const { members } = useHouse()
+  const { user } = useAuth()
   const [activeTab, setActiveTab] = useState('All')
   const [search, setSearch]       = useState('')
+  const preferredCurrency = user?.currency || 'LKR'
 
   const { data, isLoading } = useQuery({
     queryKey: ['expenses', activeTab, search],
@@ -41,6 +47,7 @@ export default function ExpensesList() {
         <DesktopExpensesView
           expenses={data?.expenses || []}
           summaryData={summaryData}
+          currency={preferredCurrency}
           onAdd={() => navigate('/expenses/add')}
         />
       </div>
@@ -94,7 +101,7 @@ export default function ExpensesList() {
             <div className="relative z-10">
               <p className="text-xs font-bold uppercase tracking-widest opacity-80 mb-1">Total Balance</p>
               <h2 className="text-3xl font-black font-headline mb-4">
-                ₹{summaryData?.totalExpenses?.toLocaleString() || '0'}
+                {formatCurrency(summaryData?.totalExpenses || 0, preferredCurrency)}
               </h2>
               <div className="flex items-center gap-2 bg-white/10 backdrop-blur-md w-fit px-3 py-1.5 rounded-full">
                 <span className="material-symbols-outlined text-xs">calendar_month</span>
@@ -106,7 +113,7 @@ export default function ExpensesList() {
           <div className="bg-surface-container-low p-6 rounded-3xl">
             <p className="text-xs font-bold uppercase tracking-widest text-on-surface-variant mb-1">My Share</p>
             <h2 className="text-2xl font-bold font-headline text-on-surface">
-              ₹{summaryData?.myShare?.toLocaleString() || '0'}
+              {formatCurrency(summaryData?.myShare || 0, preferredCurrency)}
             </h2>
           </div>
           <div className="bg-secondary-container p-6 rounded-3xl">
@@ -158,11 +165,12 @@ export default function ExpensesList() {
                 <div className="flex-1 min-w-0">
                   <h4 className="font-bold text-on-surface truncate">{exp.title}</h4>
                   <p className="text-xs text-on-surface-variant font-medium uppercase tracking-tight">
-                    {exp.category} • {new Date(exp.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                    {exp.category}
+                    {exp.billMonth ? ` • ${exp.billMonth}` : ` • ${new Date(exp.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}`}
                   </p>
                 </div>
                 <div className="text-right flex-shrink-0">
-                  <p className="font-bold text-lg text-on-surface">₹{exp.amount.toLocaleString()}</p>
+                  <p className="font-bold text-lg text-on-surface">{formatCurrency(exp.amount, preferredCurrency)}</p>
                   <div className="flex items-center justify-end gap-1 mt-1">
                     <div className="w-5 h-5 rounded-full bg-primary-fixed flex items-center justify-center text-[8px] font-bold text-primary">
                       {payer?.name?.charAt(0) || '?'}

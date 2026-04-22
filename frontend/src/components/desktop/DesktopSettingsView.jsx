@@ -6,12 +6,18 @@ export default function DesktopSettingsView({
   onLeave,
   leaving,
   inviteCode,
+  inviteQrSrc,
   onCopyInvite,
   refreshCode,
   refreshing,
   isAdmin,
   notificationPrefs = {},
   onToggleNotification,
+  monthlyRentAmount = 0,
+  monthlyRentInput = '',
+  onMonthlyRentInput,
+  onUpdateMonthlyRent,
+  updatingMonthlyRent,
 }) {
   return (
     <DesktopAppShell
@@ -67,12 +73,54 @@ export default function DesktopSettingsView({
               </div>
             ))}
           </div>
+
+          {isAdmin ? (
+            <div className="bg-white rounded-[30px] p-5 border border-slate-200">
+              <h4 className="text-xl font-black tracking-tight mb-2">Monthly Rent</h4>
+              <p className="text-sm text-slate-500">Set the default rent amount for each month. Only admins can edit this.</p>
+              <div className="mt-4 flex gap-3">
+                <span className="px-3 py-3 rounded-xl bg-[#f7f8fb] text-slate-600 font-semibold">LKR</span>
+                <input
+                  type="number"
+                  min="0"
+                  value={monthlyRentInput}
+                  onChange={e => onMonthlyRentInput?.(e.target.value)}
+                  placeholder={`${monthlyRentAmount || 0}`}
+                  className="flex-1 rounded-xl border border-slate-200 bg-[#f7f8fb] px-4 py-3 text-slate-900"
+                />
+                <button
+                  type="button"
+                  onClick={onUpdateMonthlyRent}
+                  disabled={updatingMonthlyRent}
+                  className="px-5 py-3 rounded-xl signature-gradient text-white font-semibold disabled:opacity-60"
+                >
+                  {updatingMonthlyRent ? 'Saving...' : 'Save Rent'}
+                </button>
+              </div>
+            </div>
+          ) : null}
         </section>
 
         <section className="col-span-4 space-y-5">
           <div className="bg-white rounded-3xl p-5 border border-slate-200">
             <h4 className="text-lg font-black">Invite Code</h4>
-            <p className="text-3xl font-black tracking-widest mt-3 text-[#5f52f2]">{inviteCode || '----'}</p>
+            <p className="text-[clamp(1.8rem,2.1vw,2.5rem)] leading-tight break-all font-black tracking-wider mt-3 text-[#5f52f2]">{inviteCode || '----'}</p>
+            <div className="mt-4 w-full rounded-2xl border border-slate-200 bg-[#f7f8fb] p-3 flex flex-col items-center gap-2">
+              <div className="bg-white p-2 rounded-lg">
+                {inviteQrSrc ? (
+                  <img
+                    src={inviteQrSrc}
+                    alt="Invite link QR"
+                    width={128}
+                    height={128}
+                    className="w-32 h-32"
+                  />
+                ) : (
+                  <div className="w-32 h-32 rounded bg-slate-100" />
+                )}
+              </div>
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Scan To Open Invite Link</p>
+            </div>
             <div className="mt-4 space-y-2">
               <button onClick={onCopyInvite} className="w-full py-2.5 rounded-xl signature-gradient text-white font-semibold">Copy Invite Code</button>
               {isAdmin ? (

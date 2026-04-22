@@ -176,43 +176,7 @@ export default function Register() {
   }
 
   return (
-    <>
-      <div className="hidden lg:flex min-h-screen bg-[#f2f4f8] items-center justify-center px-8 py-10">
-        <section className="w-full max-w-[1220px] bg-white rounded-[28px] shadow-2xl shadow-slate-300/40 border border-slate-200 overflow-hidden grid grid-cols-2">
-          <div className="relative min-h-[760px] bg-[url('https://images.unsplash.com/photo-1484154218962-a197022b5858?auto=format&fit=crop&w=1200&q=80')] bg-cover bg-center">
-            <div className="absolute inset-0 bg-gradient-to-t from-[#5f52f2cc] via-transparent to-transparent" />
-            <div className="absolute top-8 left-9 text-white">
-              <h1 className="text-4xl font-black tracking-tight">Rental Life</h1>
-            </div>
-            <div className="absolute bottom-8 left-9 right-9 text-white">
-              <h2 className="text-6xl leading-tight font-black tracking-tight">Elevate your property experience.</h2>
-              <p className="mt-4 text-white/85 text-lg">Join a curated community of property managers and residents where every detail is managed with architectural precision.</p>
-            </div>
-          </div>
-
-          <div className="px-10 py-9">
-            <h2 className="text-5xl font-black tracking-tight">Create an account</h2>
-            <p className="text-slate-500 mt-2">Fill in your details to start your journey with Rental Life Manager.</p>
-
-            <RegisterForm
-              variant="desktop"
-              defaultEmail={defaultEmail}
-              defaultInviteCode={defaultInviteCode}
-              onSubmit={onSubmit}
-              loading={loading}
-              registerUser={registerUser}
-              navigate={navigate}
-            />
-
-            <div className="mt-8 text-center text-sm">
-              Already have an account?{' '}
-              <Link to="/login" className="text-[#5f52f2] font-bold">Sign in here</Link>
-            </div>
-          </div>
-        </section>
-      </div>
-
-      <div className="lg:hidden bg-surface font-body text-on-surface min-h-screen flex flex-col">
+    <div className="bg-surface font-body text-on-surface min-h-screen flex flex-col">
         <main className="flex-grow flex items-center justify-center px-6 py-12 relative overflow-hidden">
           <div className="absolute top-[-10%] right-[-5%] w-[400px] h-[400px] rounded-full bg-primary/5 blur-[120px]" />
           <div className="absolute bottom-[-5%] left-[-5%] w-[300px] h-[300px] rounded-full bg-secondary/5 blur-[100px]" />
@@ -269,7 +233,6 @@ export default function Register() {
         <footer className="py-8 px-6 text-center">
           <p className="text-[10px] text-outline uppercase tracking-[0.2em] font-medium">© Rental Life Manager • Modern Living Protocol</p>
         </footer>
-      </div>
-    </>
+    </div>
   )
 }

@@ -182,50 +182,7 @@ export default function Login() {
   }
 
   return (
-    <>
-      <div className="hidden lg:flex min-h-screen bg-[#f2f4f8] items-center justify-center px-10 py-12 gap-10">
-        <div className="w-[400px] self-start mt-6">
-          <div className="text-[#5f52f2] font-black text-5xl leading-none tracking-tight">Rental Life</div>
-          <p className="text-[10px] tracking-[0.2em] uppercase text-slate-500 mt-2">Elevated Living</p>
-        </div>
-
-        <div className="w-[520px] bg-white rounded-[28px] border border-slate-200 p-8 shadow-xl shadow-slate-200/60">
-          <h2 className="text-4xl font-black tracking-tight">Welcome back</h2>
-          <p className="text-slate-500 mt-2">Please enter your details to access your dashboard.</p>
-          <LoginForm
-            variant="desktop"
-            onSubmit={onSubmit}
-            handleGoogleLogin={handleGoogleLogin}
-            loading={loading}
-            googleLoading={googleLoading}
-            defaultEmail={defaultEmail}
-          />
-
-          <footer className="mt-10 pt-8 border-t border-outline-variant/15 text-center">
-            <p className="text-sm text-on-surface-variant">
-              New to Rental Life?{' '}
-              <Link to="/register" className="text-primary font-bold hover:underline decoration-2 underline-offset-4">
-                Request an Account
-              </Link>
-            </p>
-          </footer>
-        </div>
-
-        <div className="w-[300px] self-end bg-white rounded-3xl border border-slate-200 p-4 shadow-lg shadow-slate-200/70">
-          <div className="flex items-center gap-3">
-            <div className="w-14 h-14 rounded-xl bg-slate-900" />
-            <div>
-              <p className="font-semibold">The Zenith Suites</p>
-              <p className="text-xs text-slate-500">Occupancy: 98%</p>
-            </div>
-          </div>
-          <div className="mt-3 h-1.5 bg-slate-200 rounded-full overflow-hidden">
-            <div className="h-full w-[86%] bg-[#6a5df6] rounded-full" />
-          </div>
-        </div>
-      </div>
-
-      <div className="lg:hidden bg-surface font-body text-on-surface min-h-screen">
+    <div className="bg-surface font-body text-on-surface min-h-screen">
         <main className="min-h-screen flex flex-col items-center justify-center p-6 md:p-12 relative overflow-hidden">
           {/* Background blobs */}
           <div className="absolute top-[-10%] left-[-5%] w-[40%] h-[40%] bg-primary-fixed/20 rounded-full blur-[120px] -z-10" />
@@ -278,7 +235,6 @@ export default function Login() {
             </div>
           </div>
         </main>
-      </div>
-    </>
+    </div>
   )
 }

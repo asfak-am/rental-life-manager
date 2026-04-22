@@ -6,6 +6,7 @@ import BottomNav from '../components/BottomNav'
 import DesktopAppShell from '../components/desktop/DesktopAppShell'
 import { useAuth } from '../context/AuthContext'
 import { authService } from '../services'
+import { CURRENCY_OPTIONS } from '../utils/currency'
 
 const MAX_IMAGE_INPUT_SIZE = 10 * 1024 * 1024
 const CROP_BOX_SIZE = 320
@@ -70,6 +71,7 @@ export default function Profile() {
       name: defaultName,
       displayName: defaultDisplayName,
       bio: user?.bio || '',
+      currency: user?.currency || 'LKR',
     },
   })
 
@@ -168,6 +170,7 @@ export default function Profile() {
         name: data.name,
         displayName: data.displayName,
         bio: data.bio,
+        currency: data.currency,
         avatar: avatarPreview || '',
       }
       const res = await authService.updateProfile(payload)
@@ -258,6 +261,18 @@ export default function Profile() {
             disabled
             className="w-full rounded-xl border border-slate-200 bg-slate-100 px-4 py-3 text-slate-500"
           />
+        </div>
+
+        <div>
+          <label className="block text-xs font-semibold uppercase tracking-widest text-slate-500 mb-1">Preferred Currency</label>
+          <select
+            className="w-full rounded-xl border border-slate-200 bg-[#f7f8fb] px-4 py-3 text-slate-900 outline-none focus:border-[#bdb8ff]"
+            {...register('currency')}
+          >
+            {CURRENCY_OPTIONS.map(option => (
+              <option key={option} value={option}>{option}</option>
+            ))}
+          </select>
         </div>
       </section>
 

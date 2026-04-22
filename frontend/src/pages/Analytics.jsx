@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
-import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
+import { useMemo } from 'react'
+import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, AreaChart, Area, CartesianGrid, Legend } from 'recharts'
 import { expenseService } from '../services'
 import { useHouse } from '../context/HouseContext'
 import TopBar from '../components/TopBar'
@@ -16,11 +17,50 @@ export default function Analytics() {
     queryFn: () => expenseService.summary().then(r => r.data),
   })
 
+  const { data: expensesData } = useQuery({
+    queryKey: ['analytics-expenses-all'],
+    queryFn: () => expenseService.getAll().then(r => r.data),
+  })
+
   const categoryData = summaryData?.categoryBreakdown
     ? Object.entries(summaryData.categoryBreakdown).map(([name, value]) => ({ name, value }))
     : []
 
   const monthlyData = summaryData?.monthlyTrends || []
+
+  const utilityTrendData = useMemo(() => {
+    const expenses = expensesData?.expenses || []
+    const monthMap = new Map()
+
+    expenses.forEach(expense => {
+      if (expense.category !== 'Water Bill' && expense.category !== 'Electricity Bill') return
+
+      const key = expense.billMonth
+        ? expense.billMonth
+        : new Date(expense.date).toISOString().slice(0, 7)
+
+      if (!monthMap.has(key)) {
+        monthMap.set(key, { key, water: 0, electricity: 0 })
+      }
+
+      const item = monthMap.get(key)
+      if (expense.category === 'Water Bill') item.water += Number(expense.amount || 0)
+      if (expense.category === 'Electricity Bill') item.electricity += Number(expense.amount || 0)
+    })
+
+    return [...monthMap.values()]
+      .sort((a, b) => a.key.localeCompare(b.key))
+      .slice(-6)
+      .map(item => {
+        const [year, month] = item.key.split('-')
+        const date = new Date(Number(year), Number(month) - 1, 1)
+        return {
+          month: date.toLocaleDateString('en-US', { month: 'short' }),
+          water: item.water,
+          electricity: item.electricity,
+        }
+      })
+  }, [expensesData?.expenses])
 
   const contributions = summaryData?.contributions || []
 
@@ -34,6 +74,7 @@ export default function Analytics() {
           summaryData={summaryData}
           categoryData={categoryData}
           monthlyData={monthlyData}
+          utilityTrendData={utilityTrendData}
         />
       </div>
 
@@ -48,7 +89,7 @@ export default function Analytics() {
               <span className="text-primary font-bold tracking-widest uppercase text-xs mb-2 block font-label">Analytics Ledger</span>
               <h1 className="text-4xl md:text-5xl font-headline font-extrabold tracking-tight text-on-surface">Monthly Summary</h1>
               <p className="text-on-surface-variant mt-2 max-w-md">
-                Comprehensive view of your shared household's financial performance.
+                Comprehensive view of shared expenses across all housemates.
               </p>
             </div>
             <div className="bg-surface-container-lowest p-6 rounded-2xl shadow-sm flex items-center gap-6 border border-outline-variant/15">
@@ -98,6 +139,10 @@ export default function Analytics() {
                 </div>
               )}
             </div>
+            <div className="mt-3 text-center">
+              <p className="text-2xl font-headline font-bold text-on-surface">₹{Math.round(total).toLocaleString()}</p>
+              <p className="text-[10px] uppercase tracking-widest text-outline">Total Spent</p>
+            </div>
             <div className="space-y-3 mt-4">
               {categoryData.length === 0 ? (
                 <p className="text-sm text-on-surface-variant">Add expenses to see category breakdowns.</p>
@@ -118,7 +163,7 @@ export default function Analytics() {
           {/* Bar chart */}
           <div className="lg:col-span-7 bg-surface-container-lowest rounded-2xl p-8 border border-outline-variant/15">
             <div className="flex justify-between items-center mb-8">
-              <h3 className="text-xl font-headline font-bold">Monthly Trends</h3>
+              <h3 className="text-xl font-headline font-bold">Shared Expense Trends</h3>
               <span className="px-3 py-1 bg-surface-container-high rounded-full text-xs font-bold text-on-surface-variant">Last 6 Months</span>
             </div>
             {monthlyData.length > 0 ? (
@@ -132,7 +177,7 @@ export default function Analytics() {
                   />
                   <YAxis hide />
                   <Tooltip
-                    formatter={(v) => [`₹${v.toLocaleString()}`, 'Spent']}
+                    formatter={(v) => [`₹${v.toLocaleString()}`, 'Shared Spent']}
                     contentStyle={{ borderRadius: '12px', border: 'none', background: '#ffffff', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}
                     cursor={{ fill: '#5744cf10', radius: 8 }}
                   />
@@ -142,6 +187,43 @@ export default function Analytics() {
             ) : (
               <div className="h-[280px] grid place-items-center rounded-2xl bg-surface-container text-sm text-on-surface-variant">
                 No monthly trend data yet.
+              </div>
+            )}
+          </div>
+
+          <div className="lg:col-span-12 bg-surface-container-lowest rounded-2xl p-8 border border-outline-variant/15">
+            <div className="flex justify-between items-center mb-8">
+              <h3 className="text-xl font-headline font-bold">Utility Bills Trend</h3>
+              <span className="px-3 py-1 bg-surface-container-high rounded-full text-xs font-bold text-on-surface-variant">Water vs Electricity</span>
+            </div>
+            {utilityTrendData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={260}>
+                <AreaChart data={utilityTrendData}>
+                  <defs>
+                    <linearGradient id="waterFillMobile" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#59dad1" stopOpacity={0.35} />
+                      <stop offset="95%" stopColor="#59dad1" stopOpacity={0.05} />
+                    </linearGradient>
+                    <linearGradient id="electricFillMobile" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#5744cf" stopOpacity={0.35} />
+                      <stop offset="95%" stopColor="#5744cf" stopOpacity={0.05} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                  <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 12, fontWeight: 700, fill: '#787586' }} />
+                  <YAxis hide />
+                  <Tooltip
+                    formatter={(v) => [`₹${Number(v || 0).toLocaleString()}`, 'Amount']}
+                    contentStyle={{ borderRadius: '12px', border: 'none', background: '#ffffff', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}
+                  />
+                  <Legend />
+                  <Area type="monotone" dataKey="water" name="Water Bill" stroke="#59dad1" fill="url(#waterFillMobile)" strokeWidth={3} />
+                  <Area type="monotone" dataKey="electricity" name="Electricity Bill" stroke="#5744cf" fill="url(#electricFillMobile)" strokeWidth={3} />
+                </AreaChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-[220px] grid place-items-center rounded-2xl bg-surface-container text-sm text-on-surface-variant">
+                Add water and electricity expenses to see monthly variation.
               </div>
             )}
           </div>

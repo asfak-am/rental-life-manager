@@ -1,6 +1,9 @@
 import DesktopAppShell from './DesktopAppShell'
+import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, AreaChart, Area, CartesianGrid, Legend } from 'recharts'
 
-export default function DesktopAnalyticsView({ summaryData, categoryData = [], monthlyData = [] }) {
+const COLORS = ['#6a5df6', '#57d0c5', '#f6b15a', '#f09595', '#9fe1cb']
+
+export default function DesktopAnalyticsView({ summaryData, categoryData = [], monthlyData = [], utilityTrendData = [] }) {
   const totalSpent = summaryData?.totalExpenses || 0
   const hasCategoryData = categoryData.length > 0
   const hasMonthlyData = monthlyData.length > 0
@@ -8,7 +11,7 @@ export default function DesktopAnalyticsView({ summaryData, categoryData = [], m
   return (
     <DesktopAppShell
       title="Analytics Overview"
-      subtitle="Financial performance and tenant engagement insights."
+      subtitle="Shared household spending insights for all housemates."
       searchPlaceholder="Search analytics..."
       rightActions={(
         <>
@@ -19,17 +22,26 @@ export default function DesktopAnalyticsView({ summaryData, categoryData = [], m
     >
       <div className="grid grid-cols-12 gap-6">
         <section className="col-span-8 bg-white rounded-3xl p-5 border border-slate-200">
-          <h4 className="text-2xl font-black tracking-tight mb-4">Revenue Trends</h4>
+          <h4 className="text-2xl font-black tracking-tight mb-4">Shared Expense Trends</h4>
           {hasMonthlyData ? (
-            <div className="h-[300px] flex items-end gap-3">
-              {monthlyData.map(item => (
-                <div key={item.month} className="flex-1 flex flex-col items-center gap-2">
-                  <div className="w-full bg-[#ecebff] rounded-t-xl relative" style={{ height: `${Math.max(18, Number(item.amount || 0) / Math.max(1, Math.max(...monthlyData.map(month => Number(month.amount || 0)))) * 220)}px` }}>
-                    <div className="absolute bottom-0 left-0 right-0 bg-[#6a5df6] rounded-t-xl" style={{ height: '68%' }} />
-                  </div>
-                  <span className="text-[11px] font-semibold text-slate-400 uppercase">{item.month}</span>
-                </div>
-              ))}
+            <div className="h-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={monthlyData} barSize={34}>
+                  <XAxis
+                    dataKey="month"
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 12, fontWeight: 700, fill: '#787586' }}
+                  />
+                  <YAxis hide />
+                  <Tooltip
+                    formatter={(value) => [`LKR ${Number(value || 0).toLocaleString('en-LK')}`, 'Shared Spent']}
+                    contentStyle={{ borderRadius: '12px', border: 'none', background: '#ffffff', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}
+                    cursor={{ fill: '#6a5df610', radius: 8 }}
+                  />
+                  <Bar dataKey="amount" fill="#6a5df6" radius={[10, 10, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
             </div>
           ) : (
             <div className="h-[300px] grid place-items-center text-sm text-slate-500 bg-[#f7f8fb] rounded-2xl">
@@ -41,15 +53,37 @@ export default function DesktopAnalyticsView({ summaryData, categoryData = [], m
         <section className="col-span-4 bg-white rounded-3xl p-5 border border-slate-200">
           <h4 className="text-2xl font-black tracking-tight">Expense Distribution</h4>
           <div className="mt-5 flex justify-center">
-            <div className="w-40 h-40 rounded-full border-[18px] border-slate-100 relative">
-              <div className="absolute inset-0 rounded-full border-[18px] border-transparent border-t-[#f6b15a] border-r-[#57d0c5] border-b-[#6a5df6]" />
-              <div className="absolute inset-0 grid place-items-center">
-                <div className="text-center">
-                  <p className="text-4xl font-black">₹{Math.round(totalSpent / 1000)}.0k</p>
-                  <p className="text-xs uppercase tracking-widest text-slate-400">Total Spent</p>
-                </div>
-              </div>
+            <div className="w-44 h-44">
+              {hasCategoryData ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={categoryData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={48}
+                      outerRadius={80}
+                      paddingAngle={2}
+                      dataKey="value"
+                    >
+                      {categoryData.map((item, idx) => (
+                        <Cell key={`${item.name}-${idx}`} fill={COLORS[idx % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      formatter={(value) => [`LKR ${Number(value || 0).toLocaleString('en-LK')}`, 'Amount']}
+                      contentStyle={{ borderRadius: '12px', border: 'none', background: '#ffffff', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="w-full h-full rounded-full border-[18px] border-slate-100" />
+              )}
             </div>
+          </div>
+          <div className="mt-3 text-center">
+            <p className="text-xl font-black leading-tight">LKR {Math.round(totalSpent).toLocaleString('en-LK')}</p>
+            <p className="text-[10px] uppercase tracking-widest text-slate-400">Total Spent</p>
           </div>
           {hasCategoryData ? (
             <ul className="mt-5 space-y-2">
@@ -65,6 +99,46 @@ export default function DesktopAnalyticsView({ summaryData, categoryData = [], m
             </ul>
           ) : (
             <p className="mt-5 text-sm text-slate-500">No category breakdown available yet.</p>
+          )}
+        </section>
+
+        <section className="col-span-12 bg-white rounded-3xl p-5 border border-slate-200">
+          <div className="flex justify-between items-center mb-4">
+            <h4 className="text-2xl font-black tracking-tight">Utility Bills Variation</h4>
+            <span className="text-xs font-semibold text-slate-400 uppercase tracking-widest">Water vs Electricity</span>
+          </div>
+
+          {utilityTrendData.length > 0 ? (
+            <div className="h-[280px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={utilityTrendData}>
+                  <defs>
+                    <linearGradient id="waterFillDesktop" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#57d0c5" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#57d0c5" stopOpacity={0.05} />
+                    </linearGradient>
+                    <linearGradient id="electricFillDesktop" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#6a5df6" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#6a5df6" stopOpacity={0.05} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                  <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 12, fontWeight: 700, fill: '#787586' }} />
+                  <YAxis hide />
+                  <Tooltip
+                    formatter={(value) => [`LKR ${Number(value || 0).toLocaleString('en-LK')}`, 'Amount']}
+                    contentStyle={{ borderRadius: '12px', border: 'none', background: '#ffffff', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}
+                  />
+                  <Legend />
+                  <Area type="monotone" dataKey="water" name="Water Bill" stroke="#57d0c5" fill="url(#waterFillDesktop)" strokeWidth={3} />
+                  <Area type="monotone" dataKey="electricity" name="Electricity Bill" stroke="#6a5df6" fill="url(#electricFillDesktop)" strokeWidth={3} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <div className="h-[280px] grid place-items-center rounded-2xl bg-[#f7f8fb] text-sm text-slate-500">
+              Add water and electricity expenses to see monthly variation.
+            </div>
           )}
         </section>
       </div>

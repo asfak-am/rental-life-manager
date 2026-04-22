@@ -21,6 +21,20 @@ const findHouseByInviteCode = async (inviteCode) => House.findOne({ inviteCode: 
 
 const generateOtp = () => String(Math.floor(100000 + Math.random() * 900000))
 
+const escapeRegex = (value = '') => String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
+const findUserByEmail = async (email) => {
+	const normalized = String(email || '').trim().toLowerCase()
+	if (!normalized) return null
+
+	let user = await User.findOne({ email: normalized })
+	if (user) return user
+
+	// Fallback for legacy records that may not have normalized casing.
+	user = await User.findOne({ email: { $regex: `^${escapeRegex(normalized)}$`, $options: 'i' } })
+	return user
+}
+
 const setOtp = (user, fieldPrefix = 'otp') => {
 	const otp = generateOtp()
 	user[`${fieldPrefix}Code`] = otp
@@ -316,14 +330,16 @@ const forgotPassword = async (req, res, next) => {
 		const { email } = req.body
 		if (!email) return res.status(400).json({ message: 'Email is required' })
 
-		const user = await User.findOne({ email: email.toLowerCase().trim() })
-		if (!user) return res.json({ message: 'If the account exists, reset code has been sent' })
+		const user = await findUserByEmail(email)
+		if (!user) {
+			return res.json({ exists: false, message: 'Email does not exist' })
+		}
 
 		const resetOtp = setOtp(user, 'reset')
 		await user.save()
 		await sendOtpEmail(user.email, resetOtp, 'Reset your password')
 
-		return res.json({ message: 'If the account exists, reset code has been sent' })
+		return res.json({ exists: true, message: 'Reset code sent to email' })
 	} catch (error) {
 		next(error)
 	}
@@ -340,7 +356,7 @@ const resetPassword = async (req, res, next) => {
 			return res.status(400).json({ message: 'Password must be at least 6 characters' })
 		}
 
-		const user = await User.findOne({ email: email.toLowerCase().trim() })
+		const user = await findUserByEmail(email)
 		if (!user) return res.status(404).json({ message: 'Account not found' })
 
 		if (!user.resetCode || !user.resetExpires || user.resetExpires < new Date()) {

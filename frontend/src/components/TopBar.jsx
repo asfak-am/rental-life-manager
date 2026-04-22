@@ -2,7 +2,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 
 export default function TopBar() {
-  const { user } = useAuth()
+  const { user, logout } = useAuth()
   const navigate = useNavigate()
 
   const initials = user?.name
@@ -59,6 +59,18 @@ export default function TopBar() {
             title="Help"
           >
             <span className="material-symbols-outlined">help</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              logout()
+              navigate('/login')
+            }}
+            className="w-10 h-10 flex items-center justify-center rounded-full text-rose-700 hover:bg-rose-100 transition-all duration-200 active:scale-95"
+            aria-label="Logout"
+            title="Logout"
+          >
+            <span className="material-symbols-outlined">logout</span>
           </button>
         </div>
       </div>

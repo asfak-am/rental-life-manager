@@ -9,6 +9,7 @@ export const houseService = {
   inviteMember:  (data) => api.post('/house/invite-member', data),
   getInviteCode: ()     => api.get('/house/invite-code'),
   getRentStatus: (month) => api.get('/house/rent-status', { params: { month } }),
+  getRentHistory: () => api.get('/house/rent-history'),
   updateRentConfig: (monthlyRentAmount) => api.put('/house/rent-config', { monthlyRentAmount }),
   payRent: (month) => api.post('/house/pay-rent', { month }),
   leave:         ()     => api.delete('/house/leave'),

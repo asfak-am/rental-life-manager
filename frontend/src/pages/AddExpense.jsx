@@ -11,10 +11,9 @@ import TopBar from '../components/TopBar'
 import DesktopAppShell from '../components/desktop/DesktopAppShell'
 import { formatCurrency } from '../utils/currency'
 
-const CATEGORIES = ['Food', 'Rent', 'Water Bill', 'Electricity Bill', 'Transport', 'Entertainment', 'Other']
+const CATEGORIES = ['Food', 'Water Bill', 'Electricity Bill', 'Transport', 'Entertainment', 'Other']
 const CAT_ICONS  = {
   Food: 'shopping_basket',
-  Rent: 'home',
   'Water Bill': 'water_drop',
   'Electricity Bill': 'electric_bolt',
   Transport: 'directions_car',

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { expenseService } from '../services'
+import { expenseService, houseService } from '../services'
 import { useHouse } from '../context/HouseContext'
 import { useAuth } from '../context/AuthContext'
 import TopBar from '../components/TopBar'
@@ -9,14 +9,16 @@ import BottomNav from '../components/BottomNav'
 import DesktopExpensesView from '../components/desktop/DesktopExpensesView'
 import { formatCurrency } from '../utils/currency'
 
-const CATEGORIES = ['All', 'Food', 'Rent', 'Utilities', 'Water Bill', 'Electricity Bill', 'Other']
+const EXPENSE_CATEGORIES = ['All', 'Food', 'Water Bill', 'Electricity Bill', 'Transport', 'Entertainment', 'Other']
 
 const catStyle = {
   Food:      { icon: 'shopping_basket', bg: 'bg-amber-100',  text: 'text-amber-700'  },
-  Rent:      { icon: 'home',            bg: 'bg-blue-100',   text: 'text-blue-700'   },
-  Utilities: { icon: 'bolt',            bg: 'bg-purple-100', text: 'text-purple-700' },
   'Water Bill': { icon: 'water_drop',   bg: 'bg-cyan-100',   text: 'text-cyan-700'   },
   'Electricity Bill': { icon: 'electric_bolt', bg: 'bg-yellow-100', text: 'text-yellow-700' },
+  Transport: { icon: 'directions_car',  bg: 'bg-sky-100',    text: 'text-sky-700'    },
+  Entertainment: { icon: 'movie',       bg: 'bg-pink-100',   text: 'text-pink-700'   },
+  Utilities: { icon: 'bolt',            bg: 'bg-purple-100', text: 'text-purple-700' },
+  Rent:      { icon: 'home',            bg: 'bg-blue-100',   text: 'text-blue-700'   },
   Other:     { icon: 'more_horiz',      bg: 'bg-gray-100',   text: 'text-gray-700'   },
 }
 
@@ -41,14 +43,23 @@ export default function ExpensesList() {
     queryFn: () => expenseService.summary().then(r => r.data),
   })
 
+  const { data: rentHistoryData } = useQuery({
+    queryKey: ['rent-history'],
+    queryFn: () => houseService.getRentHistory().then(r => r.data),
+  })
+
   return (
     <>
       <div className="hidden lg:block">
         <DesktopExpensesView
           expenses={data?.expenses || []}
+          rentHistory={rentHistoryData?.history || []}
           summaryData={summaryData}
           currency={preferredCurrency}
           onAdd={() => navigate('/expenses/add')}
+          categories={EXPENSE_CATEGORIES}
+          activeTab={activeTab}
+          onChangeTab={setActiveTab}
         />
       </div>
 
@@ -79,12 +90,12 @@ export default function ExpensesList() {
         </div>
 
         {/* Category tabs */}
-        <div className="flex gap-2 overflow-x-auto pb-4 no-scrollbar -mx-6 px-6 mb-8">
-          {CATEGORIES.map(cat => (
+        <div className="flex flex-wrap gap-2 pb-4 mb-8">
+          {EXPENSE_CATEGORIES.map(cat => (
             <button
               key={cat}
               onClick={() => setActiveTab(cat)}
-              className={`px-5 py-2 rounded-full font-semibold text-sm whitespace-nowrap transition-all ${
+              className={`px-5 py-2 rounded-full font-semibold text-sm transition-all ${
                 activeTab === cat
                   ? 'bg-primary text-on-primary shadow-lg shadow-primary/20'
                   : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container-high'
@@ -181,6 +192,29 @@ export default function ExpensesList() {
               </div>
             )
           })}
+        </div>
+
+        <div className="space-y-3 mt-10">
+          <h3 className="text-xs font-bold uppercase tracking-widest text-on-surface-variant mb-4 px-1">Rent Paid History</h3>
+
+          {(rentHistoryData?.history || []).length === 0 && (
+            <div className="bg-surface-container-lowest p-8 rounded-3xl text-center text-on-surface-variant">
+              No rent payments recorded yet.
+            </div>
+          )}
+
+          {(rentHistoryData?.history || []).slice(0, 10).map(item => (
+            <div key={item.id} className="bg-surface-container-lowest p-4 rounded-3xl flex items-center justify-between gap-3 border border-outline-variant/10">
+              <div className="min-w-0">
+                <p className="font-bold text-on-surface truncate">{item.name}</p>
+                <p className="text-xs text-on-surface-variant">{new Date(item.paidAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+              </div>
+              <div className="text-right flex-shrink-0">
+                <p className="font-bold text-on-surface">{formatCurrency(item.amount || 0, preferredCurrency)}</p>
+                <p className="text-[10px] uppercase tracking-widest text-on-surface-variant">Paid</p>
+              </div>
+            </div>
+          ))}
         </div>
       </main>
 

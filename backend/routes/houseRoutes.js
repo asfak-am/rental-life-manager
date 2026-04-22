@@ -11,6 +11,7 @@ const {
 	updateMonthlyRent,
 	getRentStatus,
 	payMonthlyRent,
+	getRentHistory,
 } = require('../controllers/houseController')
 
 const router = express.Router()
@@ -24,6 +25,7 @@ router.get('/invite-code', getInviteCode)
 router.post('/refresh-code', refreshInviteCode)
 router.put('/rent-config', updateMonthlyRent)
 router.get('/rent-status', getRentStatus)
+router.get('/rent-history', getRentHistory)
 router.post('/pay-rent', payMonthlyRent)
 router.delete('/leave', leaveHouse)
 

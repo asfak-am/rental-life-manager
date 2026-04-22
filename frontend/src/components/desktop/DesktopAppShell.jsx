@@ -16,7 +16,7 @@ export default function DesktopAppShell({
   children,
   rightActions,
 }) {
-  const { user } = useAuth()
+  const { user, logout } = useAuth()
   const navigate = useNavigate()
   const displayName = user?.displayName || user?.name || 'Profile'
   const avatarUrl = user?.avatar || ''
@@ -56,8 +56,15 @@ export default function DesktopAppShell({
         </nav>
 
         <div className="mt-auto">
-          <button className="w-full signature-gradient text-white rounded-xl py-3 font-semibold shadow-lg shadow-indigo-200">
-            + Add Property
+          <button
+            type="button"
+            onClick={() => {
+              logout()
+              navigate('/login')
+            }}
+            className="w-full rounded-xl py-3 font-semibold bg-slate-900 text-white shadow-lg shadow-slate-300/50 hover:bg-slate-800 transition"
+          >
+            Logout
           </button>
           <button
             type="button"

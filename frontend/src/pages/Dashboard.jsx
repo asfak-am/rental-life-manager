@@ -37,82 +37,80 @@ export default function Dashboard() {
   const qc = useQueryClient()
   const preferredCurrency = user?.currency || 'LKR'
 
-  if (!house) {
-    return (
-      <>
-        <div className="hidden lg:block">
-          <DesktopAppShell
-            title="Dashboard"
-            subtitle="You are not connected to a home yet"
-            searchPlaceholder="Search..."
-          >
-            <section className="max-w-2xl mx-auto mt-8 bg-white rounded-3xl p-10 border border-slate-200 shadow-xl shadow-slate-200/60 text-center">
-              <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-[#ecebff] text-[#5e51f2] mb-5">
-                <span className="material-symbols-outlined text-3xl" style={{ fontVariationSettings: "'FILL' 1" }}>home_work</span>
-              </div>
+  const noHouseView = (
+    <>
+      <div className="hidden lg:block">
+        <DesktopAppShell
+          title="Dashboard"
+          subtitle="You are not connected to a home yet"
+          searchPlaceholder="Search..."
+        >
+          <section className="max-w-2xl mx-auto mt-8 bg-white rounded-3xl p-10 border border-slate-200 shadow-xl shadow-slate-200/60 text-center">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-[#ecebff] text-[#5e51f2] mb-5">
+              <span className="material-symbols-outlined text-3xl" style={{ fontVariationSettings: "'FILL' 1" }}>home_work</span>
+            </div>
 
-              <h1 className="font-headline font-extrabold text-3xl tracking-tight">No Home Connected</h1>
-              <p className="text-slate-500 text-sm md:text-base mt-3 leading-relaxed">
-                You are currently not part of a home. Connect to an existing home with an invite code or create a new one to continue.
-              </p>
+            <h1 className="font-headline font-extrabold text-3xl tracking-tight">No Home Connected</h1>
+            <p className="text-slate-500 text-sm md:text-base mt-3 leading-relaxed">
+              You are currently not part of a home. Connect to an existing home with an invite code or create a new one to continue.
+            </p>
 
-              <div className="mt-8 flex items-center justify-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => navigate('/onboarding/step1')}
-                  className="signature-gradient px-6 py-3.5 rounded-xl text-on-primary font-bold"
-                >
-                  Connect To A Home
-                </button>
-                <button
-                  type="button"
-                  onClick={() => navigate('/settings')}
-                  className="px-6 py-3.5 rounded-xl bg-slate-100 text-slate-700 font-semibold border border-slate-200"
-                >
-                  Open Settings
-                </button>
-              </div>
-            </section>
-          </DesktopAppShell>
-        </div>
+            <div className="mt-8 flex items-center justify-center gap-3">
+              <button
+                type="button"
+                onClick={() => navigate('/onboarding/step1')}
+                className="signature-gradient px-6 py-3.5 rounded-xl text-on-primary font-bold"
+              >
+                Connect To A Home
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate('/settings')}
+                className="px-6 py-3.5 rounded-xl bg-slate-100 text-slate-700 font-semibold border border-slate-200"
+              >
+                Open Settings
+              </button>
+            </div>
+          </section>
+        </DesktopAppShell>
+      </div>
 
-        <div className="lg:hidden bg-surface font-body text-on-surface min-h-screen">
-          <main className="min-h-screen flex items-center justify-center px-6 py-12 relative overflow-hidden">
-            <div className="absolute top-[-10%] left-[-5%] w-[40%] h-[40%] bg-primary-fixed/20 rounded-full blur-[120px] -z-10" />
-            <div className="absolute bottom-[-10%] right-[-5%] w-[30%] h-[30%] bg-secondary-fixed/20 rounded-full blur-[100px] -z-10" />
+      <div className="lg:hidden bg-surface font-body text-on-surface min-h-screen">
+        <main className="min-h-screen flex items-center justify-center px-6 py-12 relative overflow-hidden">
+          <div className="absolute top-[-10%] left-[-5%] w-[40%] h-[40%] bg-primary-fixed/20 rounded-full blur-[120px] -z-10" />
+          <div className="absolute bottom-[-10%] right-[-5%] w-[30%] h-[30%] bg-secondary-fixed/20 rounded-full blur-[100px] -z-10" />
 
-            <section className="w-full max-w-xl bg-surface-container-lowest rounded-2xl p-8 md:p-10 border border-outline-variant/15 shadow-[0_24px_48px_-12px_rgba(26,28,29,0.04)] text-center">
-              <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary-fixed text-primary mb-5">
-                <span className="material-symbols-outlined text-3xl" style={{ fontVariationSettings: "'FILL' 1" }}>home_work</span>
-              </div>
+          <section className="w-full max-w-xl bg-surface-container-lowest rounded-2xl p-8 md:p-10 border border-outline-variant/15 shadow-[0_24px_48px_-12px_rgba(26,28,29,0.04)] text-center">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary-fixed text-primary mb-5">
+              <span className="material-symbols-outlined text-3xl" style={{ fontVariationSettings: "'FILL' 1" }}>home_work</span>
+            </div>
 
-              <h1 className="font-headline font-extrabold text-3xl tracking-tight">No Home Connected</h1>
-              <p className="text-on-surface-variant text-sm md:text-base mt-3 leading-relaxed">
-                You are currently not part of a home. Connect to an existing home with an invite code or create a new one to continue.
-              </p>
+            <h1 className="font-headline font-extrabold text-3xl tracking-tight">No Home Connected</h1>
+            <p className="text-on-surface-variant text-sm md:text-base mt-3 leading-relaxed">
+              You are currently not part of a home. Connect to an existing home with an invite code or create a new one to continue.
+            </p>
 
-              <div className="mt-8 flex flex-col sm:flex-row gap-3 sm:justify-center">
-                <button
-                  type="button"
-                  onClick={() => navigate('/onboarding/step1')}
-                  className="signature-gradient px-6 py-3.5 rounded-xl text-on-primary font-bold"
-                >
-                  Connect To A Home
-                </button>
-                <button
-                  type="button"
-                  onClick={() => navigate('/settings')}
-                  className="px-6 py-3.5 rounded-xl bg-surface-container-high text-on-surface font-semibold border border-outline-variant/20"
-                >
-                  Open Settings
-                </button>
-              </div>
-            </section>
-          </main>
-        </div>
-      </>
-    )
-  }
+            <div className="mt-8 flex flex-col sm:flex-row gap-3 sm:justify-center">
+              <button
+                type="button"
+                onClick={() => navigate('/onboarding/step1')}
+                className="signature-gradient px-6 py-3.5 rounded-xl text-on-primary font-bold"
+              >
+                Connect To A Home
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate('/settings')}
+                className="px-6 py-3.5 rounded-xl bg-surface-container-high text-on-surface font-semibold border border-outline-variant/20"
+              >
+                Open Settings
+              </button>
+            </div>
+          </section>
+        </main>
+      </div>
+    </>
+  )
 
   const { data: summaryData } = useQuery({
     queryKey: ['expense-summary'],
@@ -185,6 +183,10 @@ export default function Dashboard() {
     'Water Bill': { icon: 'water_drop',    bg: 'bg-cyan-100',    text: 'text-cyan-700'   },
     'Electricity Bill': { icon: 'electric_bolt', bg: 'bg-yellow-100', text: 'text-yellow-700' },
     Other:      { icon: 'more_horiz',      bg: 'bg-gray-100',    text: 'text-gray-700'   },
+  }
+
+  if (!house) {
+    return noHouseView
   }
 
   return (

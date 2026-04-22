@@ -217,7 +217,7 @@ export default function Login() {
               <p className="text-sm text-on-surface-variant">
                 Don't have an account?{' '}
                 <Link to="/register" className="text-primary font-bold hover:underline decoration-2 underline-offset-4">
-                  Create a Ledger
+                  Create an account
                 </Link>
               </p>
             </footer>

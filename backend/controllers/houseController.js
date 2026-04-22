@@ -228,6 +228,30 @@ const payMonthlyRent = async (req, res, next) => {
 	}
 }
 
+const getRentHistory = async (req, res, next) => {
+	try {
+		const house = await requireHouse(req.user._id)
+		if (!house) return res.status(404).json({ message: 'No house found' })
+
+		const payments = await RentPayment.find({ houseId: house._id, status: 'paid' })
+			.sort({ paidAt: -1, createdAt: -1 })
+			.populate('userId', 'name displayName')
+
+		const history = payments.map(payment => ({
+			id: payment._id,
+			month: payment.month,
+			amount: payment.amountDue,
+			paidAt: payment.paidAt || payment.updatedAt || payment.createdAt,
+			userId: payment.userId?._id || payment.userId,
+			name: payment.userId?.displayName || payment.userId?.name || 'Member',
+		}))
+
+		return res.json({ history })
+	} catch (error) {
+		next(error)
+	}
+}
+
 const getInviteCode = async (req, res, next) => {
 	try {
 		const house = await requireHouse(req.user._id)
@@ -303,4 +327,5 @@ module.exports = {
 	updateMonthlyRent,
 	getRentStatus,
 	payMonthlyRent,
+	getRentHistory,
 }

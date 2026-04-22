@@ -1,0 +1,42 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+build
+coverage
+.vite
+.nyc_output
+.eslintcache
+
+# Environment files (keep examples)
+.env
+.env.*
+!.env.example
+!.env*.example
+
+# Runtime files
+*.pid
+*.seed
+*.pid.lock
+
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+Thumbs.db
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?

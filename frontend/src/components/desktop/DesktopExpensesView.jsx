@@ -1,0 +1,80 @@
+import DesktopAppShell from './DesktopAppShell'
+
+export default function DesktopExpensesView({ expenses = [], summaryData, onAdd }) {
+  const categoryBreakdown = summaryData?.categoryBreakdown
+    ? Object.entries(summaryData.categoryBreakdown).map(([name, value]) => ({ name, value }))
+    : []
+  const totalExpenses = summaryData?.totalExpenses || 0
+  const myShare = summaryData?.myShare || 0
+  const savings = summaryData?.savings || 0
+
+  return (
+    <DesktopAppShell
+      title="Financial Flow"
+      subtitle="Tracking real expense activity for the selected house"
+      searchPlaceholder="Search expenses, invoices..."
+      rightActions={(
+        <>
+          <button className="px-4 py-2 rounded-xl border border-slate-300 bg-white text-slate-700 text-sm font-semibold">Export PDF</button>
+          <button onClick={onAdd} className="px-4 py-2 rounded-xl signature-gradient text-white text-sm font-semibold">+ Log Expense</button>
+        </>
+      )}
+    >
+      <div className="grid grid-cols-12 gap-4 mb-6">
+        <div className="col-span-3 bg-white rounded-2xl p-5 border border-slate-200">
+          <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Total Outflow</p>
+          <p className="text-4xl font-black mt-2">₹{Number(totalExpenses).toLocaleString('en-IN')}</p>
+        </div>
+        <div className="col-span-3 bg-white rounded-2xl p-5 border border-slate-200">
+          <p className="text-xs uppercase tracking-[0.2em] text-slate-400">My Share</p>
+          <p className="text-4xl font-black mt-2">₹{Number(myShare).toLocaleString('en-IN')}</p>
+        </div>
+        <div className="col-span-6 signature-gradient rounded-2xl p-5 text-white">
+          <p className="text-xs uppercase tracking-[0.2em] opacity-80">House Savings</p>
+          <p className="text-4xl font-black mt-2">₹{Number(savings).toLocaleString('en-IN')}</p>
+        </div>
+      </div>
+
+      <section className="bg-white rounded-3xl border border-slate-200 overflow-hidden">
+        <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between">
+          <div className="flex items-center gap-5 text-xs font-bold uppercase tracking-widest text-slate-400">
+            <span className="text-[#5f52f2]">All Expenses</span>
+            {categoryBreakdown.slice(0, 3).map(item => (
+              <span key={item.name}>{item.name}</span>
+            ))}
+          </div>
+          <span className="text-xs font-semibold text-slate-400">Live data</span>
+        </div>
+
+        {expenses.length === 0 ? (
+          <div className="px-5 py-14 text-center text-slate-500">
+            No expenses recorded yet.
+          </div>
+        ) : (
+          <table className="w-full text-left">
+            <thead>
+              <tr className="text-xs uppercase tracking-widest text-slate-400 border-b border-slate-200">
+                <th className="px-5 py-3">Service</th>
+                <th className="px-5 py-3">Date</th>
+                <th className="px-5 py-3">Category</th>
+                <th className="px-5 py-3">Amount</th>
+                <th className="px-5 py-3">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {expenses.slice(0, 5).map(exp => (
+                <tr key={exp._id} className="border-b border-slate-100">
+                  <td className="px-5 py-4 font-semibold">{exp.title}</td>
+                  <td className="px-5 py-4 text-slate-500">{new Date(exp.date).toLocaleDateString()}</td>
+                  <td className="px-5 py-4"><span className="px-2 py-1 rounded-full text-[10px] uppercase tracking-widest bg-[#ecebff] text-[#5f52f2]">{exp.category || 'Other'}</span></td>
+                  <td className="px-5 py-4 font-black">₹{Number(exp.amount || 0).toLocaleString('en-IN')}</td>
+                  <td className="px-5 py-4 text-emerald-600 text-xs font-semibold uppercase tracking-widest">Recorded</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </section>
+    </DesktopAppShell>
+  )
+}

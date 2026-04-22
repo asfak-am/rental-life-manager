@@ -1,0 +1,54 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Build outputs
+build/
+dist/
+**/dist/
+coverage/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Runtime files
+*.pid
+*.seed
+*.pid.lock
+
+# Environment files (keep examples only)
+.env
+.env.*
+!.env.example
+!.env*.example
+
+# OS / Editor
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Frontend caches
+frontend/.vite/
+frontend/dist-ssr/
+
+# Test / tooling artifacts
+.nyc_output/
+.eslintcache
+
+# Optional local uploads/temp assets
+uploads/
+tmp/
+temp/

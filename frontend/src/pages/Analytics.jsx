@@ -1,0 +1,210 @@
+import { useQuery } from '@tanstack/react-query'
+import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
+import { expenseService } from '../services'
+import { useHouse } from '../context/HouseContext'
+import TopBar from '../components/TopBar'
+import BottomNav from '../components/BottomNav'
+import DesktopAnalyticsView from '../components/desktop/DesktopAnalyticsView'
+
+const COLORS = ['#5744cf', '#59dad1', '#ffb86c', '#f09595', '#9FE1CB']
+
+export default function Analytics() {
+  const { members } = useHouse()
+
+  const { data: summaryData } = useQuery({
+    queryKey: ['analytics-summary'],
+    queryFn: () => expenseService.summary().then(r => r.data),
+  })
+
+  const categoryData = summaryData?.categoryBreakdown
+    ? Object.entries(summaryData.categoryBreakdown).map(([name, value]) => ({ name, value }))
+    : []
+
+  const monthlyData = summaryData?.monthlyTrends || []
+
+  const contributions = summaryData?.contributions || []
+
+  const total  = summaryData?.totalExpenses || 0
+  const savings = summaryData?.savings || 0
+
+  return (
+    <>
+      <div className="hidden lg:block">
+        <DesktopAnalyticsView
+          summaryData={summaryData}
+          categoryData={categoryData}
+          monthlyData={monthlyData}
+        />
+      </div>
+
+      <div className="lg:hidden bg-surface font-body text-on-surface min-h-screen pb-32">
+        <TopBar />
+
+      <main className="max-w-screen-xl mx-auto px-6 pt-8">
+        {/* Header */}
+        <section className="mb-10">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+            <div>
+              <span className="text-primary font-bold tracking-widest uppercase text-xs mb-2 block font-label">Analytics Ledger</span>
+              <h1 className="text-4xl md:text-5xl font-headline font-extrabold tracking-tight text-on-surface">Monthly Summary</h1>
+              <p className="text-on-surface-variant mt-2 max-w-md">
+                Comprehensive view of your shared household's financial performance.
+              </p>
+            </div>
+            <div className="bg-surface-container-lowest p-6 rounded-2xl shadow-sm flex items-center gap-6 border border-outline-variant/15">
+              <div>
+                <span className="block text-xs font-label uppercase tracking-wider text-outline mb-1">Total Spent</span>
+                <span className="text-3xl font-headline font-bold text-on-surface">₹{total.toLocaleString()}</span>
+              </div>
+              <div className="h-10 w-px bg-outline-variant/30" />
+              <div>
+                <span className="block text-xs font-label uppercase tracking-wider text-secondary mb-1">Savings</span>
+                <span className="text-3xl font-headline font-bold text-secondary">+₹{savings.toLocaleString()}</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Charts grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* Donut */}
+          <div className="lg:col-span-5 bg-surface-container-lowest rounded-2xl p-8 flex flex-col border border-outline-variant/15">
+            <h3 className="text-xl font-headline font-bold mb-6">Spending by Category</h3>
+            <div className="flex justify-center">
+              {categoryData.length > 0 ? (
+                <ResponsiveContainer width={240} height={240}>
+                  <PieChart>
+                    <Pie
+                      data={categoryData}
+                      cx="50%" cy="50%"
+                      innerRadius={70}
+                      outerRadius={110}
+                      paddingAngle={3}
+                      dataKey="value"
+                    >
+                      {categoryData.map((_, i) => (
+                        <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      formatter={(v) => [`₹${v.toLocaleString()}`, 'Amount']}
+                      contentStyle={{ borderRadius: '12px', border: 'none', background: '#ffffff', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="w-[240px] h-[240px] grid place-items-center rounded-full bg-surface-container text-sm text-on-surface-variant text-center px-8">
+                  No category data yet.
+                </div>
+              )}
+            </div>
+            <div className="space-y-3 mt-4">
+              {categoryData.length === 0 ? (
+                <p className="text-sm text-on-surface-variant">Add expenses to see category breakdowns.</p>
+              ) : categoryData.map((cat, i) => (
+                <div key={cat.name} className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-3 h-3 rounded-full" style={{ background: COLORS[i % COLORS.length] }} />
+                    <span className="text-sm font-medium text-on-surface">{cat.name}</span>
+                  </div>
+                  <span className="font-bold text-on-surface">
+                    {total > 0 ? Math.round((cat.value / categoryData.reduce((a, b) => a + b.value, 0)) * 100) : cat.value}%
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Bar chart */}
+          <div className="lg:col-span-7 bg-surface-container-lowest rounded-2xl p-8 border border-outline-variant/15">
+            <div className="flex justify-between items-center mb-8">
+              <h3 className="text-xl font-headline font-bold">Monthly Trends</h3>
+              <span className="px-3 py-1 bg-surface-container-high rounded-full text-xs font-bold text-on-surface-variant">Last 6 Months</span>
+            </div>
+            {monthlyData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={280}>
+                <BarChart data={monthlyData} barSize={32}>
+                  <XAxis
+                    dataKey="month"
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 12, fontWeight: 700, fill: '#787586', fontFamily: 'Inter' }}
+                  />
+                  <YAxis hide />
+                  <Tooltip
+                    formatter={(v) => [`₹${v.toLocaleString()}`, 'Spent']}
+                    contentStyle={{ borderRadius: '12px', border: 'none', background: '#ffffff', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}
+                    cursor={{ fill: '#5744cf10', radius: 8 }}
+                  />
+                  <Bar dataKey="amount" fill="#5744cf" radius={[8, 8, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-[280px] grid place-items-center rounded-2xl bg-surface-container text-sm text-on-surface-variant">
+                No monthly trend data yet.
+              </div>
+            )}
+          </div>
+
+          {/* Contributions leaderboard */}
+          <div className="lg:col-span-7 bg-surface-container-lowest rounded-2xl p-8 border border-outline-variant/15">
+            <h3 className="text-xl font-headline font-bold mb-6">Individual Contributions</h3>
+            <div className="space-y-4">
+              {contributions.length === 0 ? (
+                <p className="text-sm text-on-surface-variant">No contribution history yet.</p>
+              ) : contributions
+                .sort((a, b) => b.amount - a.amount)
+                .map((c, i) => {
+                  const pct = total > 0 ? ((c.amount / total) * 100).toFixed(0) : 0
+                  return (
+                    <div key={c.userId || i} className="flex items-center gap-4">
+                      <span className="text-xs font-bold text-outline w-4">{i + 1}</span>
+                      <div className="w-9 h-9 rounded-full bg-primary-fixed flex items-center justify-center text-xs font-bold text-primary flex-shrink-0">
+                        {c.name?.slice(0, 2).toUpperCase()}
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex justify-between mb-1">
+                          <span className="font-semibold text-sm text-on-surface">{c.name}</span>
+                          <span className="font-bold text-sm text-primary">₹{c.amount.toLocaleString()}</span>
+                        </div>
+                        <div className="w-full h-2 bg-surface-container rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-primary rounded-full transition-all duration-700"
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                      </div>
+                      <span className="text-xs text-outline font-bold">{pct}%</span>
+                    </div>
+                  )
+                })}
+            </div>
+          </div>
+
+          {/* Export */}
+          <div className="lg:col-span-5 bg-surface-container-lowest rounded-2xl p-8 border border-outline-variant/15 flex flex-col justify-between">
+            <div>
+              <h3 className="text-xl font-headline font-bold mb-3">Export Report</h3>
+              <p className="text-on-surface-variant text-sm leading-relaxed">
+                Download your monthly summary as a PDF to share with your housemates or keep for records.
+              </p>
+            </div>
+            <div className="space-y-3 mt-8">
+              <button className="w-full py-4 signature-gradient text-on-primary font-bold rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-primary/20 active:scale-95 transition-all">
+                <span className="material-symbols-outlined">download</span>
+                Download PDF Report
+              </button>
+              <button className="w-full py-4 bg-surface-container text-on-surface font-bold rounded-2xl flex items-center justify-center gap-2 active:scale-95 transition-all">
+                <span className="material-symbols-outlined">share</span>
+                Share Summary Link
+              </button>
+            </div>
+          </div>
+        </div>
+      </main>
+
+        <BottomNav />
+      </div>
+    </>
+  )
+}

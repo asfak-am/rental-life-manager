@@ -10,12 +10,29 @@ connectDB()
 
 const app = express()
 
+const normalizeOrigin = (value = '') => String(value).trim().replace(/\/+$/, '')
+const configuredClientOrigin = normalizeOrigin(process.env.CLIENT_URL || 'https://rental-life.vercel.app')
+const allowedOrigins = new Set([
+  configuredClientOrigin,
+  'http://localhost:5173',
+  'http://localhost:5174',
+])
+
+const isAllowedOrigin = (origin) => {
+  if (!origin) return true
+
+  const normalizedOrigin = normalizeOrigin(origin)
+  if (allowedOrigins.has(normalizedOrigin)) return true
+
+  // Allow Vercel preview deployments (e.g. branch-name-project.vercel.app).
+  return /^https:\/\/[a-z0-9-]+\.vercel\.app$/i.test(normalizedOrigin)
+}
+
 app.use(cors({
-  origin: [
-    process.env.CLIENT_URL || 'https://rental-life.vercel.app',
-    'http://localhost:5173',
-    'http://localhost:5174',
-  ],
+  origin: (origin, callback) => {
+    if (isAllowedOrigin(origin)) return callback(null, true)
+    return callback(new Error(`CORS blocked for origin: ${origin}`))
+  },
   credentials: true,
 }))
 app.use(express.json({ limit: '12mb' }))

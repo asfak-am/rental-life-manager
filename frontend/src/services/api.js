@@ -1,7 +1,17 @@
 import axios from 'axios'
 
+const normalizeApiBaseUrl = () => {
+  const raw = (import.meta.env.VITE_API_URL || '').trim()
+  if (!raw) return 'http://localhost:5000/api'
+
+  const withoutTrailingSlash = raw.replace(/\/+$/, '')
+  return withoutTrailingSlash.endsWith('/api')
+    ? withoutTrailingSlash
+    : `${withoutTrailingSlash}/api`
+}
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
+  baseURL: normalizeApiBaseUrl(),
   headers: { 'Content-Type': 'application/json' },
 })
 

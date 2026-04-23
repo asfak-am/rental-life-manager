@@ -1,4 +1,4 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { houseService } from '../services'
@@ -42,7 +42,7 @@ export default function OnboardingStep1() {
   }
 
   return (
-    <div className="bg-surface font-body text-on-surface min-h-screen flex flex-col relative overflow-hidden">
+    <div className="bg-surface app-light-gradient font-body text-on-surface min-h-screen flex flex-col relative overflow-hidden">
       {/* Background gradient with blur */}
       <div className="absolute top-[-10%] left-[-5%] w-[40%] h-[40%] bg-primary-fixed/20 rounded-full blur-[120px] -z-10" />
       <div className="absolute bottom-[-10%] right-[-5%] w-[30%] h-[30%] bg-secondary-fixed/20 rounded-full blur-[100px] -z-10" />
@@ -135,8 +135,9 @@ export default function OnboardingStep1() {
       </main>
 
       <footer className="w-full py-12 flex flex-col items-center gap-4 text-outline text-sm">
-        <p>© 2024 Rental Life Architectural Ledger</p>
+        <p>Â© 2024 Rental Life Architectural Ledger</p>
       </footer>
     </div>
   )
 }
+

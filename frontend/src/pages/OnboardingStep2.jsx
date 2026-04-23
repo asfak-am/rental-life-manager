@@ -1,4 +1,4 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import toast from 'react-hot-toast'
@@ -29,7 +29,7 @@ export default function OnboardingStep2() {
   }
 
   return (
-    <div className="bg-surface font-body text-on-surface min-h-screen flex flex-col relative">
+    <div className="bg-surface app-light-gradient font-body text-on-surface min-h-screen flex flex-col relative">
       {/* Background gradient with blur */}
       <div className="absolute top-[-10%] left-[-5%] w-[40%] h-[40%] bg-primary-fixed/20 rounded-full blur-[120px] -z-10" />
       <div className="absolute bottom-[-10%] right-[-5%] w-[30%] h-[30%] bg-secondary-fixed/20 rounded-full blur-[100px] -z-10" />
@@ -109,7 +109,7 @@ export default function OnboardingStep2() {
             <h3 className="font-headline text-lg font-bold text-on-surface">Short Bio <span className="text-outline font-normal text-sm">(optional)</span></h3>
             <textarea
               rows={3}
-              placeholder="e.g. Morning person, loves cooking, pays on time 🙌"
+              placeholder="e.g. Morning person, loves cooking, pays on time ðŸ™Œ"
               className="w-full bg-surface-container-low border-none rounded-xl px-5 py-4 focus:ring-2 focus:ring-primary/20 text-on-surface placeholder:text-outline-variant font-medium transition-all resize-none"
               {...register('bio')}
             />
@@ -142,10 +142,11 @@ export default function OnboardingStep2() {
             disabled={loading}
             className="w-full py-5 signature-gradient text-on-primary font-headline font-bold text-lg rounded-2xl shadow-xl shadow-primary/20 hover:scale-[1.01] active:scale-[0.98] transition-all disabled:opacity-60"
           >
-            {loading ? 'Saving...' : 'Save & Continue →'}
+            {loading ? 'Saving...' : 'Save & Continue â†’'}
           </button>
         </form>
       </main>
     </div>
   )
 }
+

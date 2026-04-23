@@ -1,4 +1,4 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
@@ -146,7 +146,7 @@ export default function HouseSettings() {
         />
       </div>
 
-      <div className="lg:hidden bg-surface font-body text-on-surface min-h-screen pb-32">
+      <div className="lg:hidden bg-surface app-light-gradient font-body text-on-surface min-h-screen pb-32">
         <TopBar />
 
       <main className="max-w-screen-xl mx-auto px-6 pt-8 space-y-10">
@@ -157,7 +157,7 @@ export default function HouseSettings() {
               <span className="text-[11px] uppercase tracking-[0.2em] text-outline font-semibold">Active Residence</span>
               <h1 className="text-4xl font-extrabold text-on-surface mt-2 tracking-tight">{house?.name || 'Your House'}</h1>
               <p className="text-on-surface-variant mt-2 max-w-md">
-                {members.length} members · Managed with Rental Life
+                {members.length} members Â· Managed with Rental Life
               </p>
             </div>
             <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full -mr-20 -mt-20 blur-3xl" />
@@ -382,3 +382,4 @@ export default function HouseSettings() {
     </>
   )
 }
+

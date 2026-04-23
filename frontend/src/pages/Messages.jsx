@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+﻿import { useEffect, useMemo, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import TopBar from '../components/TopBar'
 import BottomNav from '../components/BottomNav'
@@ -258,7 +258,7 @@ export default function Messages() {
         </DesktopAppShell>
       </div>
 
-      <div className="lg:hidden bg-surface font-body text-on-surface min-h-screen pb-32">
+      <div className="lg:hidden bg-surface app-light-gradient font-body text-on-surface min-h-screen pb-32">
         <TopBar />
 
         <main className="max-w-screen-xl mx-auto px-4 pt-6 space-y-4 pb-32">
@@ -325,3 +325,5 @@ export default function Messages() {
     </>
   )
 }
+
+

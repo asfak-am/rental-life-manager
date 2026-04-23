@@ -27,12 +27,6 @@ export default function DesktopAnalyticsView({
       title="Analytics Overview"
       subtitle="Shared household spending insights for all housemates."
       searchPlaceholder="Search analytics..."
-      rightActions={(
-        <>
-          <button className="px-4 py-2 rounded-xl bg-[#ecebff] text-[#5f52f2] text-sm font-semibold">Last 30 Days</button>
-          <button className="px-4 py-2 rounded-xl signature-gradient text-white text-sm font-semibold">Export PDF</button>
-        </>
-      )}
     >
       <div className="grid grid-cols-12 gap-6">
         <section className="col-span-8 bg-white rounded-3xl p-5 border border-slate-200">

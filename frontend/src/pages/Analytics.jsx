@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+﻿import { useQuery } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, AreaChart, Area, CartesianGrid, Legend } from 'recharts'
 import { expenseService } from '../services'
@@ -95,7 +95,7 @@ export default function Analytics() {
         />
       </div>
 
-      <div className="lg:hidden bg-surface font-body text-on-surface min-h-screen pb-32">
+      <div className="lg:hidden bg-surface app-light-gradient font-body text-on-surface min-h-screen pb-32">
         <TopBar />
 
       <main className="max-w-screen-xl mx-auto px-6 pt-8">
@@ -251,7 +251,7 @@ export default function Analytics() {
           </div>
 
           {/* Contributions leaderboard */}
-          <div className="lg:col-span-7 bg-surface-container-lowest rounded-2xl p-8 border border-outline-variant/15">
+          <div className="lg:col-span-12 bg-surface-container-lowest rounded-2xl p-8 border border-outline-variant/15">
             <h3 className="text-xl font-headline font-bold mb-6">Individual Contributions</h3>
             <div className="space-y-4">
               {contributions.length === 0 ? (
@@ -285,25 +285,6 @@ export default function Analytics() {
             </div>
           </div>
 
-          {/* Export */}
-          <div className="lg:col-span-5 bg-surface-container-lowest rounded-2xl p-8 border border-outline-variant/15 flex flex-col justify-between">
-            <div>
-              <h3 className="text-xl font-headline font-bold mb-3">Export Report</h3>
-              <p className="text-on-surface-variant text-sm leading-relaxed">
-                Download your monthly summary as a PDF to share with your housemates or keep for records.
-              </p>
-            </div>
-            <div className="space-y-3 mt-8">
-              <button className="w-full py-4 signature-gradient text-on-primary font-bold rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-primary/20 active:scale-95 transition-all">
-                <span className="material-symbols-outlined">download</span>
-                Download PDF Report
-              </button>
-              <button className="w-full py-4 bg-surface-container text-on-surface font-bold rounded-2xl flex items-center justify-center gap-2 active:scale-95 transition-all">
-                <span className="material-symbols-outlined">share</span>
-                Share Summary Link
-              </button>
-            </div>
-          </div>
         </div>
       </main>
 
@@ -312,3 +293,4 @@ export default function Analytics() {
     </>
   )
 }
+

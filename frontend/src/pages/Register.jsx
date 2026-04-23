@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+﻿import { useEffect, useState } from 'react'
 import { useNavigate, Link, useSearchParams } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import toast from 'react-hot-toast'
@@ -64,7 +64,7 @@ function RegisterForm({ variant, defaultEmail, defaultInviteCode, onSubmit, load
             <input
               id="password"
               type="password"
-              placeholder="••••••••"
+              placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
               autoComplete="new-password"
               className="w-full bg-[#ebedf2] border-none rounded-xl px-4 py-3.5 text-slate-900 placeholder:text-slate-500"
               {...register('password', { required: 'Password is required', minLength: { value: 6, message: 'Min 6 characters' } })}
@@ -113,7 +113,7 @@ function RegisterForm({ variant, defaultEmail, defaultInviteCode, onSubmit, load
           <div className="space-y-1.5">
             <label className="block text-xs font-semibold uppercase tracking-wider text-on-surface-variant ml-1" htmlFor="password">Password</label>
             <input
-              id="password" type="password" placeholder="••••••••"
+              id="password" type="password" placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
               autoComplete="new-password"
               className="w-full bg-surface-container-high border-none rounded-lg px-4 py-3 text-on-surface placeholder:text-outline/60 focus:ring-2 focus:ring-primary/20 transition-all duration-200"
               {...register('password', { required: 'Password is required', minLength: { value: 6, message: 'Min 6 characters' } })}
@@ -176,7 +176,7 @@ export default function Register() {
   }
 
   return (
-    <div className="bg-surface font-body text-on-surface min-h-screen flex flex-col">
+    <div className="bg-surface app-light-gradient font-body text-on-surface min-h-screen flex flex-col">
         <main className="flex-grow flex items-center justify-center px-6 py-12 relative overflow-hidden">
           <div className="absolute top-[-10%] right-[-5%] w-[400px] h-[400px] rounded-full bg-primary/5 blur-[120px]" />
           <div className="absolute bottom-[-5%] left-[-5%] w-[300px] h-[300px] rounded-full bg-secondary/5 blur-[100px]" />
@@ -231,8 +231,9 @@ export default function Register() {
       </main>
 
         <footer className="py-8 px-6 text-center">
-          <p className="text-[10px] text-outline uppercase tracking-[0.2em] font-medium">© Rental Life Manager • Modern Living Protocol</p>
+          <p className="text-[10px] text-outline uppercase tracking-[0.2em] font-medium">Â© Rental Life Manager â€¢ Modern Living Protocol</p>
         </footer>
     </div>
   )
 }
+

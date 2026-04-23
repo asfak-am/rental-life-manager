@@ -1,8 +1,25 @@
 import DesktopAppShell from './DesktopAppShell'
 import { formatCurrency } from '../../utils/currency'
-import { jsPDF } from 'jspdf'
+import { exportExpensesPdf } from '../../utils/pdfExport'
 
-export default function DesktopExpensesView({ expenses = [], rentHistory = [], summaryData, onAdd, currency = 'LKR', categories = ['All'], activeTab = 'All', onChangeTab }) {
+export default function DesktopExpensesView({
+  expenses = [],
+  rentHistory = [],
+  summaryData,
+  onAdd,
+  currency = 'LKR',
+  categories = ['All'],
+  activeTab = 'All',
+  onChangeTab,
+  expenseFromDate = '',
+  expenseToDate = '',
+  onExpenseFromDateChange,
+  onExpenseToDateChange,
+  rentFromDate = '',
+  rentToDate = '',
+  onRentFromDateChange,
+  onRentToDateChange,
+}) {
   const categoryBreakdown = summaryData?.categoryBreakdown
     ? Object.entries(summaryData.categoryBreakdown).map(([name, value]) => ({ name, value }))
     : []
@@ -11,64 +28,16 @@ export default function DesktopExpensesView({ expenses = [], rentHistory = [], s
   const savings = summaryData?.savings || 0
 
   const exportPdf = () => {
-    const doc = new jsPDF()
-    const left = 14
-    let y = 16
-
-    doc.setFontSize(18)
-    doc.setFont('helvetica', 'bold')
-    doc.text('Expenses Report', left, y)
-
-    y += 10
-    doc.setFontSize(10)
-    doc.setFont('helvetica', 'normal')
-    doc.text(`Total outflow: ${formatCurrency(totalExpenses, currency)}`, left, y)
-    y += 6
-    doc.text(`My share: ${formatCurrency(myShare, currency)}`, left, y)
-    y += 6
-    doc.text(`House savings: ${formatCurrency(savings, currency)}`, left, y)
-
-    y += 12
-    doc.setFontSize(12)
-    doc.setFont('helvetica', 'bold')
-    doc.text('Recent Expenses', left, y)
-    y += 8
-
-    doc.setFontSize(9)
-    doc.setFont('helvetica', 'normal')
-    if (expenses.length === 0) {
-      doc.text('No expenses recorded yet.', left, y)
-      y += 6
-    } else {
-      expenses.slice(0, 8).forEach(exp => {
-        const dateLabel = exp.billMonth || new Date(exp.date).toLocaleDateString()
-        const line = `${dateLabel} - ${exp.title} - ${exp.category || 'Other'} - ${formatCurrency(exp.amount || 0, currency)}`
-        const wrapped = doc.splitTextToSize(line, 180)
-        doc.text(wrapped, left, y)
-        y += wrapped.length * 5 + 2
-      })
-    }
-
-    y += 4
-    doc.setFontSize(12)
-    doc.setFont('helvetica', 'bold')
-    doc.text('Rent Paid History', left, y)
-    y += 8
-
-    doc.setFontSize(9)
-    doc.setFont('helvetica', 'normal')
-    if (rentHistory.length === 0) {
-      doc.text('No rent payments recorded yet.', left, y)
-    } else {
-      rentHistory.slice(0, 8).forEach(item => {
-        const line = `${new Date(item.paidAt).toLocaleDateString()} - ${item.name} - ${item.month} - ${formatCurrency(item.amount || 0, currency)}`
-        const wrapped = doc.splitTextToSize(line, 180)
-        doc.text(wrapped, left, y)
-        y += wrapped.length * 5 + 2
-      })
-    }
-
-    doc.save('expenses-report.pdf')
+    exportExpensesPdf({
+      summaryData,
+      expenses,
+      rentHistory,
+      currency,
+      expenseFromDate,
+      expenseToDate,
+      rentFromDate,
+      rentToDate,
+    })
   }
 
   return (
@@ -116,6 +85,31 @@ export default function DesktopExpensesView({ expenses = [], rentHistory = [], s
       </div>
 
       <section className="bg-white rounded-3xl border border-slate-200 overflow-hidden">
+        <div className="px-5 py-4 border-b border-slate-200 bg-[#f8f9fc] flex items-center justify-between gap-3 flex-wrap">
+          <span className="text-xs font-bold uppercase tracking-widest text-slate-500">Filter by Date</span>
+          <div className="flex items-center gap-2 flex-wrap">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">From</p>
+              <input
+                type="date"
+                value={expenseFromDate}
+                onChange={e => onExpenseFromDateChange?.(e.target.value)}
+                className="rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs"
+                aria-label="Filter expenses from date"
+              />
+            </div>
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">To</p>
+              <input
+                type="date"
+                value={expenseToDate}
+                onChange={e => onExpenseToDateChange?.(e.target.value)}
+                className="rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs"
+                aria-label="Filter expenses to date"
+              />
+            </div>
+          </div>
+        </div>
 
         {expenses.length === 0 ? (
           <div className="px-5 py-14 text-center text-slate-500">
@@ -148,9 +142,30 @@ export default function DesktopExpensesView({ expenses = [], rentHistory = [], s
       </section>
 
       <section className="mt-6 bg-white rounded-3xl border border-slate-200 overflow-hidden">
-        <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between">
+        <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between gap-3 flex-wrap">
           <span className="text-xs font-bold uppercase tracking-widest text-[#5f52f2]">Rent Paid History</span>
-          <span className="text-xs font-semibold text-slate-400">Date & Amount</span>
+          <div className="flex items-center gap-2 flex-wrap">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">From</p>
+              <input
+                type="date"
+                value={rentFromDate}
+                onChange={e => onRentFromDateChange?.(e.target.value)}
+                className="rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs"
+                aria-label="Filter rent history from date"
+              />
+            </div>
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">To</p>
+              <input
+                type="date"
+                value={rentToDate}
+                onChange={e => onRentToDateChange?.(e.target.value)}
+                className="rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs"
+                aria-label="Filter rent history to date"
+              />
+            </div>
+          </div>
         </div>
 
         {rentHistory.length === 0 ? (

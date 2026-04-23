@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+﻿import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
@@ -338,7 +338,7 @@ export default function AddExpense() {
           </section>
         </DesktopAppShell>
       ) : (
-      <div className="bg-surface font-body text-on-surface min-h-screen pb-32">
+      <div className="bg-surface app-light-gradient font-body text-on-surface min-h-screen pb-32">
         <TopBar />
 
         <main className="max-w-screen-xl mx-auto px-6 pt-8 pb-32">
@@ -372,3 +372,4 @@ export default function AddExpense() {
     </>
   )
 }
+

@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom'
+﻿import { useNavigate } from 'react-router-dom'
 import { useHouse } from '../context/HouseContext'
 
 export default function OnboardingSuccess() {
@@ -6,7 +6,7 @@ export default function OnboardingSuccess() {
   const { house, members } = useHouse()
 
   return (
-    <div className="bg-surface font-body text-on-surface min-h-screen flex flex-col relative overflow-hidden">
+    <div className="bg-surface app-light-gradient font-body text-on-surface min-h-screen flex flex-col relative overflow-hidden">
       {/* Background gradient with blur */}
       <div className="absolute top-[-10%] left-[-5%] w-[40%] h-[40%] bg-primary-fixed/20 rounded-full blur-[120px] -z-10" />
       <div className="absolute bottom-[-10%] right-[-5%] w-[30%] h-[30%] bg-secondary-fixed/20 rounded-full blur-[100px] -z-10" />
@@ -99,3 +99,4 @@ export default function OnboardingSuccess() {
     </div>
   )
 }
+

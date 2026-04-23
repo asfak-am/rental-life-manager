@@ -1,4 +1,4 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import toast from 'react-hot-toast'
@@ -86,7 +86,7 @@ export default function ForgotPassword() {
   const newPassword = watch('newPassword')
 
   return (
-    <div className="bg-surface font-body text-on-surface min-h-screen flex items-center justify-center p-6 relative overflow-hidden">
+    <div className="bg-surface app-light-gradient font-body text-on-surface min-h-screen flex items-center justify-center p-6 relative overflow-hidden">
     {/* Background gradient with blur */}
     <div className="absolute top-[-10%] left-[-5%] w-[40%] h-[40%] bg-primary-fixed/20 rounded-full blur-[120px] -z-10" />
     <div className="absolute bottom-[-10%] right-[-5%] w-[30%] h-[30%] bg-secondary-fixed/20 rounded-full blur-[100px] -z-10" />
@@ -180,3 +180,5 @@ export default function ForgotPassword() {
     </div>
   )
 }
+
+

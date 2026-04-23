@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+﻿import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '../services/api'
 import TopBar from '../components/TopBar'
 import BottomNav from '../components/BottomNav'
@@ -68,7 +68,7 @@ export default function Notifications() {
               {timeAgo(n.createdAt)}
             </span>
             {n.amount && (
-              <span className="text-xs font-bold text-primary">₹{n.amount.toLocaleString()}</span>
+              <span className="text-xs font-bold text-primary">â‚¹{n.amount.toLocaleString()}</span>
             )}
           </div>
         </div>
@@ -99,7 +99,7 @@ export default function Notifications() {
             <section className="col-span-8 bg-white rounded-3xl p-6 border border-slate-200 space-y-3">
               <div className="flex items-center justify-between mb-2 px-2">
                 <span className="text-xs font-bold uppercase tracking-widest text-slate-400">
-                  Recent Activity {unread.length > 0 && `· ${unread.length} unread`}
+                  Recent Activity {unread.length > 0 && `Â· ${unread.length} unread`}
                 </span>
               </div>
 
@@ -157,7 +157,7 @@ export default function Notifications() {
         </DesktopAppShell>
       </div>
 
-      <div className="lg:hidden bg-surface font-body text-on-surface min-h-screen pb-32">
+      <div className="lg:hidden bg-surface app-light-gradient font-body text-on-surface min-h-screen pb-32">
         <TopBar />
 
         <main className="max-w-screen-xl mx-auto px-6 pt-8 pb-32">
@@ -171,7 +171,7 @@ export default function Notifications() {
             <div className="lg:col-span-2 space-y-3">
               <div className="flex items-center justify-between mb-4 px-2">
                 <span className="text-xs font-bold uppercase tracking-widest text-outline">
-                  Recent Activity {unread.length > 0 && `· ${unread.length} unread`}
+                  Recent Activity {unread.length > 0 && `Â· ${unread.length} unread`}
                 </span>
                 {unread.length > 0 && (
                   <button
@@ -242,3 +242,4 @@ export default function Notifications() {
     </>
   )
 }
+

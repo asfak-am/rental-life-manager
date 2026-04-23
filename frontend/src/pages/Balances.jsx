@@ -1,4 +1,4 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import { balanceService, expenseService, houseService } from '../services'
@@ -97,7 +97,7 @@ export default function Balances() {
             <div>
               <p className="text-xs font-bold uppercase tracking-widest text-on-surface-variant">Monthly Rent Payment</p>
               <h3 className="text-2xl font-headline font-black mt-1">{formatCurrency(rentDue, preferredCurrency)}</h3>
-              <p className="text-sm text-on-surface-variant mt-1">{currentBillMonth} • tracked separately from other expenses</p>
+              <p className="text-sm text-on-surface-variant mt-1">{currentBillMonth} â€¢ tracked separately from other expenses</p>
             </div>
             <span className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest ${rentPaid ? 'bg-secondary-container text-on-secondary-container' : myRentItems.length === 0 ? 'bg-surface-container text-on-surface-variant' : 'bg-error-container text-on-error-container'}`}>
               {rentStatusLabel}
@@ -147,7 +147,7 @@ export default function Balances() {
             </span>
           </div>
           <p className="text-sm text-on-surface-variant mt-2">
-            {members.length} members · {displayDebts.length} active debts
+            {members.length} members Â· {displayDebts.length} active debts
           </p>
         </section>
 
@@ -240,7 +240,7 @@ export default function Balances() {
         </DesktopAppShell>
       </div>
 
-      <div className="lg:hidden bg-surface font-body text-on-surface min-h-screen pb-32">
+      <div className="lg:hidden bg-surface app-light-gradient font-body text-on-surface min-h-screen pb-32">
         <TopBar />
         <main className="max-w-screen-xl mx-auto px-6 pt-8 pb-32">{ledgerContent}</main>
         <BottomNav />
@@ -272,3 +272,4 @@ export default function Balances() {
     </>
   )
 }
+

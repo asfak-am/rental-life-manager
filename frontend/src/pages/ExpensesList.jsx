@@ -1,4 +1,4 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { expenseService, houseService } from '../services'
@@ -8,7 +8,7 @@ import TopBar from '../components/TopBar'
 import BottomNav from '../components/BottomNav'
 import DesktopExpensesView from '../components/desktop/DesktopExpensesView'
 import { formatCurrency } from '../utils/currency'
-import { jsPDF } from 'jspdf'
+import { exportExpensesPdf } from '../utils/pdfExport'
 
 const EXPENSE_CATEGORIES = ['All', 'Food', 'Water Bill', 'Electricity Bill', 'Transport', 'Entertainment', 'Other']
 
@@ -29,6 +29,10 @@ export default function ExpensesList() {
   const { user } = useAuth()
   const [activeTab, setActiveTab] = useState('All')
   const [search, setSearch]       = useState('')
+  const [expenseFromDate, setExpenseFromDate] = useState('')
+  const [expenseToDate, setExpenseToDate] = useState('')
+  const [rentFromDate, setRentFromDate] = useState('')
+  const [rentToDate, setRentToDate] = useState('')
   const preferredCurrency = user?.currency || 'LKR'
 
   const { data, isLoading } = useQuery({
@@ -49,83 +53,74 @@ export default function ExpensesList() {
     queryFn: () => houseService.getRentHistory().then(r => r.data),
   })
 
+  const getExpenseFilterDate = (expense) => {
+    const billMonth = String(expense?.billMonth || '').trim()
+    if (/^\d{4}-\d{2}$/.test(billMonth)) {
+      return new Date(`${billMonth}-01T00:00:00`)
+    }
+    return new Date(expense?.date)
+  }
+
+  const isWithinDateRange = (value, from, to) => {
+    const date = value instanceof Date ? value : new Date(value)
+    if (Number.isNaN(date.getTime())) return false
+
+    if (from) {
+      const start = new Date(`${from}T00:00:00`)
+      if (date < start) return false
+    }
+    if (to) {
+      const end = new Date(`${to}T23:59:59.999`)
+      if (date > end) return false
+    }
+    return true
+  }
+
+  const filteredExpenses = (data?.expenses || []).filter(expense =>
+    isWithinDateRange(getExpenseFilterDate(expense), expenseFromDate, expenseToDate)
+  )
+
+  const filteredRentHistory = (rentHistoryData?.history || []).filter(item =>
+    isWithinDateRange(item.paidAt, rentFromDate, rentToDate)
+  )
+
   const exportPdf = () => {
-    const doc = new jsPDF()
-    const left = 14
-    let y = 16
-
-    doc.setFontSize(18)
-    doc.setFont('helvetica', 'bold')
-    doc.text('Expenses Report', left, y)
-
-    y += 10
-    doc.setFontSize(10)
-    doc.setFont('helvetica', 'normal')
-    doc.text(`Total outflow: ${formatCurrency(summaryData?.totalExpenses || 0, preferredCurrency)}`, left, y)
-    y += 6
-    doc.text(`My share: ${formatCurrency(summaryData?.myShare || 0, preferredCurrency)}`, left, y)
-    y += 6
-    doc.text(`House savings: ${formatCurrency(summaryData?.savings || 0, preferredCurrency)}`, left, y)
-
-    y += 12
-    doc.setFontSize(12)
-    doc.setFont('helvetica', 'bold')
-    doc.text('Recent Expenses', left, y)
-    y += 8
-
-    doc.setFontSize(9)
-    doc.setFont('helvetica', 'normal')
-    if ((data?.expenses || []).length === 0) {
-      doc.text('No expenses recorded yet.', left, y)
-      y += 6
-    } else {
-      (data?.expenses || []).slice(0, 8).forEach(exp => {
-        const dateLabel = exp.billMonth || new Date(exp.date).toLocaleDateString()
-        const line = `${dateLabel} - ${exp.title} - ${exp.category || 'Other'} - ${formatCurrency(exp.amount || 0, preferredCurrency)}`
-        const wrapped = doc.splitTextToSize(line, 180)
-        doc.text(wrapped, left, y)
-        y += wrapped.length * 5 + 2
-      })
-    }
-
-    y += 4
-    doc.setFontSize(12)
-    doc.setFont('helvetica', 'bold')
-    doc.text('Rent Paid History', left, y)
-    y += 8
-
-    doc.setFontSize(9)
-    doc.setFont('helvetica', 'normal')
-    if ((rentHistoryData?.history || []).length === 0) {
-      doc.text('No rent payments recorded yet.', left, y)
-    } else {
-      (rentHistoryData?.history || []).slice(0, 8).forEach(item => {
-        const line = `${new Date(item.paidAt).toLocaleDateString()} - ${item.name} - ${item.month} - ${formatCurrency(item.amount || 0, preferredCurrency)}`
-        const wrapped = doc.splitTextToSize(line, 180)
-        doc.text(wrapped, left, y)
-        y += wrapped.length * 5 + 2
-      })
-    }
-
-    doc.save('expenses-report.pdf')
+    exportExpensesPdf({
+      summaryData,
+      expenses: filteredExpenses,
+      rentHistory: filteredRentHistory,
+      currency: preferredCurrency,
+      expenseFromDate,
+      expenseToDate,
+      rentFromDate,
+      rentToDate,
+    })
   }
 
   return (
     <>
       <div className="hidden lg:block">
         <DesktopExpensesView
-          expenses={data?.expenses || []}
-          rentHistory={rentHistoryData?.history || []}
+          expenses={filteredExpenses}
+          rentHistory={filteredRentHistory}
           summaryData={summaryData}
           currency={preferredCurrency}
           onAdd={() => navigate('/expenses/add')}
           categories={EXPENSE_CATEGORIES}
           activeTab={activeTab}
           onChangeTab={setActiveTab}
+          expenseFromDate={expenseFromDate}
+          expenseToDate={expenseToDate}
+          onExpenseFromDateChange={setExpenseFromDate}
+          onExpenseToDateChange={setExpenseToDate}
+          rentFromDate={rentFromDate}
+          rentToDate={rentToDate}
+          onRentFromDateChange={setRentFromDate}
+          onRentToDateChange={setRentToDate}
         />
       </div>
 
-      <div className="lg:hidden bg-surface font-body text-on-surface min-h-screen pb-32">
+      <div className="lg:hidden bg-surface app-light-gradient font-body text-on-surface min-h-screen pb-32">
         <TopBar />
 
       <main className="max-w-screen-xl mx-auto px-6 pt-4 pb-32">
@@ -161,9 +156,6 @@ export default function ExpensesList() {
             aria-label="Add expense"
           >
             <span className="material-symbols-outlined text-on-primary">add</span>
-          </button>
-          <button className="bg-surface-container-high p-3.5 rounded-2xl flex items-center justify-center hover:bg-surface-container-highest transition-colors active:scale-95">
-            <span className="material-symbols-outlined text-on-surface">tune</span>
           </button>
         </div>
 
@@ -217,6 +209,29 @@ export default function ExpensesList() {
         <div className="space-y-3">
           <h3 className="text-xs font-bold uppercase tracking-widest text-on-surface-variant mb-4 px-1">Recent Transactions</h3>
 
+          <div className="bg-surface-container-low p-3 rounded-2xl border border-outline-variant/10 grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant mb-1">From</p>
+              <input
+                type="date"
+                value={expenseFromDate}
+                onChange={e => setExpenseFromDate(e.target.value)}
+                className="w-full bg-white rounded-xl px-3 py-2 text-sm border border-outline-variant/20"
+                aria-label="Filter expenses from date"
+              />
+            </div>
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant mb-1">To</p>
+              <input
+                type="date"
+                value={expenseToDate}
+                onChange={e => setExpenseToDate(e.target.value)}
+                className="w-full bg-white rounded-xl px-3 py-2 text-sm border border-outline-variant/20"
+                aria-label="Filter expenses to date"
+              />
+            </div>
+          </div>
+
           {isLoading && (
             <div className="space-y-3">
               {[1,2,3].map(i => (
@@ -231,7 +246,7 @@ export default function ExpensesList() {
             </div>
           )}
 
-          {!isLoading && data?.expenses?.length === 0 && (
+          {!isLoading && filteredExpenses.length === 0 && (
             <div className="bg-surface-container-lowest p-12 rounded-3xl text-center">
               <span className="material-symbols-outlined text-5xl text-outline mb-3 block">receipt_long</span>
               <p className="text-on-surface-variant font-medium">No expenses found</p>
@@ -239,7 +254,7 @@ export default function ExpensesList() {
             </div>
           )}
 
-          {data?.expenses?.map(exp => {
+          {filteredExpenses.map(exp => {
             const cat   = catStyle[exp.category] || catStyle.Other
             const payer = members.find(m => m._id === exp.paidBy)
             return (
@@ -255,7 +270,7 @@ export default function ExpensesList() {
                   <h4 className="font-bold text-on-surface truncate">{exp.title}</h4>
                   <p className="text-xs text-on-surface-variant font-medium uppercase tracking-tight">
                     {exp.category}
-                    {exp.billMonth ? ` • ${exp.billMonth}` : ` • ${new Date(exp.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}`}
+                    {exp.billMonth ? ` - ${exp.billMonth}` : ` - ${new Date(exp.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}`}
                   </p>
                 </div>
                 <div className="text-right flex-shrink-0">
@@ -275,13 +290,36 @@ export default function ExpensesList() {
         <div className="space-y-3 mt-10">
           <h3 className="text-xs font-bold uppercase tracking-widest text-on-surface-variant mb-4 px-1">Rent Paid History</h3>
 
-          {(rentHistoryData?.history || []).length === 0 && (
+          <div className="bg-surface-container-low p-3 rounded-2xl border border-outline-variant/10 grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant mb-1">From</p>
+              <input
+                type="date"
+                value={rentFromDate}
+                onChange={e => setRentFromDate(e.target.value)}
+                className="w-full bg-white rounded-xl px-3 py-2 text-sm border border-outline-variant/20"
+                aria-label="Filter rent history from date"
+              />
+            </div>
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant mb-1">To</p>
+              <input
+                type="date"
+                value={rentToDate}
+                onChange={e => setRentToDate(e.target.value)}
+                className="w-full bg-white rounded-xl px-3 py-2 text-sm border border-outline-variant/20"
+                aria-label="Filter rent history to date"
+              />
+            </div>
+          </div>
+
+          {filteredRentHistory.length === 0 && (
             <div className="bg-surface-container-lowest p-8 rounded-3xl text-center text-on-surface-variant">
               No rent payments recorded yet.
             </div>
           )}
 
-          {(rentHistoryData?.history || []).slice(0, 10).map(item => (
+          {filteredRentHistory.slice(0, 10).map(item => (
             <div key={item.id} className="bg-surface-container-lowest p-4 rounded-3xl flex items-center justify-between gap-3 border border-outline-variant/10">
               <div className="min-w-0">
                 <p className="font-bold text-on-surface truncate">{item.name}</p>
@@ -301,3 +339,4 @@ export default function ExpensesList() {
     </>
   )
 }
+

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+﻿import { useEffect, useState } from 'react'
 import { useNavigate, Link, useSearchParams } from 'react-router-dom'
 import { useGoogleLogin } from '@react-oauth/google'
 import { useForm } from 'react-hook-form'
@@ -52,7 +52,7 @@ function LoginForm({ variant, onSubmit, handleGoogleLogin, loading, googleLoadin
           <input
             id={`password-${variant}`}
             type={showPass ? 'text' : 'password'}
-            placeholder="••••••••"
+            placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
             autoComplete="current-password"
             className={desktop
               ? 'w-full h-14 px-4 bg-surface-container-high border-0 rounded-lg focus:ring-0 focus:outline-none border-b-2 border-transparent focus:border-primary transition-all duration-200 placeholder:text-outline/60 text-on-surface font-medium'
@@ -182,7 +182,7 @@ export default function Login() {
   }
 
   return (
-    <div className="bg-surface font-body text-on-surface min-h-screen">
+    <div className="bg-surface app-light-gradient font-body text-on-surface min-h-screen">
         <main className="min-h-screen flex flex-col items-center justify-center p-6 md:p-12 relative overflow-hidden">
           {/* Background blobs */}
           <div className="absolute top-[-10%] left-[-5%] w-[40%] h-[40%] bg-primary-fixed/20 rounded-full blur-[120px] -z-10" />
@@ -235,3 +235,4 @@ export default function Login() {
     </div>
   )
 }
+

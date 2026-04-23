@@ -1,4 +1,4 @@
-import { useParams, useNavigate } from 'react-router-dom'
+﻿import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import { expenseService } from '../services'
@@ -44,7 +44,7 @@ export default function ExpenseDetails() {
   const payer = members.find(m => m._id === exp.paidBy)
 
   return (
-    <div className="bg-surface font-body text-on-surface min-h-screen pb-32">
+    <div className="bg-surface app-light-gradient font-body text-on-surface min-h-screen pb-32">
       {/* Dimmed background */}
       <div className="fixed inset-0 bg-on-surface/20 backdrop-blur-sm z-[60] flex items-end justify-center">
         <div className="bg-surface-container-lowest w-full max-w-3xl rounded-t-[2.5rem] shadow-[0_-8px_40px_rgba(0,0,0,0.12)] max-h-[90vh] overflow-y-auto relative">
@@ -176,3 +176,4 @@ export default function ExpenseDetails() {
     </div>
   )
 }
+

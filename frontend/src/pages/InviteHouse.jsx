@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+﻿import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useMutation } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
@@ -68,7 +68,7 @@ export default function InviteHouse() {
         </div>
 
         <p className="text-xs text-slate-500 mt-6">
-          After you sign in or sign up, we’ll continue the invitation and add you to the house.
+          After you sign in or sign up, weâ€™ll continue the invitation and add you to the house.
         </p>
       </div>
     </div>

@@ -63,7 +63,7 @@ export default function DesktopAppShell({
               logout()
               navigate('/login')
             }}
-            className="w-full rounded-xl py-3 font-semibold bg-slate-900 text-white shadow-lg shadow-slate-300/50 hover:bg-slate-800 transition"
+            className="w-full rounded-xl py-3 font-semibold bg-red-600 text-white shadow-lg shadow-red-300/40 hover:bg-red-700 transition"
           >
             Logout
           </button>

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 import toast from 'react-hot-toast'
@@ -59,7 +59,7 @@ function TaskCard({ task, members, onToggle, onDelete }) {
                 : 'bg-primary-fixed text-primary hover:bg-primary hover:text-on-primary'
             }`}
           >
-            {task.status === 'completed' ? 'Done ✓' : 'Mark done'}
+            {task.status === 'completed' ? 'Done âœ“' : 'Mark done'}
           </button>
         </div>
       </div>
@@ -109,7 +109,7 @@ export default function Tasks() {
       {/* Header */}
       <div className="flex items-end justify-between mb-8 lg:hidden">
         <div>
-          <h1 className="text-4xl font-extrabold tracking-tight text-on-surface mb-2">Chore Ledger</h1>
+          <h1 className="text-3xl font-extrabold tracking-tight text-on-surface mb-2">Manage Tasks</h1>
           <p className="text-on-surface-variant font-medium">Coordinate, execute, and track shared responsibilities.</p>
         </div>
         <button
@@ -177,7 +177,7 @@ export default function Tasks() {
     <>
       <div className="hidden lg:block">
         <DesktopAppShell
-          title="Chore Ledger"
+          title="Manage Tasks"
           subtitle="Coordinate, execute, and track shared responsibilities"
           searchPlaceholder="Search tasks..."
           rightActions={(
@@ -194,7 +194,7 @@ export default function Tasks() {
         </DesktopAppShell>
       </div>
 
-      <div className="lg:hidden bg-surface font-body text-on-surface min-h-screen pb-32">
+      <div className="lg:hidden bg-surface app-light-gradient font-body text-on-surface min-h-screen pb-32">
         <TopBar />
         <main className="max-w-screen-xl mx-auto px-6 pt-6 pb-32">{boardContent}</main>
         <BottomNav />
@@ -276,3 +276,4 @@ export default function Tasks() {
     </>
   )
 }
+

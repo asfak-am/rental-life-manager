@@ -1,4 +1,4 @@
-import { useForm } from 'react-hook-form'
+﻿import { useForm } from 'react-hook-form'
 import toast from 'react-hot-toast'
 import TopBar from '../components/TopBar'
 import BottomNav from '../components/BottomNav'
@@ -140,7 +140,7 @@ export default function Help() {
         </DesktopAppShell>
       </div>
 
-      <div className="lg:hidden bg-surface font-body text-on-surface min-h-screen pb-32">
+      <div className="lg:hidden bg-surface app-light-gradient font-body text-on-surface min-h-screen pb-32">
         <TopBar />
 
         <main className="max-w-screen-xl mx-auto px-6 pt-6 pb-32 space-y-5">
@@ -158,3 +158,5 @@ export default function Help() {
     </>
   )
 }
+
+

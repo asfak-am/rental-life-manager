@@ -6,6 +6,7 @@ const navItems = [
   { to: '/expenses', label: 'Expenses', icon: 'receipt_long' },
   { to: '/tasks', label: 'Tasks', icon: 'task_alt' },
   { to: '/analytics', label: 'Analytics', icon: 'insights' },
+  { to: '/ledger', label: 'Ledger', icon: 'account_balance' },
   { to: '/settings', label: 'Settings', icon: 'settings' },
 ]
 

@@ -1,16 +1,26 @@
 import { useQuery } from '@tanstack/react-query'
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, AreaChart, Area, CartesianGrid, Legend } from 'recharts'
 import { expenseService } from '../services'
 import { useHouse } from '../context/HouseContext'
+import { useAuth } from '../context/AuthContext'
 import TopBar from '../components/TopBar'
 import BottomNav from '../components/BottomNav'
 import DesktopAnalyticsView from '../components/desktop/DesktopAnalyticsView'
+import { formatCurrency, normalizeCurrency } from '../utils/currency'
 
 const COLORS = ['#5744cf', '#59dad1', '#ffb86c', '#f09595', '#9FE1CB']
+const UTILITY_RANGE_OPTIONS = [
+  { value: '3M', label: '3M', months: 3 },
+  { value: '6M', label: '6M', months: 6 },
+  { value: '12M', label: '12M', months: 12 },
+  { value: 'ALL', label: 'All', months: null },
+]
 
 export default function Analytics() {
   const { members } = useHouse()
+  const { user } = useAuth()
+  const [utilityRange, setUtilityRange] = useState('6M')
 
   const { data: summaryData } = useQuery({
     queryKey: ['analytics-summary'],
@@ -50,7 +60,6 @@ export default function Analytics() {
 
     return [...monthMap.values()]
       .sort((a, b) => a.key.localeCompare(b.key))
-      .slice(-6)
       .map(item => {
         const [year, month] = item.key.split('-')
         const date = new Date(Number(year), Number(month) - 1, 1)
@@ -62,10 +71,16 @@ export default function Analytics() {
       })
   }, [expensesData?.expenses])
 
+  const filteredUtilityTrendData = useMemo(() => {
+    const selected = UTILITY_RANGE_OPTIONS.find(option => option.value === utilityRange)
+    if (!selected || selected.months == null) return utilityTrendData
+    return utilityTrendData.slice(-selected.months)
+  }, [utilityTrendData, utilityRange])
+
   const contributions = summaryData?.contributions || []
 
   const total  = summaryData?.totalExpenses || 0
-  const savings = summaryData?.savings || 0
+  const currency = normalizeCurrency(user?.currency)
 
   return (
     <>
@@ -74,7 +89,9 @@ export default function Analytics() {
           summaryData={summaryData}
           categoryData={categoryData}
           monthlyData={monthlyData}
-          utilityTrendData={utilityTrendData}
+          utilityTrendData={filteredUtilityTrendData}
+          utilityRange={utilityRange}
+          onUtilityRangeChange={setUtilityRange}
         />
       </div>
 
@@ -84,25 +101,12 @@ export default function Analytics() {
       <main className="max-w-screen-xl mx-auto px-6 pt-8">
         {/* Header */}
         <section className="mb-10">
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-            <div>
-              <span className="text-primary font-bold tracking-widest uppercase text-xs mb-2 block font-label">Analytics Ledger</span>
-              <h1 className="text-4xl md:text-5xl font-headline font-extrabold tracking-tight text-on-surface">Monthly Summary</h1>
-              <p className="text-on-surface-variant mt-2 max-w-md">
-                Comprehensive view of shared expenses across all housemates.
-              </p>
-            </div>
-            <div className="bg-surface-container-lowest p-6 rounded-2xl shadow-sm flex items-center gap-6 border border-outline-variant/15">
-              <div>
-                <span className="block text-xs font-label uppercase tracking-wider text-outline mb-1">Total Spent</span>
-                <span className="text-3xl font-headline font-bold text-on-surface">₹{total.toLocaleString()}</span>
-              </div>
-              <div className="h-10 w-px bg-outline-variant/30" />
-              <div>
-                <span className="block text-xs font-label uppercase tracking-wider text-secondary mb-1">Savings</span>
-                <span className="text-3xl font-headline font-bold text-secondary">+₹{savings.toLocaleString()}</span>
-              </div>
-            </div>
+          <div>
+            <span className="text-primary font-bold tracking-widest uppercase text-xs mb-2 block font-label">Analytics Ledger</span>
+            <h1 className="text-4xl md:text-5xl font-headline font-extrabold tracking-tight text-on-surface">Monthly Summary</h1>
+            <p className="text-on-surface-variant mt-2 max-w-md">
+              Comprehensive view of shared expenses across all housemates.
+            </p>
           </div>
         </section>
 
@@ -128,7 +132,7 @@ export default function Analytics() {
                       ))}
                     </Pie>
                     <Tooltip
-                      formatter={(v) => [`₹${v.toLocaleString()}`, 'Amount']}
+                      formatter={(v) => [formatCurrency(v, currency), 'Amount']}
                       contentStyle={{ borderRadius: '12px', border: 'none', background: '#ffffff', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}
                     />
                   </PieChart>
@@ -140,7 +144,7 @@ export default function Analytics() {
               )}
             </div>
             <div className="mt-3 text-center">
-              <p className="text-2xl font-headline font-bold text-on-surface">₹{Math.round(total).toLocaleString()}</p>
+              <p className="text-2xl font-headline font-bold text-on-surface">{formatCurrency(Math.round(total), currency)}</p>
               <p className="text-[10px] uppercase tracking-widest text-outline">Total Spent</p>
             </div>
             <div className="space-y-3 mt-4">
@@ -177,7 +181,7 @@ export default function Analytics() {
                   />
                   <YAxis hide />
                   <Tooltip
-                    formatter={(v) => [`₹${v.toLocaleString()}`, 'Shared Spent']}
+                    formatter={(v) => [formatCurrency(v, currency), 'Shared Spent']}
                     contentStyle={{ borderRadius: '12px', border: 'none', background: '#ffffff', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}
                     cursor={{ fill: '#5744cf10', radius: 8 }}
                   />
@@ -192,13 +196,31 @@ export default function Analytics() {
           </div>
 
           <div className="lg:col-span-12 bg-surface-container-lowest rounded-2xl p-8 border border-outline-variant/15">
-            <div className="flex justify-between items-center mb-8">
-              <h3 className="text-xl font-headline font-bold">Utility Bills Trend</h3>
-              <span className="px-3 py-1 bg-surface-container-high rounded-full text-xs font-bold text-on-surface-variant">Water vs Electricity</span>
+            <div className="flex flex-col gap-4 mb-8 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <h3 className="text-xl font-headline font-bold">Utility Bills Trend</h3>
+                <p className="text-sm text-on-surface-variant mt-1">Water vs electricity over the selected period.</p>
+              </div>
+              <div className="inline-flex flex-wrap gap-2 rounded-2xl bg-surface-container-high/80 p-1.5 border border-outline-variant/20 shadow-sm">
+                {UTILITY_RANGE_OPTIONS.map((option) => {
+                  const active = utilityRange === option.value
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => setUtilityRange(option.value)}
+                      className={`min-w-[3.5rem] px-3 py-2 rounded-xl text-xs font-bold tracking-wide transition-all ${active ? 'bg-primary text-on-primary shadow-md shadow-primary/20' : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container'}`}
+                      aria-pressed={active}
+                    >
+                      {option.label}
+                    </button>
+                  )
+                })}
+              </div>
             </div>
-            {utilityTrendData.length > 0 ? (
+            {filteredUtilityTrendData.length > 0 ? (
               <ResponsiveContainer width="100%" height={260}>
-                <AreaChart data={utilityTrendData}>
+                <AreaChart data={filteredUtilityTrendData}>
                   <defs>
                     <linearGradient id="waterFillMobile" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#59dad1" stopOpacity={0.35} />
@@ -213,7 +235,7 @@ export default function Analytics() {
                   <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 12, fontWeight: 700, fill: '#787586' }} />
                   <YAxis hide />
                   <Tooltip
-                    formatter={(v) => [`₹${Number(v || 0).toLocaleString()}`, 'Amount']}
+                    formatter={(v) => [formatCurrency(Number(v || 0), currency), 'Amount']}
                     contentStyle={{ borderRadius: '12px', border: 'none', background: '#ffffff', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}
                   />
                   <Legend />
@@ -247,7 +269,7 @@ export default function Analytics() {
                       <div className="flex-1">
                         <div className="flex justify-between mb-1">
                           <span className="font-semibold text-sm text-on-surface">{c.name}</span>
-                          <span className="font-bold text-sm text-primary">₹{c.amount.toLocaleString()}</span>
+                          <span className="font-bold text-sm text-primary">{formatCurrency(c.amount, currency)}</span>
                         </div>
                         <div className="w-full h-2 bg-surface-container rounded-full overflow-hidden">
                           <div

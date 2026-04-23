@@ -48,6 +48,7 @@ export default function App() {
           <Route path="/expenses/add"     element={<AddExpense />} />
           <Route path="/expenses/:id"     element={<ExpenseDetails />} />
           <Route path="/balances"         element={<Balances />} />
+          <Route path="/ledger"           element={<Balances />} />
           <Route path="/tasks"            element={<Tasks />} />
           <Route path="/analytics"        element={<Analytics />} />
           <Route path="/settings"         element={<HouseSettings />} />

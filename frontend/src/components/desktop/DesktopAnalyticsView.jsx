@@ -3,7 +3,21 @@ import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveCo
 
 const COLORS = ['#6a5df6', '#57d0c5', '#f6b15a', '#f09595', '#9fe1cb']
 
-export default function DesktopAnalyticsView({ summaryData, categoryData = [], monthlyData = [], utilityTrendData = [] }) {
+const UTILITY_RANGE_OPTIONS = [
+  { value: '3M', label: 'Last 3 Months' },
+  { value: '6M', label: 'Last 6 Months' },
+  { value: '12M', label: 'Last 12 Months' },
+  { value: 'ALL', label: 'All Time' },
+]
+
+export default function DesktopAnalyticsView({
+  summaryData,
+  categoryData = [],
+  monthlyData = [],
+  utilityTrendData = [],
+  utilityRange = '6M',
+  onUtilityRangeChange,
+}) {
   const totalSpent = summaryData?.totalExpenses || 0
   const hasCategoryData = categoryData.length > 0
   const hasMonthlyData = monthlyData.length > 0
@@ -105,7 +119,22 @@ export default function DesktopAnalyticsView({ summaryData, categoryData = [], m
         <section className="col-span-12 bg-white rounded-3xl p-5 border border-slate-200">
           <div className="flex justify-between items-center mb-4">
             <h4 className="text-2xl font-black tracking-tight">Utility Bills Variation</h4>
-            <span className="text-xs font-semibold text-slate-400 uppercase tracking-widest">Water vs Electricity</span>
+            <div className="inline-flex flex-wrap gap-2 rounded-2xl bg-[#f4f5f9] p-1.5 border border-slate-200">
+              {UTILITY_RANGE_OPTIONS.map((option) => {
+                const active = utilityRange === option.value
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => onUtilityRangeChange?.(option.value)}
+                    className={`min-w-[4.5rem] px-3 py-2 rounded-xl text-xs font-bold tracking-wide transition-all ${active ? 'signature-gradient text-white shadow-lg shadow-primary/15' : 'text-slate-500 hover:text-slate-900 hover:bg-white'}`}
+                    aria-pressed={active}
+                  >
+                    {option.label}
+                  </button>
+                )
+              })}
+            </div>
           </div>
 
           {utilityTrendData.length > 0 ? (

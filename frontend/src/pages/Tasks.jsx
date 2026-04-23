@@ -106,27 +106,6 @@ export default function Tasks() {
 
   const boardContent = (
     <>
-      {/* Weekly rotation banner */}
-      {weekAssignee && (
-        <section className="mb-10">
-          <div className="relative overflow-hidden rounded-xl bg-gradient-to-r from-primary to-primary-container p-1 shadow-lg">
-            <div className="bg-surface-container-lowest/10 backdrop-blur-md rounded-[1.25rem] px-6 py-4 flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="bg-white/20 p-2 rounded-full">
-                  <span className="material-symbols-outlined text-white">auto_awesome</span>
-                </div>
-                <div>
-                  <p className="text-white/80 text-xs font-bold uppercase tracking-widest mb-0.5">Weekly Rotation</p>
-                  <h2 className="text-white text-lg font-bold font-headline">
-                    This week: {weekAssignee.name?.split(' ')[0]}'s turn for common area
-                  </h2>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-      )}
-
       {/* Header */}
       <div className="flex items-end justify-between mb-8 lg:hidden">
         <div>

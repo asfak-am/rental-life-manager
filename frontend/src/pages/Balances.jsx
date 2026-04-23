@@ -13,7 +13,6 @@ export default function Balances() {
   const { members } = useHouse()
   const { user }    = useAuth()
   const qc          = useQueryClient()
-  const [simplified, setSimplified] = useState(false)
   const [settling, setSettling]     = useState(null)
   const preferredCurrency = user?.currency || 'LKR'
 
@@ -33,17 +32,11 @@ export default function Balances() {
     queryFn: () => expenseService.getAll({ category: 'Rent' }).then(r => r.data),
   })
 
-  const { data: simData } = useQuery({
-    queryKey: ['balance-simplified'],
-    queryFn: () => balanceService.getSimplified().then(r => r.data),
-  })
-
   const settleMutation = useMutation({
     mutationFn: (data) => balanceService.settle(data),
     onSuccess: () => {
       toast.success('Payment settled!')
       qc.invalidateQueries(['balance-raw'])
-      qc.invalidateQueries(['balance-simplified'])
       setSettling(null)
     },
     onError: () => toast.error('Failed to settle'),
@@ -54,7 +47,6 @@ export default function Balances() {
   const iOwe       = rawData?.debts?.filter(d => d.from === user?._id) || []
   const owedToMe   = rawData?.debts?.filter(d => d.to === user?._id)   || []
   const totalHouse = rawData?.totalHouseExpenses ?? 0
-  const savedTx    = rawData?.debts?.length - (simData?.transactions?.length || 0)
 
   const currentMonthRent = (rentData?.expenses || []).filter(expense => {
     if (expense.billMonth === currentBillMonth) return true
@@ -81,82 +73,18 @@ export default function Balances() {
     return n.split(' ').map(x => x[0]).join('').toUpperCase().slice(0, 2)
   }
 
-  const displayDebts = simplified
-    ? (simData?.transactions || [])
-    : (rawData?.debts || [])
+  const displayDebts = rawData?.debts || []
 
   const ledgerContent = (
     <>
       {/* Header */}
       <section className="mb-10">
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-          <div>
-            <h1 className="text-4xl font-headline font-extrabold tracking-tight text-on-surface mb-2">Financial Ledger</h1>
-            <p className="text-on-surface-variant max-w-md font-medium">Keep the house harmony high by settling balances.</p>
-          </div>
-
-          {/* Simplified toggle */}
-          <div className="flex items-center gap-3 bg-surface-container-low p-2 rounded-2xl">
-            <div className="flex items-center gap-2 px-3">
-              <span className="text-xs font-label font-bold uppercase tracking-widest text-on-surface-variant">Simplified Debts</span>
-              {savedTx > 0 && (
-                <span className="bg-secondary text-on-secondary text-[10px] px-2 py-0.5 rounded-full font-bold">
-                  {savedTx} saved
-                </span>
-              )}
-            </div>
-            <button
-              onClick={() => setSimplified(s => !s)}
-              className={`w-12 h-6 rounded-full relative transition-colors duration-300 ${simplified ? 'bg-primary' : 'bg-surface-container-high'}`}
-            >
-              <span className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all duration-300 ${simplified ? 'right-1' : 'left-1'}`} />
-            </button>
-          </div>
+        <div className="max-w-2xl">
+          <p className="text-on-surface-variant max-w-md font-medium">Keep the house harmony high by settling balances.</p>
         </div>
       </section>
 
-      {/* Bento grid */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-        {/* Hero balance card */}
-        <div className="md:col-span-8 bg-gradient-to-br from-primary to-primary-container p-8 rounded-3xl text-on-primary shadow-xl relative overflow-hidden flex flex-col justify-between min-h-[280px] min-w-0">
-          <div className="relative z-10">
-            <span className="text-xs font-label font-bold uppercase tracking-[0.2em] opacity-80">Total House Balance</span>
-            <h2 className="mt-2 text-[clamp(2.2rem,10vw,4.4rem)] leading-none font-headline font-black tracking-tighter break-words max-w-full">
-              {formatCurrency(totalHouse, preferredCurrency)}
-            </h2>
-            <div className="mt-4 flex items-center gap-2 text-secondary-fixed">
-              <span className="material-symbols-outlined text-sm">group</span>
-              <span className="text-sm font-semibold tracking-wide break-words">{members.length} members · {displayDebts.length} active debts</span>
-            </div>
-          </div>
-          <div className="relative z-10 flex gap-4 mt-8">
-            <span className={`px-4 py-2 rounded-2xl font-bold text-sm ${netAmount >= 0 ? 'bg-on-primary text-secondary' : 'bg-on-primary text-error'}`}>
-              {netAmount >= 0 ? `You're owed ${formatCurrency(netAmount, preferredCurrency)}` : `You owe ${formatCurrency(Math.abs(netAmount), preferredCurrency)}`}
-            </span>
-          </div>
-          <div className="absolute -right-10 -bottom-10 w-64 h-64 bg-on-primary/10 rounded-full blur-3xl" />
-          <div className="absolute right-12 top-12 w-32 h-32 border-[20px] border-on-primary/5 rounded-full" />
-        </div>
-
-        {/* Side stats */}
-        <div className="md:col-span-4 flex flex-col gap-6">
-          <div className="bg-surface-container-lowest p-6 rounded-3xl flex-1 flex flex-col justify-center">
-            <span className="text-xs font-label font-bold text-on-surface-variant uppercase tracking-widest mb-1">Status</span>
-            <h3 className={`text-2xl font-headline font-bold ${netAmount >= -0.5 ? 'text-secondary' : 'text-error'}`}>
-              {netAmount >= -0.5 ? 'Balanced' : 'Owes'}
-            </h3>
-            <p className="text-sm text-on-surface-variant mt-2 leading-relaxed">
-              {netAmount >= -0.5 ? 'No overdue payments detected.' : `Settle ${formatCurrency(Math.abs(netAmount), preferredCurrency)} to clear.`}
-            </p>
-          </div>
-          <div className="bg-tertiary-container text-on-tertiary p-6 rounded-3xl flex-1">
-            <span className="material-symbols-outlined text-3xl">savings</span>
-            <span className="text-xs font-label font-bold uppercase tracking-widest opacity-80 block mt-2">House Savings</span>
-            <p className="text-2xl font-headline font-black">{formatCurrency(simData?.savedAmount || 0, preferredCurrency)}</p>
-          </div>
-        </div>
-
-        {/* Monthly rent status */}
         <section className="md:col-span-12 bg-surface-container-lowest rounded-3xl p-6 border border-outline-variant/10">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
@@ -168,6 +96,21 @@ export default function Balances() {
               {rentStatusLabel}
             </span>
           </div>
+        </section>
+
+        <section className="md:col-span-12 bg-surface-container-lowest rounded-3xl p-6 border border-outline-variant/10">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-widest text-on-surface-variant">House Balance</p>
+              <h3 className="text-2xl font-headline font-black mt-1">{formatCurrency(totalHouse, preferredCurrency)}</h3>
+            </div>
+            <span className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest ${netAmount >= -0.5 ? 'bg-secondary-container text-on-secondary-container' : 'bg-error-container text-on-error-container'}`}>
+              {netAmount >= -0.5 ? 'Balanced' : 'Owes'}
+            </span>
+          </div>
+          <p className="text-sm text-on-surface-variant mt-2">
+            {members.length} members · {displayDebts.length} active debts
+          </p>
         </section>
 
         {/* You Owe */}
@@ -254,7 +197,7 @@ export default function Balances() {
   return (
     <>
       <div className="hidden lg:block">
-        <DesktopAppShell title="Financial Ledger" subtitle="Keep your house balances clear and settled" searchPlaceholder="Search members...">
+        <DesktopAppShell title="Financial Ledger"  searchPlaceholder="Search members...">
           {ledgerContent}
         </DesktopAppShell>
       </div>

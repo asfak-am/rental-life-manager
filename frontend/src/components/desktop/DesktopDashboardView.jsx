@@ -21,6 +21,10 @@ export default function DesktopDashboardView({
   inviteCode = '',
   inviteQrSrc = '',
   utilityTrendData = [],
+  utilityRange = '6M',
+  onUtilityRangeChange,
+  onMarkTaskComplete,
+  isMarkingTaskComplete = false,
   onViewLedger,
   onTransferFunds,
   onOpenInvite,
@@ -40,7 +44,7 @@ export default function DesktopDashboardView({
   }, [balances.length, settledPercent, taskCompletion, tasks.length])
 
   const recent = expenses.slice(0, 4)
-  const upcomingTasks = tasks.filter(task => task.status !== 'completed').slice(0, 3)
+  const upcomingTasks = tasks.filter(task => task.status !== 'completed')
 
   const settledLabel = settledPercent > 0 ? `${settledPercent}% settled` : 'No balances yet'
   const taskLabel = tasks.length ? `${taskCompletion}% complete` : 'No tasks yet'
@@ -112,8 +116,24 @@ export default function DesktopDashboardView({
             <div>
               <p className="text-xs uppercase tracking-widest text-slate-400">Utility Trend</p>
               <h4 className="text-2xl font-black mt-1">Water vs Electricity</h4>
+              <p className="text-sm text-slate-500 mt-1">Tap a range to filter the graph.</p>
             </div>
-            <span className="text-xs font-semibold text-slate-400 uppercase tracking-widest">Last 6 Months</span>
+            <div className="inline-flex flex-wrap gap-2 rounded-2xl bg-[#f4f5f9] p-1.5 border border-slate-200">
+              {['3M', '6M', '12M', 'ALL'].map((range) => {
+                const active = utilityRange === range
+                return (
+                  <button
+                    key={range}
+                    type="button"
+                    onClick={() => onUtilityRangeChange?.(range)}
+                    className={`min-w-[4.5rem] px-3 py-2 rounded-xl text-xs font-bold tracking-wide transition-all ${active ? 'signature-gradient text-white shadow-lg shadow-primary/15' : 'text-slate-500 hover:text-slate-900 hover:bg-white'}`}
+                    aria-pressed={active}
+                  >
+                    {range === 'ALL' ? 'All' : range}
+                  </button>
+                )
+              })}
+            </div>
           </div>
 
           {utilityTrendData.length > 0 ? (
@@ -151,7 +171,7 @@ export default function DesktopDashboardView({
         </section>
 
         {/* Recent Expenses */}
-        <section className="col-span-8 bg-white rounded-3xl p-6 border border-slate-200">
+        <section className="col-span-6 bg-white rounded-3xl p-6 border border-slate-200">
           <h4 className="text-2xl font-black mb-4">Recent Expenses</h4>
 
           {recent.map(exp => (
@@ -163,14 +183,67 @@ export default function DesktopDashboardView({
         </section>
 
         {/* Tasks */}
-        <section className="col-span-4 bg-white rounded-3xl p-6 border border-slate-200">
-          <h4 className="text-2xl font-black mb-4">Tasks</h4>
-
-          {upcomingTasks.map(task => (
-            <div key={task._id} className="bg-[#f7f8fb] p-3 rounded-xl mb-2">
-              {task.title}
+        <section className="col-span-6 bg-white rounded-3xl p-6 border border-slate-200 relative overflow-hidden">
+          <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#6a5df6] via-[#57d0c5] to-[#f6b15a]" />
+          <div className="flex items-center justify-between gap-3 mb-4">
+            <div>
+              <h4 className="text-2xl font-black">Tasks</h4>
+              <p className="text-sm text-slate-500 mt-1">{upcomingTasks.length} pending items</p>
             </div>
-          ))}
+            <span className="px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest bg-[#f4f5f9] text-slate-500">
+              Live
+            </span>
+          </div>
+
+          <div className="space-y-3">
+            {upcomingTasks.length === 0 ? (
+              <div className="rounded-2xl bg-[#f7f8fb] p-4 text-sm text-slate-500">
+                No open tasks right now.
+              </div>
+            ) : upcomingTasks.map((task, index) => {
+              const isInProgress = task.status === 'in-progress'
+              const isPending = !task.status || task.status === 'todo' || task.status === 'pending'
+              const accentClasses = [
+                'bg-[#ecebff] text-[#5f52f2]',
+                'bg-[#e9faf7] text-[#0f9d8d]',
+                'bg-[#fff4e6] text-[#d97706]',
+                'bg-[#fef2f2] text-[#dc2626]',
+              ]
+              const accent = accentClasses[index % accentClasses.length]
+
+              return (
+                <div key={task._id} className="rounded-2xl border border-slate-200 bg-[#f8f9fc] p-4 flex items-start gap-3 shadow-[0_10px_24px_-18px_rgba(15,23,42,0.35)]">
+                  <div className={`w-10 h-10 rounded-xl grid place-items-center flex-shrink-0 ${accent}`}>
+                    <span className="material-symbols-outlined text-[18px]" style={{ fontVariationSettings: "'FILL' 1" }}>
+                      {isInProgress ? 'progress_activity' : isPending ? 'radio_button_unchecked' : 'check_circle'}
+                    </span>
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="font-semibold text-slate-900 truncate">{task.title}</p>
+                      <span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest shrink-0 ${isInProgress ? 'bg-amber-100 text-amber-700' : isPending ? 'bg-slate-200 text-slate-600' : 'bg-emerald-100 text-emerald-700'}`}>
+                        {isInProgress ? 'Working' : isPending ? 'Pending' : 'Done'}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-500 mt-1 line-clamp-2">
+                      {task.description || 'Household task to keep things moving.'}
+                    </p>
+                    <div className="mt-3 flex justify-end">
+                      <button
+                        type="button"
+                        onClick={() => onMarkTaskComplete?.(task)}
+                        disabled={isMarkingTaskComplete}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-semibold uppercase tracking-[0.18em] bg-white text-[#5f52f2] border border-[#d8d3ff] hover:bg-[#ecebff] disabled:opacity-60 disabled:cursor-not-allowed"
+                      >
+                        <span className="material-symbols-outlined text-[14px]" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+                        Mark as complete
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
         </section>
 
         {/* Rent */}
@@ -182,7 +255,7 @@ export default function DesktopDashboardView({
 
           <div className="mt-5 flex gap-3">
             <button onClick={onTransferFunds} className="px-5 py-3 signature-gradient rounded-xl text-white font-semibold">
-              Transfer Funds
+              Add Expenses
             </button>
 
             <button onClick={onViewLedger} className="px-5 py-3 rounded-xl bg-[#ecebff] text-[#5f52f2] font-semibold">

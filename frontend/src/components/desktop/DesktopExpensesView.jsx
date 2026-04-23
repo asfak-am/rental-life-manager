@@ -79,18 +79,18 @@ export default function DesktopExpensesView({ expenses = [], rentHistory = [], s
       rightActions={(
         <>
           <button type="button" onClick={exportPdf} className="px-4 py-2 rounded-xl border border-slate-300 bg-white text-slate-700 text-sm font-semibold">Export PDF</button>
-          <button onClick={onAdd} className="px-4 py-2 rounded-xl signature-gradient text-white text-sm font-semibold">+ Log Expense</button>
+          <button onClick={onAdd} className="px-4 py-2 rounded-xl signature-gradient text-white text-sm font-semibold">+ Add Expense</button>
         </>
       )}
     >
       <div className="grid grid-cols-12 gap-4 mb-6">
         <div className="col-span-3 bg-white rounded-2xl p-5 border border-slate-200">
           <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Total Outflow</p>
-          <p className="text-[clamp(1.75rem,2.4vw,2.6rem)] font-black mt-2 leading-tight break-words">{formatCurrency(totalExpenses, currency)}</p>
+          <p className="text-[clamp(1.5rem,2vw,2.2rem)] font-black mt-2 leading-tight break-words">{formatCurrency(totalExpenses, currency)}</p>
         </div>
         <div className="col-span-3 bg-white rounded-2xl p-5 border border-slate-200">
           <p className="text-xs uppercase tracking-[0.2em] text-slate-400">My Share</p>
-          <p className="text-[clamp(1.75rem,2.4vw,2.6rem)] font-black mt-2 leading-tight break-words">{formatCurrency(myShare, currency)}</p>
+          <p className="text-[clamp(1.5rem,2vw,2.2rem)] font-black mt-2 leading-tight break-words">{formatCurrency(myShare, currency)}</p>
         </div>
         <div className="col-span-6 signature-gradient rounded-2xl p-5 text-white">
           <p className="text-xs uppercase tracking-[0.2em] opacity-80">House Savings</p>
@@ -116,15 +116,6 @@ export default function DesktopExpensesView({ expenses = [], rentHistory = [], s
       </div>
 
       <section className="bg-white rounded-3xl border border-slate-200 overflow-hidden">
-        <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between">
-          <div className="flex items-center gap-5 text-xs font-bold uppercase tracking-widest text-slate-400">
-            <span className="text-[#5f52f2]">All Expenses</span>
-            {categoryBreakdown.slice(0, 3).map(item => (
-              <span key={item.name}>{item.name}</span>
-            ))}
-          </div>
-          <span className="text-xs font-semibold text-slate-400">Live data</span>
-        </div>
 
         {expenses.length === 0 ? (
           <div className="px-5 py-14 text-center text-slate-500">

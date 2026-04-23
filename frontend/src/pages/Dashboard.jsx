@@ -1,4 +1,4 @@
-﻿import { useMemo } from 'react'
+﻿import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
@@ -11,6 +11,13 @@ import BottomNav from '../components/BottomNav'
 import DesktopAppShell from '../components/desktop/DesktopAppShell'
 import DesktopDashboardView from '../components/desktop/DesktopDashboardView'
 import { formatCurrency } from '../utils/currency'
+
+const UTILITY_RANGE_OPTIONS = [
+  { value: '3M', label: '3M', months: 3 },
+  { value: '6M', label: '6M', months: 6 },
+  { value: '12M', label: '12M', months: 12 },
+  { value: 'ALL', label: 'All', months: null },
+]
 
 function harmonyScore(balances = [], totalExpenses = 0) {
   if (totalExpenses === 0) return 100
@@ -37,6 +44,7 @@ export default function Dashboard() {
   const navigate = useNavigate()
   const qc = useQueryClient()
   const preferredCurrency = user?.currency || 'LKR'
+  const [utilityRange, setUtilityRange] = useState('6M')
 
   const noHouseView = (
     <>
@@ -165,6 +173,16 @@ export default function Dashboard() {
     onError: (err) => toast.error(err.response?.data?.message || 'Failed to pay rent'),
   })
 
+  const completeTaskMutation = useMutation({
+    mutationFn: (task) => taskService.update(task._id, { status: 'completed' }),
+    onSuccess: () => {
+      toast.success('Task marked complete')
+      qc.invalidateQueries(['tasks-dashboard'])
+      qc.invalidateQueries(['tasks'])
+    },
+    onError: (err) => toast.error(err.response?.data?.message || 'Failed to update task'),
+  })
+
   const myBalance = balanceData?.balances?.find(b => b.userId === user?._id)
   const netAmount = myBalance?.net ?? 0
   const isOwed = netAmount > 0
@@ -205,7 +223,6 @@ export default function Dashboard() {
 
     return [...monthMap.values()]
       .sort((a, b) => a.key.localeCompare(b.key))
-      .slice(-6)
       .map(item => {
         const [year, month] = item.key.split('-')
         const date = new Date(Number(year), Number(month) - 1, 1)
@@ -216,6 +233,12 @@ export default function Dashboard() {
         }
       })
   }, [utilityExpensesData?.expenses])
+
+  const filteredUtilityTrendData = useMemo(() => {
+    const selected = UTILITY_RANGE_OPTIONS.find(option => option.value === utilityRange)
+    if (!selected || selected.months == null) return utilityTrendData
+    return utilityTrendData.slice(-selected.months)
+  }, [utilityRange, utilityTrendData])
 
   const categoryIcons = {
     Food: { icon: 'shopping_basket', bg: 'bg-amber-100', text: 'text-amber-700' },
@@ -246,7 +269,11 @@ export default function Dashboard() {
           currency={preferredCurrency}
           inviteCode={inviteCode}
           inviteQrSrc={inviteQrSrc}
-          utilityTrendData={utilityTrendData}
+          utilityTrendData={filteredUtilityTrendData}
+          utilityRange={utilityRange}
+          onUtilityRangeChange={setUtilityRange}
+          onMarkTaskComplete={(task) => completeTaskMutation.mutate(task)}
+          isMarkingTaskComplete={completeTaskMutation.isPending}
           onViewLedger={() => navigate('/balances')}
           onTransferFunds={() => navigate('/expenses/add')}
           onOpenInvite={() => navigate('/settings')}
@@ -306,8 +333,24 @@ export default function Dashboard() {
                 <div>
                   <span className="text-on-primary-container/80 text-sm font-semibold uppercase tracking-widest">Utility Trend</span>
                   <h2 className="text-2xl font-extrabold mt-2 tracking-tight">Water vs Electricity</h2>
+                  <p className="text-sm text-on-primary/80 mt-1">Tap a range to filter the chart.</p>
                 </div>
-                <span className="px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-widest bg-white/15 text-on-primary">Last 6 Months</span>
+                <div className="inline-flex flex-wrap gap-2 rounded-2xl bg-white/10 p-1.5 border border-white/10 backdrop-blur-sm">
+                  {UTILITY_RANGE_OPTIONS.map((option) => {
+                    const active = utilityRange === option.value
+                    return (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() => setUtilityRange(option.value)}
+                        className={`min-w-[3.5rem] px-3 py-2 rounded-xl text-xs font-bold tracking-wide transition-all ${active ? 'bg-white text-primary shadow-lg' : 'text-white/85 hover:text-white hover:bg-white/10'}`}
+                        aria-pressed={active}
+                      >
+                        {option.label}
+                      </button>
+                    )
+                  })}
+                </div>
               </div>
               <div className="h-[240px] min-w-0">
                 {utilityTrendData.length > 0 ? (

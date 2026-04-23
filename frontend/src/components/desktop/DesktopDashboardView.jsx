@@ -247,6 +247,52 @@ export default function DesktopDashboardView({
         </section>
 
         {/* Rent */}
+        <section className="col-span-12 bg-white rounded-[30px] p-6 border border-slate-200">
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Monthly Rent</p>
+              <h3 className="text-2xl font-black mt-1">{formatCurrency(rentStatus?.myRent?.amountDue || 0, currency)}</h3>
+              <p className="text-sm text-slate-500 mt-1">{rentStatus?.month || 'Current month'} · {rentPaid ? 'Paid' : 'Pending'}</p>
+            </div>
+            <button
+              type="button"
+              onClick={onPayRent}
+              disabled={payingRent || rentPaid || !rentStatus?.earlyPayAllowed}
+              className="px-5 py-3 signature-gradient text-white font-bold rounded-xl disabled:opacity-60"
+            >
+              {rentPaid ? 'Rent Paid' : payingRent ? 'Paying...' : 'Pay Monthly Rent'}
+            </button>
+          </div>
+
+          {(rentStatus?.memberStatuses || []).length > 0 && (
+            <div className="mt-5 grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {rentStatus.memberStatuses.map(member => {
+                const paid = member.status === 'paid'
+                return (
+                  <div
+                    key={member.userId}
+                    className={`p-4 rounded-2xl border ${paid ? 'bg-emerald-50 border-emerald-300' : 'bg-red-50 border-red-300'}`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`w-8 h-8 rounded-lg border-2 grid place-items-center flex-shrink-0 ${paid ? 'border-emerald-600 bg-emerald-600 text-white' : 'border-red-500 bg-white text-red-500'}`}>
+                        <span className="material-symbols-outlined text-[16px]" style={{ fontVariationSettings: "'FILL' 1" }}>
+                          {paid ? 'check' : 'close'}
+                        </span>
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-bold text-sm truncate">{member.name}</p>
+                        <p className={`text-xs font-semibold ${paid ? 'text-emerald-700' : 'text-red-700'}`}>
+                          {paid ? 'Paid' : 'Pending'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </section>
+
         {/* Balance Section */}
         <section className="col-span-12 bg-white rounded-[30px] p-5 border border-slate-200">
           <p className="text-xs uppercase text-slate-400">House Balance</p>

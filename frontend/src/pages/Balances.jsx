@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
-import { balanceService, expenseService } from '../services'
+import { balanceService, expenseService, houseService } from '../services'
 import { useHouse } from '../context/HouseContext'
 import { useAuth } from '../context/AuthContext'
 import TopBar from '../components/TopBar'
@@ -30,6 +30,11 @@ export default function Balances() {
   const { data: rentData } = useQuery({
     queryKey: ['rent-expenses', currentBillMonth],
     queryFn: () => expenseService.getAll({ category: 'Rent' }).then(r => r.data),
+  })
+
+  const { data: rentStatus } = useQuery({
+    queryKey: ['rent-status'],
+    queryFn: () => houseService.getRentStatus().then(r => r.data),
   })
 
   const settleMutation = useMutation({
@@ -63,9 +68,11 @@ export default function Balances() {
     return { amount: Number(participant.amountOwed || 0), paid: Boolean(participant.settled) }
   }).filter(Boolean)
 
-  const rentDue = myRentItems.reduce((sum, item) => sum + item.amount, 0)
-  const rentPaid = myRentItems.length > 0 && myRentItems.every(item => item.paid)
-  const rentStatusLabel = myRentItems.length === 0 ? 'Not Recorded' : (rentPaid ? 'Paid' : 'Pending')
+  // Use rentStatus for the correct monthly rent amount (from house settings, divided by members)
+  // Fall back to expense-based calculation if rentStatus is not available
+  const rentDue = rentStatus?.myRent?.amountDue ?? myRentItems.reduce((sum, item) => sum + item.amount, 0)
+  const rentPaid = rentStatus?.myRent?.status === 'paid' ?? (myRentItems.length > 0 && myRentItems.every(item => item.paid))
+  const rentStatusLabel = !rentStatus?.myRent ? 'Not Recorded' : (rentPaid ? 'Paid' : 'Pending')
 
   const getName = (id) => members.find(m => m._id === id)?.name || 'Unknown'
   const getInit = (id) => {
@@ -97,6 +104,37 @@ export default function Balances() {
             </span>
           </div>
         </section>
+
+        {/* Member Rent Payment Status */}
+        {(rentStatus?.memberStatuses || []).length > 0 && (
+          <section className="md:col-span-12">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              {rentStatus.memberStatuses.map(member => {
+                const paid = member.status === 'paid'
+                return (
+                  <div
+                    key={member.userId}
+                    className={`p-4 rounded-2xl border ${paid ? 'bg-emerald-50 border-emerald-300' : 'bg-red-50 border-red-300'}`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`w-8 h-8 rounded-lg border-2 grid place-items-center flex-shrink-0 ${paid ? 'border-emerald-600 bg-emerald-600 text-white' : 'border-red-500 bg-white text-red-500'}`}>
+                        <span className="material-symbols-outlined text-[16px]" style={{ fontVariationSettings: "'FILL' 1" }}>
+                          {paid ? 'check' : 'close'}
+                        </span>
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-bold text-sm truncate">{member.name}</p>
+                        <p className={`text-xs font-semibold ${paid ? 'text-emerald-700' : 'text-red-700'}`}>
+                          {paid ? 'Paid' : 'Pending'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </section>
+        )}
 
         <section className="md:col-span-12 bg-surface-container-lowest rounded-3xl p-6 border border-outline-variant/10">
           <div className="flex flex-wrap items-center justify-between gap-3">

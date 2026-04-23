@@ -12,7 +12,7 @@ const app = express()
 
 app.use(cors({
   origin: [
-    process.env.CLIENT_URL || 'https://rental-life-manager.onrender.com',
+    process.env.CLIENT_URL || 'https://rental-life.vercel.app',
     'http://localhost:5173',
     'http://localhost:5174',
   ],

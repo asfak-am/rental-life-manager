@@ -47,8 +47,12 @@ export default function VerifyOtp() {
   }
 
   return (
-    <div className="bg-surface font-body text-on-surface min-h-screen flex items-center justify-center p-6">
-      <div className="w-full max-w-md bg-surface-container-lowest rounded-xl p-8 border border-outline-variant/15">
+    <div className="bg-surface font-body text-on-surface min-h-screen flex items-center justify-center p-6 relative overflow-hidden">
+     {/* Background gradient with blur */}
+     <div className="absolute top-[-10%] left-[-5%] w-[40%] h-[40%] bg-primary-fixed/20 rounded-full blur-[120px] -z-10" />
+     <div className="absolute bottom-[-10%] right-[-5%] w-[30%] h-[30%] bg-secondary-fixed/20 rounded-full blur-[100px] -z-10" />
+
+     <div className="w-full max-w-md bg-surface-container-lowest rounded-xl p-8 border border-outline-variant/15 relative z-10">
         <h1 className="text-2xl font-headline font-bold mb-2">Verify Email</h1>
         <p className="text-sm text-on-surface-variant mb-6">Enter the 6-digit OTP sent to your email.</p>
 

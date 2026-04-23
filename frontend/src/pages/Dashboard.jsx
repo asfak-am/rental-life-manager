@@ -1,6 +1,8 @@
+﻿import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
+import { AreaChart, Area, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { expenseService, balanceService, houseService, taskService } from '../services'
 import { useAuth } from '../context/AuthContext'
 import { useHouse } from '../context/HouseContext'
@@ -10,7 +12,6 @@ import DesktopAppShell from '../components/desktop/DesktopAppShell'
 import DesktopDashboardView from '../components/desktop/DesktopDashboardView'
 import { formatCurrency } from '../utils/currency'
 
-// Harmony score: 0-100 based on ratio of completed tasks and settled debts
 function harmonyScore(balances = [], totalExpenses = 0) {
   if (totalExpenses === 0) return 100
   const unsettled = balances.filter(b => Math.abs(b.amount) > 0.5).length
@@ -24,7 +25,7 @@ function scoreLabel(s) {
   return { label: 'Low', color: 'text-error' }
 }
 
-const CIRCUMFERENCE = 2 * Math.PI * 88 // r=88
+const CIRCUMFERENCE = 2 * Math.PI * 88
 
 function getMemberName(member) {
   return member?.displayName?.trim() || member?.name?.trim() || 'Unknown'
@@ -130,6 +131,12 @@ export default function Dashboard() {
     enabled: !!house,
   })
 
+  const { data: utilityExpensesData } = useQuery({
+    queryKey: ['dashboard-utility-expenses'],
+    queryFn: () => expenseService.getAll().then(r => r.data),
+    enabled: !!house,
+  })
+
   const { data: tasksData } = useQuery({
     queryKey: ['tasks-dashboard'],
     queryFn: () => taskService.getAll().then(r => r.data),
@@ -158,10 +165,10 @@ export default function Dashboard() {
     onError: (err) => toast.error(err.response?.data?.message || 'Failed to pay rent'),
   })
 
-  const myBalance  = balanceData?.balances?.find(b => b.userId === user?._id)
-  const netAmount  = myBalance?.net ?? 0
-  const isOwed     = netAmount > 0
-  const score      = harmonyScore(balanceData?.balances, summaryData?.totalExpenses)
+  const myBalance = balanceData?.balances?.find(b => b.userId === user?._id)
+  const netAmount = myBalance?.net ?? 0
+  const isOwed = netAmount > 0
+  const score = harmonyScore(balanceData?.balances, summaryData?.totalExpenses)
   const { label: sLabel, color: sColor } = scoreLabel(score)
   const dashOffset = CIRCUMFERENCE - (score / 100) * CIRCUMFERENCE
   const settledPercent = balanceData?.balances?.length
@@ -176,13 +183,47 @@ export default function Dashboard() {
     : ''
   const rentPaid = rentStatus?.myRent?.status === 'paid'
 
+  const utilityTrendData = useMemo(() => {
+    const expenses = utilityExpensesData?.expenses || []
+    const monthMap = new Map()
+
+    expenses.forEach(expense => {
+      if (expense.category !== 'Water Bill' && expense.category !== 'Electricity Bill') return
+
+      const key = expense.billMonth
+        ? expense.billMonth
+        : new Date(expense.date).toISOString().slice(0, 7)
+
+      if (!monthMap.has(key)) {
+        monthMap.set(key, { key, water: 0, electricity: 0 })
+      }
+
+      const item = monthMap.get(key)
+      if (expense.category === 'Water Bill') item.water += Number(expense.amount || 0)
+      if (expense.category === 'Electricity Bill') item.electricity += Number(expense.amount || 0)
+    })
+
+    return [...monthMap.values()]
+      .sort((a, b) => a.key.localeCompare(b.key))
+      .slice(-6)
+      .map(item => {
+        const [year, month] = item.key.split('-')
+        const date = new Date(Number(year), Number(month) - 1, 1)
+        return {
+          month: date.toLocaleDateString('en-US', { month: 'short' }),
+          water: item.water,
+          electricity: item.electricity,
+        }
+      })
+  }, [utilityExpensesData?.expenses])
+
   const categoryIcons = {
-    Food:       { icon: 'shopping_basket', bg: 'bg-amber-100',   text: 'text-amber-700'  },
-    Rent:       { icon: 'home',            bg: 'bg-blue-100',    text: 'text-blue-700'   },
-    Utilities:  { icon: 'bolt',            bg: 'bg-purple-100',  text: 'text-purple-700' },
-    'Water Bill': { icon: 'water_drop',    bg: 'bg-cyan-100',    text: 'text-cyan-700'   },
+    Food: { icon: 'shopping_basket', bg: 'bg-amber-100', text: 'text-amber-700' },
+    Rent: { icon: 'home', bg: 'bg-blue-100', text: 'text-blue-700' },
+    Utilities: { icon: 'bolt', bg: 'bg-purple-100', text: 'text-purple-700' },
+    'Water Bill': { icon: 'water_drop', bg: 'bg-cyan-100', text: 'text-cyan-700' },
     'Electricity Bill': { icon: 'electric_bolt', bg: 'bg-yellow-100', text: 'text-yellow-700' },
-    Other:      { icon: 'more_horiz',      bg: 'bg-gray-100',    text: 'text-gray-700'   },
+    Other: { icon: 'more_horiz', bg: 'bg-gray-100', text: 'text-gray-700' },
   }
 
   if (!house) {
@@ -205,6 +246,7 @@ export default function Dashboard() {
           currency={preferredCurrency}
           inviteCode={inviteCode}
           inviteQrSrc={inviteQrSrc}
+          utilityTrendData={utilityTrendData}
           onViewLedger={() => navigate('/balances')}
           onTransferFunds={() => navigate('/expenses/add')}
           onOpenInvite={() => navigate('/settings')}
@@ -221,46 +263,131 @@ export default function Dashboard() {
       <div className="lg:hidden bg-surface font-body text-on-surface min-h-screen pb-32">
         <TopBar />
 
-      <main className="max-w-screen-xl mx-auto px-6 pt-6 space-y-8">
-        {/* Harmony score + balance */}
-        <section className="grid grid-cols-1 md:grid-cols-12 gap-6">
-          {/* Harmony score */}
-          <div className="md:col-span-7 bg-surface-container-lowest rounded-[2rem] p-8 relative overflow-hidden flex flex-col md:flex-row items-center gap-8 border border-outline-variant/10">
-            <div className="relative w-48 h-48 flex items-center justify-center flex-shrink-0">
-              <svg className="w-full h-full transform -rotate-90">
-                <circle className="text-surface-container" cx="96" cy="96" fill="transparent" r="88" stroke="currentColor" strokeWidth="12" />
-                <circle
-                  className="text-primary transition-all duration-700"
-                  cx="96" cy="96" fill="transparent" r="88"
-                  stroke="currentColor"
-                  strokeDasharray={CIRCUMFERENCE}
-                  strokeDashoffset={dashOffset}
-                  strokeLinecap="round"
-                  strokeWidth="12"
-                />
-              </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-4xl font-extrabold tracking-tight text-on-surface">{score}</span>
-                <span className={`text-xs font-bold uppercase tracking-widest ${sColor}`}>{sLabel}</span>
+        <main className="max-w-screen-xl mx-auto px-6 pt-6 space-y-8">
+          <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="bg-surface-container-lowest rounded-[2rem] p-8 border border-outline-variant/10 flex flex-col justify-center">
+              <div className="flex flex-col items-center gap-6 text-center">
+                <div className="relative w-48 h-48 flex items-center justify-center flex-shrink-0">
+                  <svg className="w-full h-full transform -rotate-90">
+                    <circle className="text-surface-container" cx="96" cy="96" fill="transparent" r="88" stroke="currentColor" strokeWidth="12" />
+                    <circle
+                      className="text-primary transition-all duration-700"
+                      cx="96" cy="96" fill="transparent" r="88"
+                      stroke="currentColor"
+                      strokeDasharray={CIRCUMFERENCE}
+                      strokeDashoffset={dashOffset}
+                      strokeLinecap="round"
+                      strokeWidth="12"
+                    />
+                  </svg>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <span className="text-4xl font-extrabold tracking-tight text-on-surface">{score}</span>
+                    <span className={`text-xs font-bold uppercase tracking-widest ${sColor}`}>{sLabel}</span>
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  <h2 className="text-2xl font-bold tracking-tight">House Harmony Score</h2>
+                  <p className="text-on-surface-variant text-sm leading-relaxed">
+                    {score >= 80
+                      ? 'Your household is running smoothly! Bills are paid and tasks are on track.'
+                      : 'Some balances need settling. Settle up to improve your score.'}
+                  </p>
+                  <div className="pt-2">
+                    <span className="inline-flex items-center px-4 py-1.5 rounded-full bg-secondary-container text-on-secondary-container text-xs font-bold uppercase tracking-wider">
+                      {house?.name || 'Your House'}
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
-            <div className="flex-1 text-center md:text-left space-y-3">
-              <h2 className="text-2xl font-bold tracking-tight">House Harmony Score</h2>
-              <p className="text-on-surface-variant text-sm leading-relaxed">
-                {score >= 80
-                  ? 'Your household is running smoothly! Bills are paid and tasks are on track.'
-                  : 'Some balances need settling. Settle up to improve your score.'}
-              </p>
-              <div className="pt-2">
-                <span className="inline-flex items-center px-4 py-1.5 rounded-full bg-secondary-container text-on-secondary-container text-xs font-bold uppercase tracking-wider">
-                  {house?.name || 'Your House'}
-                </span>
-              </div>
-            </div>
-          </div>
 
-          {/* Balance card */}
-          <div className="md:col-span-5 bg-gradient-to-br from-primary to-primary-container rounded-[2rem] p-8 text-on-primary flex flex-col justify-between shadow-xl">
+            <div className="bg-gradient-to-br from-primary to-primary-container rounded-[2rem] p-8 text-on-primary flex flex-col shadow-xl overflow-hidden min-w-0">
+              <div className="flex items-start justify-between gap-4 flex-wrap mb-4">
+                <div>
+                  <span className="text-on-primary-container/80 text-sm font-semibold uppercase tracking-widest">Utility Trend</span>
+                  <h2 className="text-2xl font-extrabold mt-2 tracking-tight">Water vs Electricity</h2>
+                </div>
+                <span className="px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-widest bg-white/15 text-on-primary">Last 6 Months</span>
+              </div>
+              <div className="h-[240px] min-w-0">
+                {utilityTrendData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={utilityTrendData}>
+                      <defs>
+                        <linearGradient id="waterFillDashboard" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#59dad1" stopOpacity={0.35} />
+                          <stop offset="95%" stopColor="#59dad1" stopOpacity={0.05} />
+                        </linearGradient>
+                        <linearGradient id="electricFillDashboard" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#FFB800" stopOpacity={0.35} />
+                          <stop offset="95%" stopColor="#FFB800" stopOpacity={0.05} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.25)" />
+                      <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 12, fontWeight: 700, fill: 'rgba(255,255,255,0.78)' }} />
+                      <YAxis hide />
+                      <Tooltip
+                        formatter={(value) => [`₹${Number(value || 0).toLocaleString()}`, 'Amount']}
+                        contentStyle={{ borderRadius: '12px', border: 'none', background: '#ffffff', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}
+                      />
+                      <Legend />
+                      <Area type="monotone" dataKey="water" name="Water Bill" stroke="#59dad1" fill="url(#waterFillDashboard)" strokeWidth={3} />
+                      <Area type="monotone" dataKey="electricity" name="Electricity Bill" stroke="#FFB800" fill="url(#electricFillDashboard)" strokeWidth={3} />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-full grid place-items-center rounded-2xl bg-white/10 text-sm text-on-primary/80">
+                    Add water and electricity expenses to see monthly variation.
+                  </div>
+                )}
+              </div>
+            </div>
+          </section>
+
+          <section className="bg-surface-container-lowest rounded-[2rem] p-6 border border-outline-variant/10">
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-widest text-on-surface-variant">Monthly Rent</p>
+                <h3 className="text-2xl font-extrabold mt-1">{formatCurrency(rentStatus?.myRent?.amountDue || 0, preferredCurrency)}</h3>
+                <p className="text-sm text-on-surface-variant mt-1">{rentStatus?.month || 'Current month'} · {rentStatus?.myRent?.status === 'paid' ? 'Paid' : 'Pending'}</p>
+                {rentStatus?.warningVisible ? <p className="text-xs text-error mt-1">Payment overdue. Reminder notifications are active.</p> : null}
+              </div>
+              <button
+                type="button"
+                onClick={() => payRentMutation.mutate()}
+                disabled={payRentMutation.isPending || rentStatus?.myRent?.status === 'paid' || !rentStatus?.earlyPayAllowed}
+                className="px-5 py-3 signature-gradient text-on-primary font-bold rounded-xl disabled:opacity-60"
+              >
+                {rentStatus?.myRent?.status === 'paid' ? 'Rent Paid' : payRentMutation.isPending ? 'Paying...' : 'Pay Monthly Rent'}
+              </button>
+            </div>
+
+            <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {(rentStatus?.memberStatuses || []).map(member => {
+                const paid = member.status === 'paid'
+                return (
+                  <div
+                    key={member.userId}
+                    className={`p-3 rounded-xl border ${paid ? 'bg-emerald-50 border-emerald-300' : 'bg-red-50 border-red-300'}`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className={`w-6 h-6 rounded border-2 grid place-items-center ${paid ? 'border-emerald-600 bg-emerald-600 text-white' : 'border-red-500 bg-white text-red-500'}`}>
+                        <span className="material-symbols-outlined text-[14px]" style={{ fontVariationSettings: "'FILL' 1" }}>
+                          {paid ? 'check' : 'close'}
+                        </span>
+                      </div>
+                      <p className="font-bold text-sm truncate">{member.name}</p>
+                    </div>
+                    <p className={`text-xs font-semibold mt-1 ${paid ? 'text-emerald-700' : 'text-red-700'}`}>
+                      {paid ? 'Paid' : 'Pending'}
+                    </p>
+                  </div>
+                )
+              })}
+            </div>
+          </section>
+
+          <section className="bg-gradient-to-br from-primary to-primary-container rounded-[2rem] p-8 text-on-primary flex flex-col justify-between shadow-xl">
             <div>
               <span className="text-on-primary-container/80 text-sm font-semibold uppercase tracking-widest">Financial Status</span>
               <h2 className="text-3xl font-extrabold mt-2 tracking-tight">
@@ -285,132 +412,76 @@ export default function Dashboard() {
                 <span className="material-symbols-outlined">receipt_long</span>
               </button>
             </div>
-          </div>
-        </section>
+          </section>
 
-        <section className="bg-surface-container-lowest rounded-[2rem] p-6 border border-outline-variant/10">
-          <div className="flex items-center justify-between gap-4 flex-wrap">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-widest text-on-surface-variant">Monthly Rent</p>
-              <h3 className="text-2xl font-extrabold mt-1">{formatCurrency(rentStatus?.myRent?.amountDue || 0, preferredCurrency)}</h3>
-              <p className="text-sm text-on-surface-variant mt-1">{rentStatus?.month || 'Current month'} · {rentStatus?.myRent?.status === 'paid' ? 'Paid' : 'Pending'}</p>
-              {rentStatus?.warningVisible ? <p className="text-xs text-error mt-1">Payment overdue. Reminder notifications are active.</p> : null}
+          <section className="space-y-4">
+            <div className="flex items-center justify-between px-2">
+              <h3 className="text-xl font-bold tracking-tight">Roommates</h3>
+              <button onClick={() => navigate('/balances')} className="text-primary text-sm font-bold">View Ledger</button>
             </div>
-            <button
-              type="button"
-              onClick={() => payRentMutation.mutate()}
-              disabled={payRentMutation.isPending || rentStatus?.myRent?.status === 'paid' || !rentStatus?.earlyPayAllowed}
-              className="px-5 py-3 signature-gradient text-on-primary font-bold rounded-xl disabled:opacity-60"
-            >
-              {rentStatus?.myRent?.status === 'paid' ? 'Rent Paid' : payRentMutation.isPending ? 'Paying...' : 'Pay Monthly Rent'}
-            </button>
-          </div>
-
-          <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {(rentStatus?.memberStatuses || []).map(member => {
-              const paid = member.status === 'paid'
-              return (
-                <div
-                  key={member.userId}
-                  className={`p-3 rounded-xl border ${paid ? 'bg-emerald-50 border-emerald-300' : 'bg-red-50 border-red-300'}`}
-                >
-                  <div className="flex items-center gap-2">
-                    <div className={`w-6 h-6 rounded border-2 grid place-items-center ${paid ? 'border-emerald-600 bg-emerald-600 text-white' : 'border-red-500 bg-white text-red-500'}`}>
-                      <span className="material-symbols-outlined text-[14px]" style={{ fontVariationSettings: "'FILL' 1" }}>
-                        {paid ? 'check' : 'close'}
+            <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar -mx-6 px-6">
+              {members.map(member => {
+                const memberBal = balanceData?.balances?.find(b => b.userId === member._id)
+                const amt = memberBal?.net ?? 0
+                const memberName = getMemberName(member)
+                return (
+                  <div key={member._id} className="flex-shrink-0 w-32 bg-surface-container-low p-4 rounded-3xl flex flex-col items-center gap-2 border border-outline-variant/10">
+                    <div className={`w-14 h-14 rounded-full flex items-center justify-center bg-primary-fixed border-2 ${amt > 0 ? 'border-secondary' : amt < -0.5 ? 'border-error' : 'border-transparent'}`}>
+                      <span className="text-lg font-black text-primary">
+                        {memberName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
                       </span>
                     </div>
-                    <p className="font-bold text-sm truncate">{member.name}</p>
-                  </div>
-                  <p className={`text-xs font-semibold mt-1 ${paid ? 'text-emerald-700' : 'text-red-700'}`}>
-                    {paid ? 'Paid' : 'Pending'}
-                  </p>
-                </div>
-              )
-            })}
-          </div>
-        </section>
-
-        {/* Roommates */}
-        <section className="space-y-4">
-          <div className="flex items-center justify-between px-2">
-            <h3 className="text-xl font-bold tracking-tight">Roommates</h3>
-            <button onClick={() => navigate('/balances')} className="text-primary text-sm font-bold">View Ledger</button>
-          </div>
-          <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar -mx-6 px-6">
-            {members.map(member => {
-              const memberBal = balanceData?.balances?.find(b => b.userId === member._id)
-              const amt = memberBal?.net ?? 0
-              const memberName = getMemberName(member)
-              return (
-                <div key={member._id} className="flex-shrink-0 w-32 bg-surface-container-low p-4 rounded-3xl flex flex-col items-center gap-2 border border-outline-variant/10">
-                  <div className={`w-14 h-14 rounded-full flex items-center justify-center bg-primary-fixed border-2 ${amt > 0 ? 'border-secondary' : amt < -0.5 ? 'border-error' : 'border-transparent'}`}>
-                    <span className="text-lg font-black text-primary">
-                      {memberName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
+                    <span className="text-xs font-bold">{memberName.split(' ')[0]}</span>
+                    <span className={`text-[10px] font-bold uppercase tracking-tighter ${amt > 0.5 ? 'text-secondary' : amt < -0.5 ? 'text-error' : 'text-on-surface-variant'}`}>
+                      {amt > 0.5 ? `Owes ${formatCurrency(amt, preferredCurrency)}` : amt < -0.5 ? `Gets ${formatCurrency(Math.abs(amt), preferredCurrency)}` : 'Settled'}
                     </span>
                   </div>
-                  <span className="text-xs font-bold">{memberName.split(' ')[0]}</span>
-                  <span className={`text-[10px] font-bold uppercase tracking-tighter ${amt > 0.5 ? 'text-secondary' : amt < -0.5 ? 'text-error' : 'text-on-surface-variant'}`}>
-                    {amt > 0.5 ? `Owes ${formatCurrency(amt, preferredCurrency)}` : amt < -0.5 ? `Gets ${formatCurrency(Math.abs(amt), preferredCurrency)}` : 'Settled'}
-                  </span>
-                </div>
-              )
-            })}
-          </div>
-        </section>
+                )
+              })}
+            </div>
+          </section>
 
-        {/* Recent expenses */}
-        <section className="space-y-4">
-          <div className="flex items-center justify-between px-2">
-            <h3 className="text-xl font-bold tracking-tight">Recent Expenses</h3>
-            <button onClick={() => navigate('/expenses')} className="text-primary text-sm font-bold">View All</button>
-          </div>
-          <div className="space-y-3">
-            {expensesData?.expenses?.length === 0 && (
-              <div className="bg-surface-container-lowest p-8 rounded-3xl text-center text-on-surface-variant">
-                <span className="material-symbols-outlined text-4xl mb-2 block">receipt_long</span>
-                No expenses yet. Add your first one!
-              </div>
-            )}
-            {expensesData?.expenses?.map(exp => {
-              const cat = categoryIcons[exp.category] || categoryIcons.Other
-              const payer = members.find(m => m._id === exp.paidBy)
-              const payerName = getMemberName(payer)
-              return (
-                <div
-                  key={exp._id}
-                  onClick={() => navigate(`/expenses/${exp._id}`)}
-                  className="group bg-surface-container-lowest p-4 rounded-3xl flex items-center gap-4 transition-all duration-300 hover:bg-surface-container hover:translate-x-1 active:scale-[0.98] cursor-pointer"
-                >
-                  <div className={`w-12 h-12 ${cat.bg} ${cat.text} rounded-2xl flex items-center justify-center flex-shrink-0`}>
-                    <span className="material-symbols-outlined">{cat.icon}</span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-bold text-on-surface truncate">{exp.title}</h4>
-                    <p className="text-xs text-on-surface-variant font-medium uppercase tracking-tight">
-                      {exp.category} • {exp.billMonth || new Date(exp.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-bold text-lg text-on-surface">{formatCurrency(exp.amount, preferredCurrency)}</p>
-                    <p className="text-xs text-on-surface-variant">{payerName.split(' ')[0]} paid</p>
-                  </div>
+          <section className="space-y-4">
+            <div className="flex items-center justify-between px-2">
+              <h3 className="text-xl font-bold tracking-tight">Recent Expenses</h3>
+              <button onClick={() => navigate('/expenses')} className="text-primary text-sm font-bold">View All</button>
+            </div>
+            <div className="space-y-3">
+              {expensesData?.expenses?.length === 0 && (
+                <div className="bg-surface-container-lowest p-8 rounded-3xl text-center text-on-surface-variant">
+                  <span className="material-symbols-outlined text-4xl mb-2 block">receipt_long</span>
+                  No expenses yet. Add your first one!
                 </div>
-              )
-            })}
-          </div>
-        </section>
-
-        {/* Quick add FAB */}
-        <div className="fixed bottom-24 right-6 z-40">
-          <button
-            onClick={() => navigate('/expenses/add')}
-            className="w-14 h-14 signature-gradient rounded-2xl flex items-center justify-center text-on-primary shadow-xl shadow-primary/30 hover:scale-110 active:scale-95 transition-all"
-          >
-            <span className="material-symbols-outlined text-2xl">add</span>
-          </button>
-        </div>
-      </main>
+              )}
+              {expensesData?.expenses?.map(exp => {
+                const cat = categoryIcons[exp.category] || categoryIcons.Other
+                const payer = members.find(m => m._id === exp.paidBy)
+                const payerName = getMemberName(payer)
+                return (
+                  <div
+                    key={exp._id}
+                    onClick={() => navigate(`/expenses/${exp._id}`)}
+                    className="group bg-surface-container-lowest p-4 rounded-3xl flex items-center gap-4 transition-all duration-300 hover:bg-surface-container hover:translate-x-1 active:scale-[0.98] cursor-pointer"
+                  >
+                    <div className={`w-12 h-12 ${cat.bg} ${cat.text} rounded-2xl flex items-center justify-center flex-shrink-0`}>
+                      <span className="material-symbols-outlined">{cat.icon}</span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-bold text-on-surface truncate">{exp.title}</h4>
+                      <p className="text-xs text-on-surface-variant font-medium uppercase tracking-tight">
+                        {exp.category} • {exp.billMonth || new Date(exp.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-bold text-lg text-on-surface">{formatCurrency(exp.amount, preferredCurrency)}</p>
+                      <p className="text-xs text-on-surface-variant">{payerName.split(' ')[0]} paid</p>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </section>
+        </main>
 
         <BottomNav />
       </div>

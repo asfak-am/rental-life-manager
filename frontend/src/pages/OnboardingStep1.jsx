@@ -42,7 +42,11 @@ export default function OnboardingStep1() {
   }
 
   return (
-    <div className="bg-surface font-body text-on-surface min-h-screen flex flex-col">
+    <div className="bg-surface font-body text-on-surface min-h-screen flex flex-col relative overflow-hidden">
+      {/* Background gradient with blur */}
+      <div className="absolute top-[-10%] left-[-5%] w-[40%] h-[40%] bg-primary-fixed/20 rounded-full blur-[120px] -z-10" />
+      <div className="absolute bottom-[-10%] right-[-5%] w-[30%] h-[30%] bg-secondary-fixed/20 rounded-full blur-[100px] -z-10" />
+
       <header className="w-full max-w-screen-xl mx-auto px-6 py-8 flex justify-between items-center">
         <div className="text-xl font-black text-on-surface tracking-tight font-headline">Rental Life</div>
         <div className="flex items-center gap-4">

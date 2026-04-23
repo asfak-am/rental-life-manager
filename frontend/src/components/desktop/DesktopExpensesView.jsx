@@ -1,14 +1,75 @@
 import DesktopAppShell from './DesktopAppShell'
 import { formatCurrency } from '../../utils/currency'
+import { jsPDF } from 'jspdf'
 
-export default function DesktopExpensesView({ expenses = [], rentHistory = [], summaryData, onAdd, currency = 'LKR' }) {
-  export default function DesktopExpensesView({ expenses = [], rentHistory = [], summaryData, onAdd, currency = 'LKR', categories = ['All'], activeTab = 'All', onChangeTab }) {
+export default function DesktopExpensesView({ expenses = [], rentHistory = [], summaryData, onAdd, currency = 'LKR', categories = ['All'], activeTab = 'All', onChangeTab }) {
   const categoryBreakdown = summaryData?.categoryBreakdown
     ? Object.entries(summaryData.categoryBreakdown).map(([name, value]) => ({ name, value }))
     : []
   const totalExpenses = summaryData?.totalExpenses || 0
   const myShare = summaryData?.myShare || 0
   const savings = summaryData?.savings || 0
+
+  const exportPdf = () => {
+    const doc = new jsPDF()
+    const left = 14
+    let y = 16
+
+    doc.setFontSize(18)
+    doc.setFont('helvetica', 'bold')
+    doc.text('Expenses Report', left, y)
+
+    y += 10
+    doc.setFontSize(10)
+    doc.setFont('helvetica', 'normal')
+    doc.text(`Total outflow: ${formatCurrency(totalExpenses, currency)}`, left, y)
+    y += 6
+    doc.text(`My share: ${formatCurrency(myShare, currency)}`, left, y)
+    y += 6
+    doc.text(`House savings: ${formatCurrency(savings, currency)}`, left, y)
+
+    y += 12
+    doc.setFontSize(12)
+    doc.setFont('helvetica', 'bold')
+    doc.text('Recent Expenses', left, y)
+    y += 8
+
+    doc.setFontSize(9)
+    doc.setFont('helvetica', 'normal')
+    if (expenses.length === 0) {
+      doc.text('No expenses recorded yet.', left, y)
+      y += 6
+    } else {
+      expenses.slice(0, 8).forEach(exp => {
+        const dateLabel = exp.billMonth || new Date(exp.date).toLocaleDateString()
+        const line = `${dateLabel} - ${exp.title} - ${exp.category || 'Other'} - ${formatCurrency(exp.amount || 0, currency)}`
+        const wrapped = doc.splitTextToSize(line, 180)
+        doc.text(wrapped, left, y)
+        y += wrapped.length * 5 + 2
+      })
+    }
+
+    y += 4
+    doc.setFontSize(12)
+    doc.setFont('helvetica', 'bold')
+    doc.text('Rent Paid History', left, y)
+    y += 8
+
+    doc.setFontSize(9)
+    doc.setFont('helvetica', 'normal')
+    if (rentHistory.length === 0) {
+      doc.text('No rent payments recorded yet.', left, y)
+    } else {
+      rentHistory.slice(0, 8).forEach(item => {
+        const line = `${new Date(item.paidAt).toLocaleDateString()} - ${item.name} - ${item.month} - ${formatCurrency(item.amount || 0, currency)}`
+        const wrapped = doc.splitTextToSize(line, 180)
+        doc.text(wrapped, left, y)
+        y += wrapped.length * 5 + 2
+      })
+    }
+
+    doc.save('expenses-report.pdf')
+  }
 
   return (
     <DesktopAppShell
@@ -17,11 +78,26 @@ export default function DesktopExpensesView({ expenses = [], rentHistory = [], s
       searchPlaceholder="Search expenses, invoices..."
       rightActions={(
         <>
-          <button className="px-4 py-2 rounded-xl border border-slate-300 bg-white text-slate-700 text-sm font-semibold">Export PDF</button>
+          <button type="button" onClick={exportPdf} className="px-4 py-2 rounded-xl border border-slate-300 bg-white text-slate-700 text-sm font-semibold">Export PDF</button>
           <button onClick={onAdd} className="px-4 py-2 rounded-xl signature-gradient text-white text-sm font-semibold">+ Log Expense</button>
         </>
       )}
     >
+      <div className="grid grid-cols-12 gap-4 mb-6">
+        <div className="col-span-3 bg-white rounded-2xl p-5 border border-slate-200">
+          <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Total Outflow</p>
+          <p className="text-[clamp(1.75rem,2.4vw,2.6rem)] font-black mt-2 leading-tight break-words">{formatCurrency(totalExpenses, currency)}</p>
+        </div>
+        <div className="col-span-3 bg-white rounded-2xl p-5 border border-slate-200">
+          <p className="text-xs uppercase tracking-[0.2em] text-slate-400">My Share</p>
+          <p className="text-[clamp(1.75rem,2.4vw,2.6rem)] font-black mt-2 leading-tight break-words">{formatCurrency(myShare, currency)}</p>
+        </div>
+        <div className="col-span-6 signature-gradient rounded-2xl p-5 text-white">
+          <p className="text-xs uppercase tracking-[0.2em] opacity-80">House Savings</p>
+          <p className="text-[clamp(1.9rem,2.6vw,3rem)] font-black mt-2 leading-tight break-words">{formatCurrency(savings, currency)}</p>
+        </div>
+      </div>
+
       <div className="mb-5 flex flex-wrap gap-2">
         {categories.map(cat => (
           <button
@@ -37,21 +113,6 @@ export default function DesktopExpensesView({ expenses = [], rentHistory = [], s
             {cat}
           </button>
         ))}
-      </div>
-
-      <div className="grid grid-cols-12 gap-4 mb-6">
-        <div className="col-span-3 bg-white rounded-2xl p-5 border border-slate-200">
-          <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Total Outflow</p>
-          <p className="text-[clamp(1.75rem,2.4vw,2.6rem)] font-black mt-2 leading-tight break-words">{formatCurrency(totalExpenses, currency)}</p>
-        </div>
-        <div className="col-span-3 bg-white rounded-2xl p-5 border border-slate-200">
-          <p className="text-xs uppercase tracking-[0.2em] text-slate-400">My Share</p>
-          <p className="text-[clamp(1.75rem,2.4vw,2.6rem)] font-black mt-2 leading-tight break-words">{formatCurrency(myShare, currency)}</p>
-        </div>
-        <div className="col-span-6 signature-gradient rounded-2xl p-5 text-white">
-          <p className="text-xs uppercase tracking-[0.2em] opacity-80">House Savings</p>
-          <p className="text-[clamp(1.9rem,2.6vw,3rem)] font-black mt-2 leading-tight break-words">{formatCurrency(savings, currency)}</p>
-        </div>
       </div>
 
       <section className="bg-white rounded-3xl border border-slate-200 overflow-hidden">

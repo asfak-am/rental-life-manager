@@ -8,6 +8,7 @@ import TopBar from '../components/TopBar'
 import BottomNav from '../components/BottomNav'
 import DesktopExpensesView from '../components/desktop/DesktopExpensesView'
 import { formatCurrency } from '../utils/currency'
+import { jsPDF } from 'jspdf'
 
 const EXPENSE_CATEGORIES = ['All', 'Food', 'Water Bill', 'Electricity Bill', 'Transport', 'Entertainment', 'Other']
 
@@ -48,6 +49,67 @@ export default function ExpensesList() {
     queryFn: () => houseService.getRentHistory().then(r => r.data),
   })
 
+  const exportPdf = () => {
+    const doc = new jsPDF()
+    const left = 14
+    let y = 16
+
+    doc.setFontSize(18)
+    doc.setFont('helvetica', 'bold')
+    doc.text('Expenses Report', left, y)
+
+    y += 10
+    doc.setFontSize(10)
+    doc.setFont('helvetica', 'normal')
+    doc.text(`Total outflow: ${formatCurrency(summaryData?.totalExpenses || 0, preferredCurrency)}`, left, y)
+    y += 6
+    doc.text(`My share: ${formatCurrency(summaryData?.myShare || 0, preferredCurrency)}`, left, y)
+    y += 6
+    doc.text(`House savings: ${formatCurrency(summaryData?.savings || 0, preferredCurrency)}`, left, y)
+
+    y += 12
+    doc.setFontSize(12)
+    doc.setFont('helvetica', 'bold')
+    doc.text('Recent Expenses', left, y)
+    y += 8
+
+    doc.setFontSize(9)
+    doc.setFont('helvetica', 'normal')
+    if ((data?.expenses || []).length === 0) {
+      doc.text('No expenses recorded yet.', left, y)
+      y += 6
+    } else {
+      (data?.expenses || []).slice(0, 8).forEach(exp => {
+        const dateLabel = exp.billMonth || new Date(exp.date).toLocaleDateString()
+        const line = `${dateLabel} - ${exp.title} - ${exp.category || 'Other'} - ${formatCurrency(exp.amount || 0, preferredCurrency)}`
+        const wrapped = doc.splitTextToSize(line, 180)
+        doc.text(wrapped, left, y)
+        y += wrapped.length * 5 + 2
+      })
+    }
+
+    y += 4
+    doc.setFontSize(12)
+    doc.setFont('helvetica', 'bold')
+    doc.text('Rent Paid History', left, y)
+    y += 8
+
+    doc.setFontSize(9)
+    doc.setFont('helvetica', 'normal')
+    if ((rentHistoryData?.history || []).length === 0) {
+      doc.text('No rent payments recorded yet.', left, y)
+    } else {
+      (rentHistoryData?.history || []).slice(0, 8).forEach(item => {
+        const line = `${new Date(item.paidAt).toLocaleDateString()} - ${item.name} - ${item.month} - ${formatCurrency(item.amount || 0, preferredCurrency)}`
+        const wrapped = doc.splitTextToSize(line, 180)
+        doc.text(wrapped, left, y)
+        y += wrapped.length * 5 + 2
+      })
+    }
+
+    doc.save('expenses-report.pdf')
+  }
+
   return (
     <>
       <div className="hidden lg:block">
@@ -84,13 +146,58 @@ export default function ExpensesList() {
               placeholder="Search transactions..."
             />
           </div>
+          <button
+            type="button"
+            onClick={exportPdf}
+            className="bg-surface-container-high p-3.5 rounded-2xl flex items-center justify-center hover:bg-surface-container-highest transition-colors active:scale-95"
+            aria-label="Export PDF"
+          >
+            <span className="material-symbols-outlined text-on-surface">download</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate('/expenses/add')}
+            className="signature-gradient p-3.5 rounded-2xl flex items-center justify-center text-on-primary shadow-lg shadow-primary/25 transition-transform active:scale-95"
+            aria-label="Add expense"
+          >
+            <span className="material-symbols-outlined text-on-primary">add</span>
+          </button>
           <button className="bg-surface-container-high p-3.5 rounded-2xl flex items-center justify-center hover:bg-surface-container-highest transition-colors active:scale-95">
             <span className="material-symbols-outlined text-on-surface">tune</span>
           </button>
         </div>
 
+        {/* Summary bento */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-10">
+          <div className="sm:col-span-2 bg-primary text-on-primary p-6 rounded-3xl relative overflow-hidden min-w-0">
+            <div className="relative z-10">
+              <p className="text-xs font-bold uppercase tracking-widest opacity-80 mb-1">Total Balance</p>
+              <h2 className="text-[clamp(1.8rem,7vw,2.6rem)] font-black font-headline mb-4 leading-tight break-words">
+                {formatCurrency(summaryData?.totalExpenses || 0, preferredCurrency)}
+              </h2>
+              <div className="flex items-center gap-2 bg-white/10 backdrop-blur-md w-fit px-3 py-1.5 rounded-full">
+                <span className="material-symbols-outlined text-xs">calendar_month</span>
+                <span className="text-xs font-bold">This month</span>
+              </div>
+            </div>
+            <div className="absolute -right-4 -bottom-4 w-32 h-32 bg-white/10 rounded-full blur-3xl" />
+          </div>
+          <div className="bg-surface-container-low p-6 rounded-3xl min-w-0">
+            <p className="text-xs font-bold uppercase tracking-widest text-on-surface-variant mb-1">My Share</p>
+            <h2 className="text-[clamp(1.25rem,5vw,1.9rem)] font-bold font-headline text-on-surface leading-tight break-words">
+              {formatCurrency(summaryData?.myShare || 0, preferredCurrency)}
+            </h2>
+          </div>
+          <div className="bg-secondary-container p-6 rounded-3xl min-w-0">
+            <p className="text-xs font-bold uppercase tracking-widest text-on-secondary-container mb-1">Status</p>
+            <h2 className="text-[clamp(1.25rem,5vw,1.9rem)] font-bold font-headline text-on-secondary-container leading-tight break-words">
+              {summaryData?.settled ? 'Paid Up' : 'Pending'}
+            </h2>
+          </div>
+        </div>
+
         {/* Category tabs */}
-        <div className="flex flex-wrap gap-2 pb-4 mb-8">
+        <div className="flex flex-wrap gap-2 mb-8">
           {EXPENSE_CATEGORIES.map(cat => (
             <button
               key={cat}
@@ -104,35 +211,6 @@ export default function ExpensesList() {
               {cat}
             </button>
           ))}
-        </div>
-
-        {/* Summary bento */}
-        <div className="grid grid-cols-2 gap-4 mb-10">
-          <div className="col-span-2 md:col-span-1 bg-primary text-on-primary p-6 rounded-3xl relative overflow-hidden">
-            <div className="relative z-10">
-              <p className="text-xs font-bold uppercase tracking-widest opacity-80 mb-1">Total Balance</p>
-              <h2 className="text-3xl font-black font-headline mb-4">
-                {formatCurrency(summaryData?.totalExpenses || 0, preferredCurrency)}
-              </h2>
-              <div className="flex items-center gap-2 bg-white/10 backdrop-blur-md w-fit px-3 py-1.5 rounded-full">
-                <span className="material-symbols-outlined text-xs">calendar_month</span>
-                <span className="text-xs font-bold">This month</span>
-              </div>
-            </div>
-            <div className="absolute -right-4 -bottom-4 w-32 h-32 bg-white/10 rounded-full blur-3xl" />
-          </div>
-          <div className="bg-surface-container-low p-6 rounded-3xl">
-            <p className="text-xs font-bold uppercase tracking-widest text-on-surface-variant mb-1">My Share</p>
-            <h2 className="text-2xl font-bold font-headline text-on-surface">
-              {formatCurrency(summaryData?.myShare || 0, preferredCurrency)}
-            </h2>
-          </div>
-          <div className="bg-secondary-container p-6 rounded-3xl">
-            <p className="text-xs font-bold uppercase tracking-widest text-on-secondary-container mb-1">Status</p>
-            <h2 className="text-2xl font-bold font-headline text-on-secondary-container">
-              {summaryData?.settled ? 'Paid Up' : 'Pending'}
-            </h2>
-          </div>
         </div>
 
         {/* Expense list */}
@@ -217,16 +295,6 @@ export default function ExpensesList() {
           ))}
         </div>
       </main>
-
-      {/* FAB */}
-      <div className="fixed bottom-24 right-6 z-40">
-        <button
-          onClick={() => navigate('/expenses/add')}
-          className="w-14 h-14 signature-gradient rounded-2xl flex items-center justify-center text-on-primary shadow-xl shadow-primary/30 hover:scale-110 active:scale-95 transition-all"
-        >
-          <span className="material-symbols-outlined text-2xl">add</span>
-        </button>
-      </div>
 
         <BottomNav />
       </div>

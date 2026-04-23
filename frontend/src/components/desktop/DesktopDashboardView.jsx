@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import DesktopAppShell from './DesktopAppShell'
+import { AreaChart, Area, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { formatCurrency } from '../../utils/currency'
 
 function getMemberName(member) {
@@ -19,6 +20,7 @@ export default function DesktopDashboardView({
   currency = 'LKR',
   inviteCode = '',
   inviteQrSrc = '',
+  utilityTrendData = [],
   onViewLedger,
   onTransferFunds,
   onOpenInvite,
@@ -60,7 +62,7 @@ export default function DesktopDashboardView({
       <div className="grid grid-cols-12 gap-5">
 
         {/* Harmony Score */}
-        <section className="col-span-7 bg-white rounded-[30px] p-5 border border-slate-200">
+        <section className="col-span-6 bg-white rounded-[30px] p-5 border border-slate-200">
           <span className="inline-flex px-3 py-1 text-[11px] font-bold uppercase tracking-[0.22em] rounded-full bg-[#ecebff] text-[#5f52f2]">
             Wellness Metric
           </span>
@@ -73,7 +75,7 @@ export default function DesktopDashboardView({
             Calculated based on chore completion and expense settlement.
           </p>
 
-          <div className="mt-5 flex items-center gap-8">
+          <div className="mt-5 flex flex-col items-center gap-6">
             <div className="w-40 h-40 rounded-full border-[10px] border-[#8a82f0] flex items-center justify-center">
               <div className="text-center">
                 <p className="text-4xl font-black text-[#5f52f2]">{harmonyScore}</p>
@@ -87,7 +89,7 @@ export default function DesktopDashboardView({
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 flex-1">
+            <div className="grid grid-cols-2 gap-3 w-full">
               <div className="bg-[#f4f5f9] rounded-2xl p-4">
                 <p className="text-xs text-slate-400 uppercase tracking-widest">
                   Settled
@@ -105,8 +107,75 @@ export default function DesktopDashboardView({
           </div>
         </section>
 
+        <section className="col-span-6 bg-white rounded-3xl p-6 border border-slate-200 flex flex-col">
+          <div className="flex items-center justify-between gap-4 flex-wrap mb-4">
+            <div>
+              <p className="text-xs uppercase tracking-widest text-slate-400">Utility Trend</p>
+              <h4 className="text-2xl font-black mt-1">Water vs Electricity</h4>
+            </div>
+            <span className="text-xs font-semibold text-slate-400 uppercase tracking-widest">Last 6 Months</span>
+          </div>
+
+          {utilityTrendData.length > 0 ? (
+            <div className="h-[280px] flex-1">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={utilityTrendData}>
+                  <defs>
+                    <linearGradient id="waterFillDesktopDashboard" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#57d0c5" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#57d0c5" stopOpacity={0.05} />
+                    </linearGradient>
+                    <linearGradient id="electricFillDesktopDashboard" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#FFB800" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#FFB800" stopOpacity={0.05} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                  <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 12, fontWeight: 700, fill: '#787586' }} />
+                  <YAxis hide />
+                  <Tooltip
+                    formatter={(value) => [`LKR ${Number(value || 0).toLocaleString('en-LK')}`, 'Amount']}
+                    contentStyle={{ borderRadius: '12px', border: 'none', background: '#ffffff', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}
+                  />
+                  <Legend />
+                  <Area type="monotone" dataKey="water" name="Water Bill" stroke="#57d0c5" fill="url(#waterFillDesktopDashboard)" strokeWidth={3} />
+                  <Area type="monotone" dataKey="electricity" name="Electricity Bill" stroke="#FFB800" fill="url(#electricFillDesktopDashboard)" strokeWidth={3} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <div className="h-[220px] grid place-items-center rounded-2xl bg-[#f7f8fb] text-sm text-slate-500">
+              Add water and electricity expenses to see monthly variation.
+            </div>
+          )}
+        </section>
+
+        {/* Recent Expenses */}
+        <section className="col-span-8 bg-white rounded-3xl p-6 border border-slate-200">
+          <h4 className="text-2xl font-black mb-4">Recent Expenses</h4>
+
+          {recent.map(exp => (
+            <div key={exp._id} className="bg-[#f7f8fb] p-4 rounded-xl flex justify-between mb-2">
+              <p>{exp.title}</p>
+              <p>{formatCurrency(exp.amount, currency)}</p>
+            </div>
+          ))}
+        </section>
+
+        {/* Tasks */}
+        <section className="col-span-4 bg-white rounded-3xl p-6 border border-slate-200">
+          <h4 className="text-2xl font-black mb-4">Tasks</h4>
+
+          {upcomingTasks.map(task => (
+            <div key={task._id} className="bg-[#f7f8fb] p-3 rounded-xl mb-2">
+              {task.title}
+            </div>
+          ))}
+        </section>
+
+        {/* Rent */}
         {/* Balance Section */}
-        <section className="col-span-5 bg-white rounded-[30px] p-5 border border-slate-200">
+        <section className="col-span-12 bg-white rounded-[30px] p-5 border border-slate-200">
           <p className="text-xs uppercase text-slate-400">House Balance</p>
 
           <h3 className="text-[clamp(2rem,2.6vw,3rem)] leading-tight font-black mt-3 break-words">{balanceLabel}</h3>
@@ -154,73 +223,6 @@ export default function DesktopDashboardView({
                 )
               })
             )}
-          </div>
-        </section>
-
-        {/* Recent Expenses */}
-        <section className="col-span-8 bg-white rounded-3xl p-6 border border-slate-200">
-          <h4 className="text-2xl font-black mb-4">Recent Expenses</h4>
-
-          {recent.map(exp => (
-            <div key={exp._id} className="bg-[#f7f8fb] p-4 rounded-xl flex justify-between mb-2">
-              <p>{exp.title}</p>
-              <p>{formatCurrency(exp.amount, currency)}</p>
-            </div>
-          ))}
-        </section>
-
-        {/* Tasks */}
-        <section className="col-span-4 bg-white rounded-3xl p-6 border border-slate-200">
-          <h4 className="text-2xl font-black mb-4">Tasks</h4>
-
-          {upcomingTasks.map(task => (
-            <div key={task._id} className="bg-[#f7f8fb] p-3 rounded-xl mb-2">
-              {task.title}
-            </div>
-          ))}
-        </section>
-
-        {/* Rent */}
-        <section className="col-span-12 bg-white rounded-3xl p-6 border border-slate-200">
-          <div className="flex items-center justify-between gap-4 flex-wrap">
-            <div>
-              <p className="text-xs uppercase tracking-widest text-slate-400">Monthly Rent</p>
-              <h4 className="text-2xl font-black mt-1">{formatCurrency(rentStatus?.myRent?.amountDue || 0, currency)}</h4>
-              <p className="text-sm text-slate-500 mt-1">{rentStatus?.month || 'Current month'} · {rentStatus?.myRent?.status === 'paid' ? 'Paid' : 'Pending'}</p>
-              {rentStatus?.warningVisible ? <p className="text-xs text-red-600 mt-1">Payment overdue. Please pay before month end.</p> : null}
-            </div>
-            <button
-              type="button"
-              onClick={onPayRent}
-              disabled={payingRent || rentStatus?.myRent?.status === 'paid' || !rentStatus?.earlyPayAllowed}
-              className="px-5 py-3 rounded-xl signature-gradient text-white font-semibold disabled:opacity-60"
-            >
-              {rentStatus?.myRent?.status === 'paid' ? 'Rent Paid' : payingRent ? 'Paying...' : 'Pay Monthly Rent'}
-            </button>
-          </div>
-
-          <div className="mt-5 grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
-            {(rentStatus?.memberStatuses || []).map(member => {
-              const paid = member.status === 'paid'
-              return (
-                <div
-                  key={member.userId}
-                  className={`p-3 rounded-xl border ${paid ? 'bg-emerald-50 border-emerald-300' : 'bg-red-50 border-red-300'}`}
-                >
-                  <div className="flex items-center gap-2">
-                    <div className={`w-6 h-6 rounded border-2 grid place-items-center ${paid ? 'border-emerald-600 bg-emerald-600 text-white' : 'border-red-500 bg-white text-red-500'}`}>
-                      <span className="material-symbols-outlined text-[14px]" style={{ fontVariationSettings: "'FILL' 1" }}>
-                        {paid ? 'check' : 'close'}
-                      </span>
-                    </div>
-                    <p className="font-bold text-sm truncate">{member.name}</p>
-                  </div>
-                  <p className={`text-xs font-semibold mt-1 ${paid ? 'text-emerald-700' : 'text-red-700'}`}>
-                    {paid ? 'Paid' : 'Pending'}
-                  </p>
-                </div>
-              )
-            })}
           </div>
         </section>
 

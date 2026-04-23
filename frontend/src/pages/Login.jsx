@@ -225,10 +225,7 @@ export default function Login() {
 
           {/* Trust badges */}
           <div className="mt-12 flex flex-col md:flex-row items-center gap-8 md:gap-16 opacity-60">
-            <div className="flex items-center gap-2">
-              <span className="material-symbols-outlined text-xl">shield</span>
-              <span className="text-xs font-bold uppercase tracking-widest">Bank-Grade Encryption</span>
-            </div>
+            
             <div className="flex items-center gap-2">
               <span className="material-symbols-outlined text-xl">history_edu</span>
               <span className="text-xs font-bold uppercase tracking-widest">Editorial Accuracy</span>

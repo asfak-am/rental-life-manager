@@ -118,13 +118,15 @@ export default function Balances() {
       {/* Bento grid */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
         {/* Hero balance card */}
-        <div className="md:col-span-8 bg-gradient-to-br from-primary to-primary-container p-8 rounded-3xl text-on-primary shadow-xl relative overflow-hidden flex flex-col justify-between min-h-[280px]">
+        <div className="md:col-span-8 bg-gradient-to-br from-primary to-primary-container p-8 rounded-3xl text-on-primary shadow-xl relative overflow-hidden flex flex-col justify-between min-h-[280px] min-w-0">
           <div className="relative z-10">
             <span className="text-xs font-label font-bold uppercase tracking-[0.2em] opacity-80">Total House Balance</span>
-            <h2 className="text-5xl font-headline font-black mt-2 tracking-tighter">{formatCurrency(totalHouse, preferredCurrency)}</h2>
+            <h2 className="mt-2 text-[clamp(2.2rem,10vw,4.4rem)] leading-none font-headline font-black tracking-tighter break-words max-w-full">
+              {formatCurrency(totalHouse, preferredCurrency)}
+            </h2>
             <div className="mt-4 flex items-center gap-2 text-secondary-fixed">
               <span className="material-symbols-outlined text-sm">group</span>
-              <span className="text-sm font-semibold tracking-wide">{members.length} members · {displayDebts.length} active debts</span>
+              <span className="text-sm font-semibold tracking-wide break-words">{members.length} members · {displayDebts.length} active debts</span>
             </div>
           </div>
           <div className="relative z-10 flex gap-4 mt-8">

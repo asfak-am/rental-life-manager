@@ -11,7 +11,11 @@ connectDB()
 const app = express()
 
 app.use(cors({
-  origin: 'https://rental-life.vercel.app',
+  origin: [
+    process.env.CLIENT_URL || 'https://rental-life.vercel.app',
+    'http://localhost:5173',
+    'http://localhost:5174',
+  ],
   credentials: true,
 }))
 app.use(express.json({ limit: '12mb' }))

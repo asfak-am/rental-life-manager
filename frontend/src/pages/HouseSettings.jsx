@@ -9,6 +9,7 @@ import { useHouse } from '../context/HouseContext'
 import TopBar from '../components/TopBar'
 import BottomNav from '../components/BottomNav'
 import DesktopSettingsView from '../components/desktop/DesktopSettingsView'
+import { buildInviteLink, buildInviteQrSrc } from '../utils/inviteLink'
 
 export default function HouseSettings() {
   const { user, logout, updateUser } = useAuth()
@@ -47,9 +48,7 @@ export default function HouseSettings() {
   })
 
   const inviteCode = codeData?.inviteCode || house?.inviteCode || ''
-  const inviteLink = inviteCode
-    ? `${typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5173'}/invite/${inviteCode}`
-    : ''
+  const inviteLink = codeData?.inviteLink || buildInviteLink(inviteCode)
   const { data: rentStatus } = useQuery({
     queryKey: ['rent-status'],
     queryFn: () => houseService.getRentStatus().then(r => r.data),
@@ -65,9 +64,7 @@ export default function HouseSettings() {
     },
     onError: (err) => toast.error(err.response?.data?.message || 'Failed to update monthly rent'),
   })
-  const inviteQrSrc = inviteCode
-    ? `https://api.qrserver.com/v1/create-qr-code/?size=248x248&data=${encodeURIComponent(inviteLink)}`
-    : ''
+  const inviteQrSrc = buildInviteQrSrc(inviteLink)
 
   const refreshMutation = useMutation({
     mutationFn: () => houseService.refreshCode(),

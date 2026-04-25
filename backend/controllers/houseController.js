@@ -5,6 +5,20 @@ const { generateInviteCode } = require('../utils/inviteCode')
 const RentPayment = require('../models/RentPayment')
 const { getRentStatusForUser, runRentRemindersForMonth, toMonthKey } = require('../services/rentService')
 
+const DEFAULT_CLIENT_URL = 'https://rental-life.vercel.app'
+
+const resolveClientBaseUrl = () => {
+	const raw = String(process.env.CLIENT_URL || process.env.FRONTEND_URL || DEFAULT_CLIENT_URL).trim()
+	return raw.replace(/\/+$/, '')
+}
+
+const buildInviteLink = (inviteCode, email) => {
+	const baseUrl = resolveClientBaseUrl()
+	const path = `/invite/${encodeURIComponent(String(inviteCode || '').trim().toUpperCase())}`
+	if (!email) return `${baseUrl}${path}`
+	return `${baseUrl}${path}?email=${encodeURIComponent(email)}`
+}
+
 const getPublicUser = (user) => {
 	const plain = typeof user.toObject === 'function' ? user.toObject() : user
 	const { password, __v, ...rest } = plain
@@ -72,7 +86,7 @@ const inviteMember = async (req, res, next) => {
 		const email = String(req.body.email || '').trim().toLowerCase()
 		if (!email) return res.status(400).json({ message: 'Email is required' })
 
-		const inviteUrl = `${process.env.CLIENT_URL || 'http://localhost:5173'}/invite/${house.inviteCode}?email=${encodeURIComponent(email)}`
+		const inviteUrl = buildInviteLink(house.inviteCode, email)
 		await require('../utils/mailer').sendMail({
 			to: email,
 			subject: `You're invited to ${house.name} on Rental Life`,
@@ -256,7 +270,10 @@ const getInviteCode = async (req, res, next) => {
 	try {
 		const house = await requireHouse(req.user._id)
 		if (!house) return res.status(404).json({ message: 'No house found' })
-		return res.json({ inviteCode: house.inviteCode })
+		return res.json({
+			inviteCode: house.inviteCode,
+			inviteLink: buildInviteLink(house.inviteCode),
+		})
 	} catch (error) {
 		next(error)
 	}
@@ -275,7 +292,11 @@ const refreshInviteCode = async (req, res, next) => {
 		house.inviteCode = await ensureUniqueCode()
 		await house.save()
 
-		return res.json({ inviteCode: house.inviteCode, house })
+		return res.json({
+			inviteCode: house.inviteCode,
+			inviteLink: buildInviteLink(house.inviteCode),
+			house,
+		})
 	} catch (error) {
 		next(error)
 	}

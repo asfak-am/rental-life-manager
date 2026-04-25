@@ -11,6 +11,7 @@ import BottomNav from '../components/BottomNav'
 import DesktopAppShell from '../components/desktop/DesktopAppShell'
 import DesktopDashboardView from '../components/desktop/DesktopDashboardView'
 import { formatCurrency } from '../utils/currency'
+import { buildInviteLink, buildInviteQrSrc } from '../utils/inviteLink'
 
 const UTILITY_RANGE_OPTIONS = [
   { value: '3M', label: '3M', months: 3 },
@@ -214,9 +215,8 @@ export default function Dashboard() {
     ? Math.round((tasksData.tasks.filter(task => task.status === 'completed').length / tasksData.tasks.length) * 100)
     : 0
   const inviteCode = inviteData?.inviteCode || house?.inviteCode || ''
-  const inviteQrSrc = inviteCode
-    ? `https://api.qrserver.com/v1/create-qr-code/?size=248x248&data=${encodeURIComponent(inviteCode)}`
-    : ''
+  const inviteLink = inviteData?.inviteLink || buildInviteLink(inviteCode)
+  const inviteQrSrc = buildInviteQrSrc(inviteLink)
   const rentPaid = rentStatus?.myRent?.status === 'paid'
 
   const utilityTrendData = useMemo(() => {

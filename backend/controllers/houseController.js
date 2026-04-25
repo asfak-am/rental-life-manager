@@ -7,9 +7,12 @@ const { getRentStatusForUser, runRentRemindersForMonth, toMonthKey } = require('
 
 const DEFAULT_CLIENT_URL = 'https://rental-life.vercel.app'
 
+const isLocalhostUrl = (value = '') => /^(https?:\/\/)?(localhost|127\.0\.0\.1|\[::1\])(?::\d+)?$/i.test(String(value).trim().replace(/\/+$/, ''))
+
 const resolveClientBaseUrl = () => {
 	const raw = String(process.env.CLIENT_URL || process.env.FRONTEND_URL || DEFAULT_CLIENT_URL).trim()
-	return raw.replace(/\/+$/, '')
+	const normalized = raw.replace(/\/+$/, '')
+	return isLocalhostUrl(normalized) ? DEFAULT_CLIENT_URL : normalized
 }
 
 const buildInviteLink = (inviteCode, email) => {
@@ -79,8 +82,8 @@ const inviteMember = async (req, res, next) => {
 		if (!house) return res.status(404).json({ message: 'No house found' })
 
 		const membership = house.members.find(member => String(member.userId) === String(req.user._id))
-		if (membership?.role !== 'admin') {
-			return res.status(403).json({ message: 'Only house admins can invite members' })
+		if (!membership) {
+			return res.status(403).json({ message: 'Only house members can invite members' })
 		}
 
 		const email = String(req.body.email || '').trim().toLowerCase()

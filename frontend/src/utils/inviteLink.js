@@ -2,13 +2,15 @@ const DEFAULT_APP_URL = 'https://rental-life.vercel.app'
 
 const trimTrailingSlash = (value = '') => String(value).trim().replace(/\/+$/, '')
 
+const isLocalhostUrl = (value = '') => /^(https?:\/\/)?(localhost|127\.0\.0\.1|\[::1\])(?::\d+)?$/i.test(trimTrailingSlash(value))
+
 export const getPublicAppUrl = () => {
   const envUrl = trimTrailingSlash(import.meta.env.VITE_APP_URL || import.meta.env.VITE_CLIENT_URL || '')
-  if (envUrl) return envUrl
+  if (envUrl && !isLocalhostUrl(envUrl)) return envUrl
 
   if (typeof window !== 'undefined' && window.location?.origin) {
     const origin = trimTrailingSlash(window.location.origin)
-    if (origin) return origin
+    if (origin && !isLocalhostUrl(origin)) return origin
   }
 
   return DEFAULT_APP_URL

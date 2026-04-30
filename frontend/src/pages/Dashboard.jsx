@@ -50,11 +50,13 @@ function findMemberById(members, userId) {
 
 export default function Dashboard() {
   const { user } = useAuth()
-  const { house, members } = useHouse()
+  const { house, members, loading: houseLoading, error: houseError, refreshHouse } = useHouse()
   const navigate = useNavigate()
   const qc = useQueryClient()
   const preferredCurrency = user?.currency || 'LKR'
   const [utilityRange, setUtilityRange] = useState('6M')
+
+  const isHouseBootstrapping = !!user && !house && !houseError && (houseLoading || members.length === 0)
 
   const noHouseView = (
     <>
@@ -129,6 +131,38 @@ export default function Dashboard() {
         </main>
       </div>
     </>
+  )
+
+  const houseErrorView = (
+    <div className="min-h-screen bg-surface app-light-gradient font-body text-on-surface flex items-center justify-center px-6 py-12">
+      <section className="w-full max-w-xl bg-surface-container-lowest rounded-2xl p-8 md:p-10 border border-outline-variant/15 shadow-[0_24px_48px_-12px_rgba(26,28,29,0.04)] text-center">
+        <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-error-container text-on-error-container mb-5">
+          <span className="material-symbols-outlined text-3xl" style={{ fontVariationSettings: "'FILL' 1" }}>cloud_off</span>
+        </div>
+
+        <h1 className="font-headline font-extrabold text-3xl tracking-tight">Couldn’t load your house</h1>
+        <p className="text-on-surface-variant text-sm md:text-base mt-3 leading-relaxed">
+          The app could not fetch your current house data. This is usually temporary, so try again before starting a new house.
+        </p>
+
+        <div className="mt-8 flex flex-col sm:flex-row gap-3 sm:justify-center">
+          <button
+            type="button"
+            onClick={() => refreshHouse().catch(() => {})}
+            className="signature-gradient px-6 py-3.5 rounded-xl text-on-primary font-bold"
+          >
+            Try Again
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate('/settings')}
+            className="px-6 py-3.5 rounded-xl bg-surface-container-high text-on-surface font-semibold border border-outline-variant/20"
+          >
+            Open Settings
+          </button>
+        </div>
+      </section>
+    </div>
   )
 
   const { data: summaryData } = useQuery({
@@ -265,6 +299,21 @@ export default function Dashboard() {
     'Water Bill': { icon: 'water_drop', bg: 'bg-cyan-100', text: 'text-cyan-700' },
     'Electricity Bill': { icon: 'electric_bolt', bg: 'bg-yellow-100', text: 'text-yellow-700' },
     Other: { icon: 'more_horiz', bg: 'bg-gray-100', text: 'text-gray-700' },
+  }
+
+  if (isHouseBootstrapping) {
+    return (
+      <div className="min-h-screen bg-surface app-light-gradient font-body text-on-surface flex items-center justify-center px-6 py-12">
+        <div className="flex flex-col items-center gap-4 text-center">
+          <div className="w-11 h-11 rounded-full border-4 border-primary border-t-transparent animate-spin" />
+          <span className="text-on-surface-variant text-sm font-medium">Loading your house...</span>
+        </div>
+      </div>
+    )
+  }
+
+  if (houseError && houseError.response?.status !== 404) {
+    return houseErrorView
   }
 
   if (!house) {

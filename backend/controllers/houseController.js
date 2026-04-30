@@ -38,6 +38,14 @@ const buildHousePayload = async (house) => {
 	return { house, members: orderedMembers }
 }
 
+const runRentRemindersSafely = async (args) => {
+	try {
+		await runRentRemindersForMonth(args)
+	} catch (error) {
+		console.error('Rent reminder check failed:', error)
+	}
+}
+
 const requireHouse = async (userId) => {
 	const user = await User.findById(userId)
 	if (!user?.houseId) return null
@@ -156,7 +164,7 @@ const getHouse = async (req, res, next) => {
 		const house = await requireHouse(req.user._id)
 		if (!house) return res.status(404).json({ message: 'No house found' })
 
-		await runRentRemindersForMonth({ now: new Date(), houseIds: [house._id] })
+		await runRentRemindersSafely({ now: new Date(), houseIds: [house._id] })
 
 		const payload = await buildHousePayload(house)
 		return res.json(payload)
@@ -197,7 +205,7 @@ const getRentStatus = async (req, res, next) => {
 		const month = req.query.month ? String(req.query.month) : toMonthKey()
 		const now = new Date()
 
-		await runRentRemindersForMonth({ month, now, houseIds: [house._id] })
+		await runRentRemindersSafely({ month, now, houseIds: [house._id] })
 		const status = await getRentStatusForUser({ house, userId: req.user._id, month, now })
 
 		return res.json(status)

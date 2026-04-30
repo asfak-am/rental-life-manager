@@ -24,4 +24,8 @@ const expenseSchema = new mongoose.Schema({
   }],
 }, { timestamps: true })
 
+expenseSchema.index({ houseId: 1, date: -1, createdAt: -1 })
+expenseSchema.index({ houseId: 1, category: 1, date: -1 })
+expenseSchema.index({ houseId: 1, billMonth: 1, date: -1 })
+
 module.exports = mongoose.model('Expense', expenseSchema)

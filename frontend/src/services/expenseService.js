@@ -8,4 +8,5 @@ export const expenseService = {
   update:    (id, data) => api.put(`/expense/${id}`, data),
   remove:    (id)     => api.delete(`/expense/${id}`),
   summary:   ()       => api.get('/expense/summary'),
+  utilityTrend: (range) => api.get('/expense/utility-trend', { params: { range } }),
 }

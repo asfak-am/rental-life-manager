@@ -183,9 +183,9 @@ export default function Dashboard() {
     enabled: !!house,
   })
 
-  const { data: utilityExpensesData } = useQuery({
-    queryKey: ['dashboard-utility-expenses'],
-    queryFn: () => expenseService.getAll().then(r => r.data),
+  const { data: utilityTrendData } = useQuery({
+    queryKey: ['dashboard-utility-trend', utilityRange],
+    queryFn: () => expenseService.utilityTrend(utilityRange).then(r => r.data),
     enabled: !!house,
   })
 
@@ -253,44 +253,18 @@ export default function Dashboard() {
   const inviteQrSrc = buildInviteQrSrc(inviteLink)
   const rentPaid = rentStatus?.myRent?.status === 'paid'
 
-  const utilityTrendData = useMemo(() => {
-    const expenses = utilityExpensesData?.expenses || []
-    const monthMap = new Map()
-
-    expenses.forEach(expense => {
-      if (expense.category !== 'Water Bill' && expense.category !== 'Electricity Bill') return
-
-      const key = expense.billMonth
-        ? expense.billMonth
-        : new Date(expense.date).toISOString().slice(0, 7)
-
-      if (!monthMap.has(key)) {
-        monthMap.set(key, { key, water: 0, electricity: 0 })
-      }
-
-      const item = monthMap.get(key)
-      if (expense.category === 'Water Bill') item.water += Number(expense.amount || 0)
-      if (expense.category === 'Electricity Bill') item.electricity += Number(expense.amount || 0)
-    })
-
-    return [...monthMap.values()]
-      .sort((a, b) => a.key.localeCompare(b.key))
-      .map(item => {
-        const [year, month] = item.key.split('-')
-        const date = new Date(Number(year), Number(month) - 1, 1)
-        return {
-          month: date.toLocaleDateString('en-US', { month: 'short' }),
-          water: item.water,
-          electricity: item.electricity,
-        }
-      })
-  }, [utilityExpensesData?.expenses])
-
   const filteredUtilityTrendData = useMemo(() => {
-    const selected = UTILITY_RANGE_OPTIONS.find(option => option.value === utilityRange)
-    if (!selected || selected.months == null) return utilityTrendData
-    return utilityTrendData.slice(-selected.months)
-  }, [utilityRange, utilityTrendData])
+    const data = utilityTrendData?.trend || []
+    return data.map(item => {
+      const [year, month] = String(item.month || '').split('-')
+      const date = new Date(Number(year), Number(month) - 1, 1)
+      return {
+        month: date.toLocaleDateString('en-US', { month: 'short' }),
+        water: Number(item.water || 0),
+        electricity: Number(item.electricity || 0),
+      }
+    })
+  }, [utilityTrendData])
 
   const categoryIcons = {
     Food: { icon: 'shopping_basket', bg: 'bg-amber-100', text: 'text-amber-700' },

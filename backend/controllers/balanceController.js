@@ -18,7 +18,10 @@ const getBalances = async (houseId) => {
 	const house = await House.findById(houseId)
 	if (!house) return { balances: [], debts: [], totalHouseExpenses: 0, balanceMap: {} }
 
-	const expenses = await Expense.find({ houseId }).sort({ date: -1, createdAt: -1 })
+	const expenses = await Expense.find({ houseId })
+		.select('amount paidBy participants houseId')
+		.sort({ date: -1, createdAt: -1 })
+		.lean()
 	const balances = {}
 	const rawDebts = new Map()
 	const members = house.members.map(member => String(member.userId))

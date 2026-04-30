@@ -7,6 +7,7 @@ const {
 	updateExpense,
 	deleteExpense,
 	getSummary,
+	getUtilityTrend,
 } = require('../controllers/expenseController')
 
 const router = express.Router()
@@ -14,6 +15,7 @@ const router = express.Router()
 router.use(protect)
 router.get('/all', getAllExpenses)
 router.get('/summary', getSummary)
+router.get('/utility-trend', getUtilityTrend)
 router.post('/add', addExpense)
 router.get('/:id', getExpenseById)
 router.put('/:id', updateExpense)

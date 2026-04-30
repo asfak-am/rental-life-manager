@@ -56,6 +56,15 @@ const aggregateMonthlyTrends = (expenses) => {
 	return months.map(({ key, ...rest }) => rest)
 }
 
+const getRangeStart = (range) => {
+	const months = { '3M': 3, '6M': 6, '12M': 12 }
+	const totalMonths = months[range]
+	if (!totalMonths) return null
+
+	const now = new Date()
+	return new Date(now.getFullYear(), now.getMonth() - totalMonths + 1, 1)
+}
+
 const computeSummary = (expenses, userId) => {
 	const totalExpenses = expenses.reduce((sum, expense) => sum + expense.amount, 0)
 	const categoryBreakdown = aggregateByCategory(expenses)
@@ -206,10 +215,65 @@ const getAllExpenses = async (req, res, next) => {
 		if (billMonth && BILL_MONTH_REGEX.test(String(billMonth))) query.billMonth = String(billMonth)
 
 		const expenses = await Expense.find(query)
+			.select('title amount paidBy splitType participants category billMonth date recurring recurrenceRule createdAt updatedAt')
 			.sort({ date: -1, createdAt: -1 })
 			.limit(limit ? Number(limit) : 0)
+			.lean()
 
 		return res.json({ expenses })
+	} catch (error) {
+		next(error)
+	}
+}
+
+const getUtilityTrend = async (req, res, next) => {
+	try {
+		const house = await getHouseForUser(req.user._id)
+		if (!house) return res.json({ trend: [] })
+
+		const range = String(req.query.range || '6M').toUpperCase()
+		const rangeStart = getRangeStart(range)
+		const match = {
+			houseId: house._id,
+			category: { $in: ['Water Bill', 'Electricity Bill'] },
+		}
+
+		if (rangeStart) {
+			match.date = { $gte: rangeStart }
+		}
+
+		const trend = await Expense.aggregate([
+			{ $match: match },
+			{
+				$addFields: {
+					periodKey: {
+						$cond: [
+							{ $and: [{ $ne: ['$billMonth', null] }, { $ne: ['$billMonth', ''] }] },
+							'$billMonth',
+							{ $dateToString: { format: '%Y-%m', date: '$date' } },
+						],
+					},
+				},
+			},
+			{
+				$group: {
+					_id: '$periodKey',
+					water: { $sum: { $cond: [{ $eq: ['$category', 'Water Bill'] }, '$amount', 0] } },
+					electricity: { $sum: { $cond: [{ $eq: ['$category', 'Electricity Bill'] }, '$amount', 0] } },
+				},
+			},
+			{ $sort: { _id: 1 } },
+			{
+				$project: {
+					_id: 0,
+					month: '$_id',
+					water: { $round: ['$water', 2] },
+					electricity: { $round: ['$electricity', 2] },
+				},
+			},
+		])
+
+		return res.json({ trend })
 	} catch (error) {
 		next(error)
 	}
@@ -301,7 +365,10 @@ const getSummary = async (req, res, next) => {
 		const expenses = await Expense.find({
 			houseId: house._id,
 			date: { $gte: startOfMonth, $lte: now },
-		}).sort({ date: -1 })
+		})
+			.select('amount paidBy participants category date')
+			.sort({ date: -1 })
+			.lean()
 
 		const summary = computeSummary(expenses, req.user._id)
 		const users = await User.find({ _id: { $in: house.members.map(member => member.userId) } }).select('name')
@@ -325,4 +392,5 @@ module.exports = {
 	updateExpense,
 	deleteExpense,
 	getSummary,
+	getUtilityTrend,
 }

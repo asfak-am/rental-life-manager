@@ -77,7 +77,10 @@ const getTasks = async (req, res, next) => {
 		const house = await getHouseForUser(req.user._id)
 		if (!house) return res.json({ tasks: [] })
 
-		const tasks = await Task.find({ houseId: house._id }).sort({ createdAt: -1 })
+		const tasks = await Task.find({ houseId: house._id })
+			.select('title description assignedTo status priority dueDate repeat createdBy createdAt updatedAt completedAt')
+			.sort({ createdAt: -1 })
+			.lean()
 		return res.json({ tasks })
 	} catch (error) {
 		next(error)

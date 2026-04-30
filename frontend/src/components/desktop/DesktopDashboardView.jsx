@@ -359,9 +359,16 @@ export default function DesktopDashboardView({
         {/* Balance Section */}
         <section className="col-span-12 bg-white rounded-[30px] p-5 border border-slate-200 relative overflow-hidden">
           <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#6a5df6] via-[#57d0c5] to-[#f6b15a]" />
-          <p className="text-xs uppercase tracking-widest text-slate-400">House Balance</p>
-
-          <h3 className="text-[clamp(2rem,2.6vw,3rem)] leading-tight font-black mt-3 break-words">{balanceLabel}</h3>
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            <div>
+              <p className="text-xs uppercase tracking-widest text-slate-400">House Roommates</p>
+              <h3 className="text-[clamp(2rem,2.6vw,3rem)] leading-tight font-black mt-3 break-words">{houseName || 'Your House'}</h3>
+            </div>
+            <div className="rounded-2xl bg-[#f4f5f9] px-4 py-3 border border-slate-200">
+              <p className="text-[11px] uppercase tracking-widest text-slate-400">House Balance</p>
+              <p className="text-xl font-black mt-1 break-words">{balanceLabel}</p>
+            </div>
+          </div>
 
           <div className="mt-5 flex gap-3">
             <button onClick={onTransferFunds} className="px-5 py-3 signature-gradient rounded-xl text-white font-semibold">
@@ -374,13 +381,13 @@ export default function DesktopDashboardView({
           </div>
 
           {/* Members */}
-          <div className="mt-5 grid grid-cols-3 gap-3">
+          <div className="mt-5 grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
             {members.length === 0 ? (
-              <p className="col-span-3 text-center text-slate-500">
+              <p className="col-span-full text-center text-slate-500">
                 No house members yet.
               </p>
             ) : (
-              members.slice(0, 3).map(member => {
+              members.map(member => {
                 const memberBalance = balances.find(b => b.userId === member._id)
                 const amount = memberBalance?.net ?? 0
                 const memberName = getMemberName(member)

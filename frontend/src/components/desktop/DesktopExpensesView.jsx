@@ -127,7 +127,7 @@ export default function DesktopExpensesView({
               </tr>
             </thead>
             <tbody>
-              {expenses.slice(0, 5).map(exp => (
+              {expenses.map(exp => (
                 <tr key={exp._id} className="border-b border-slate-100">
                   <td className="px-5 py-4 font-semibold">{exp.title}</td>
                   <td className="px-5 py-4 text-slate-500">{exp.billMonth || new Date(exp.date).toLocaleDateString()}</td>
@@ -184,7 +184,7 @@ export default function DesktopExpensesView({
               </tr>
             </thead>
             <tbody>
-              {rentHistory.slice(0, 10).map(item => (
+              {rentHistory.map(item => (
                 <tr key={item.id} className="border-b border-slate-100">
                   <td className="px-5 py-4 font-semibold">{item.name}</td>
                   <td className="px-5 py-4 text-slate-500">{new Date(item.paidAt).toLocaleDateString()}</td>

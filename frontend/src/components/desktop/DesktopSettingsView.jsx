@@ -36,7 +36,7 @@ export default function DesktopSettingsView({
               <button onClick={onInvite} type="button" className="text-[#5f52f2] font-semibold">+ Invite Member</button>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              {members.slice(0, 4).map(member => (
+              {members.map(member => (
                 <div key={member._id} className="bg-[#f7f8fb] rounded-2xl p-3 flex items-center gap-3">
                   <div className="w-12 h-12 rounded-xl bg-[#dbdeff] grid place-items-center text-[#5f52f2] font-black">
                     {(member.displayName || member.name || 'R').slice(0, 1).toUpperCase()}

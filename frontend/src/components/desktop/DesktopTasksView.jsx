@@ -53,8 +53,8 @@ export default function DesktopTasksView({ tasks = [] }) {
       </section>
 
       <div className="grid grid-cols-2 gap-6">
-        <TaskColumn title="Pending" colorClass="bg-amber-700" tasks={pending.slice(0, 5)} />
-        <TaskColumn title="Completed" colorClass="bg-emerald-600" tasks={completed.slice(0, 5)} />
+        <TaskColumn title="Pending" colorClass="bg-amber-700" tasks={pending} />
+        <TaskColumn title="Completed" colorClass="bg-emerald-600" tasks={completed} />
       </div>
     </DesktopAppShell>
   )

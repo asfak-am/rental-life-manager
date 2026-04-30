@@ -42,6 +42,7 @@ export default function ExpenseDetails() {
   if (!exp) return null
 
   const payer = members.find(m => m._id === exp.paidBy)
+  const isPaidByMe = String(exp.paidBy) === String(user?._id)
 
   return (
     <div className="bg-surface app-light-gradient font-body text-on-surface min-h-screen pb-32">
@@ -146,12 +147,14 @@ export default function ExpenseDetails() {
 
             {/* Actions */}
             <div className="flex gap-3 pt-4">
-              <button
-                onClick={() => navigate('/balances')}
-                className="flex-1 py-4 signature-gradient text-on-primary font-bold rounded-2xl shadow-lg shadow-primary/20 active:scale-95 transition-all"
-              >
-                Settle Up
-              </button>
+              {!isPaidByMe && (
+                <button
+                  onClick={() => navigate('/balances')}
+                  className="flex-1 py-4 signature-gradient text-on-primary font-bold rounded-2xl shadow-lg shadow-primary/20 active:scale-95 transition-all"
+                >
+                  Settle Up
+                </button>
+              )}
               {exp.paidBy === user?._id && (
                 <button
                   onClick={() => {

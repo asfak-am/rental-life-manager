@@ -11,6 +11,7 @@ const {
 	updateMonthlyRent,
 	getRentStatus,
 	payMonthlyRent,
+	payMonthlyRentForMember,
 	getRentHistory,
 } = require('../controllers/houseController')
 

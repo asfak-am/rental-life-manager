@@ -1,9 +1,19 @@
 import { useNavigate } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
+import api from '../services/api'
 import { useAuth } from '../context/AuthContext'
 
 export default function TopBar() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
+
+  const { data: notificationData } = useQuery({
+    queryKey: ['notifications', 'topbar-count'],
+    queryFn: () => api.get('/notifications').then(r => r.data),
+    staleTime: 30000,
+  })
+
+  const unreadCount = (notificationData?.notifications || []).filter(notification => !notification.read).length
 
   const initials = user?.name
     ?.split(' ')
@@ -35,12 +45,33 @@ export default function TopBar() {
         <div className="flex items-center gap-1 sm:gap-2 text-slate-500">
           <button
             type="button"
-            onClick={() => navigate('/notifications')}
+            onClick={() => navigate('/ledger')}
             className="w-10 h-10 flex items-center justify-center rounded-full text-violet-700 hover:bg-slate-200/50 transition-all duration-200 active:scale-95"
+            aria-label="Open ledger"
+            title="Ledger"
+          >
+            <span className="material-symbols-outlined">account_balance</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate('/settings')}
+            className="w-10 h-10 flex items-center justify-center rounded-full text-violet-700 hover:bg-slate-200/50 transition-all duration-200 active:scale-95"
+            aria-label="Open settings"
+            title="Settings"
+          >
+            <span className="material-symbols-outlined">settings</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate('/notifications')}
+            className="relative w-10 h-10 flex items-center justify-center rounded-full text-violet-700 hover:bg-slate-200/50 transition-all duration-200 active:scale-95"
             aria-label="Open notifications"
             title="Notifications"
           >
             <span className="material-symbols-outlined">notifications</span>
+            {unreadCount > 0 && (
+              <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 rounded-full bg-error border-2 border-slate-50" />
+            )}
           </button>
           <button
             type="button"

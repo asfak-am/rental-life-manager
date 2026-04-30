@@ -10,11 +10,12 @@ import DesktopAppShell from '../components/desktop/DesktopAppShell'
 import { formatCurrency } from '../utils/currency'
 
 export default function Balances() {
-  const { members } = useHouse()
+  const { house, members } = useHouse()
   const { user }    = useAuth()
   const qc          = useQueryClient()
   const [settling, setSettling]     = useState(null)
   const preferredCurrency = user?.currency || 'LKR'
+  const isAdmin = house?.members?.find(m => String(m.userId) === String(user?._id))?.role === 'admin'
 
   const { data: rawData } = useQuery({
     queryKey: ['balance-raw'],
@@ -81,6 +82,7 @@ export default function Balances() {
   }
 
   const displayDebts = rawData?.debts || []
+  const settlementCounterpartyId = settling ? (String(settling.from) === String(user?._id) ? settling.to : settling.from) : null
 
   const ledgerContent = (
     <>
@@ -99,9 +101,16 @@ export default function Balances() {
               <h3 className="text-2xl font-headline font-black mt-1">{formatCurrency(rentDue, preferredCurrency)}</h3>
               <p className="text-sm text-on-surface-variant mt-1">{currentBillMonth} â€¢ tracked separately from other expenses</p>
             </div>
-            <span className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest ${rentPaid ? 'bg-secondary-container text-on-secondary-container' : myRentItems.length === 0 ? 'bg-surface-container text-on-surface-variant' : 'bg-error-container text-on-error-container'}`}>
-              {rentStatusLabel}
-            </span>
+            <div className="flex flex-col items-end gap-2">
+              <span className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest ${rentPaid ? 'bg-secondary-container text-on-secondary-container' : myRentItems.length === 0 ? 'bg-surface-container text-on-surface-variant' : 'bg-error-container text-on-error-container'}`}>
+                {rentStatusLabel}
+              </span>
+              {!isAdmin && (
+                <p className="text-[11px] font-semibold uppercase tracking-widest text-on-surface-variant">
+                  Only admins can mark rent as paid
+                </p>
+              )}
+            </div>
           </div>
         </section>
 
@@ -190,10 +199,16 @@ export default function Balances() {
                   </button>
                 </div>
               </div>
-            ))}
+                    disabled={payRentMutation.isPending || rentStatus?.myRent?.status === 'paid' || !rentStatus?.earlyPayAllowed || !isAdmin}
           </div>
         </section>
-
+                    {rentStatus?.myRent?.status === 'paid'
+                      ? 'Rent Paid'
+                      : !isAdmin
+                      ? 'Admin Only'
+                      : payRentMutation.isPending
+                      ? 'Paying...'
+                      : 'Pay Monthly Rent'}
         {/* Owed to you */}
         <section className="md:col-span-6 space-y-4">
           <div className="flex items-center justify-between px-2">
@@ -223,7 +238,15 @@ export default function Balances() {
                     <p className="text-xs text-outline font-medium">Owes you</p>
                   </div>
                 </div>
-                <p className="font-black text-secondary text-lg">{formatCurrency(debt.amount, preferredCurrency)}</p>
+                <div className="flex items-center gap-3">
+                  <p className="font-black text-secondary text-lg">{formatCurrency(debt.amount, preferredCurrency)}</p>
+                  <button
+                    onClick={() => setSettling(debt)}
+                    className="text-xs font-bold text-secondary bg-secondary-container px-3 py-1.5 rounded-full hover:bg-secondary hover:text-on-secondary transition-colors"
+                  >
+                    Mark paid
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -252,7 +275,7 @@ export default function Balances() {
           <div className="bg-surface-container-lowest rounded-3xl p-8 max-w-sm w-full shadow-2xl">
             <h3 className="text-xl font-bold mb-2">Confirm Settlement</h3>
             <p className="text-on-surface-variant mb-6">
-              Pay <strong>{getName(settling.to)}</strong> <strong>{formatCurrency(settling.amount, preferredCurrency)}</strong>?
+              Confirm <strong>{getName(settlementCounterpartyId)}</strong> for <strong>{formatCurrency(settling.amount, preferredCurrency)}</strong>?
             </p>
             <div className="flex gap-3">
               <button

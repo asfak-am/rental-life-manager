@@ -95,7 +95,7 @@ export default function DesktopAppShell({
         </div>
       </aside>
 
-      <div className="flex-1 h-screen overflow-y-auto px-8 py-6">
+      <div className="flex-1 h-screen overflow-y-auto px-8 py-6 bg-white/40">
         <header className="flex items-center gap-4 mb-8">
           <div className="relative flex-1 max-w-[420px]">
             <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">search</span>
@@ -105,24 +105,6 @@ export default function DesktopAppShell({
             />
           </div>
           <div className="ml-auto flex items-center gap-3 text-slate-500">
-            <button
-              type="button"
-              onClick={() => navigate('/ledger')}
-              className="w-8 h-8 rounded-full hover:bg-white grid place-items-center"
-              aria-label="Open ledger"
-              title="Ledger"
-            >
-              <span className="material-symbols-outlined text-[18px]">account_balance</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate('/settings')}
-              className="w-8 h-8 rounded-full hover:bg-white grid place-items-center"
-              aria-label="Open settings"
-              title="Settings"
-            >
-              <span className="material-symbols-outlined text-[18px]">settings</span>
-            </button>
             <button
               type="button"
               onClick={() => navigate('/notifications')}
@@ -163,7 +145,7 @@ export default function DesktopAppShell({
             title="Profile settings"
           >
             <span className="text-xs uppercase tracking-[0.2em] text-slate-400">Profile</span>
-            <div className="w-8 h-8 rounded-md bg-slate-800 text-white grid place-items-center text-xs font-bold overflow-hidden">
+            <div className="w-8 h-8 rounded-full bg-slate-800 text-white grid place-items-center text-xs font-bold overflow-hidden">
               {avatarUrl ? (
                 <img src={avatarUrl} alt="Profile avatar" className="w-full h-full object-cover" />
               ) : (

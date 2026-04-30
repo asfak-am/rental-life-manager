@@ -32,7 +32,7 @@ export default function TopBar() {
           aria-label="Open profile"
           title="Profile"
         >
-          <div className="w-10 h-10 rounded-full bg-primary-fixed flex items-center justify-center text-on-primary-fixed-variant font-bold text-sm overflow-hidden">
+          <div className="w-10 h-10 rounded-full bg-primary-fixed flex items-center justify-center text-on-primary-fixed-variant font-bold text-sm overflow-hidden flex-shrink-0">
             {user?.avatar ? (
               <img src={user.avatar} alt="avatar" className="w-full h-full object-cover rounded-full" />
             ) : (
@@ -43,24 +43,6 @@ export default function TopBar() {
         </button>
 
         <div className="flex items-center gap-1 sm:gap-2 text-slate-500">
-          <button
-            type="button"
-            onClick={() => navigate('/ledger')}
-            className="w-10 h-10 flex items-center justify-center rounded-full text-violet-700 hover:bg-slate-200/50 transition-all duration-200 active:scale-95"
-            aria-label="Open ledger"
-            title="Ledger"
-          >
-            <span className="material-symbols-outlined">account_balance</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate('/settings')}
-            className="w-10 h-10 flex items-center justify-center rounded-full text-violet-700 hover:bg-slate-200/50 transition-all duration-200 active:scale-95"
-            aria-label="Open settings"
-            title="Settings"
-          >
-            <span className="material-symbols-outlined">settings</span>
-          </button>
           <button
             type="button"
             onClick={() => navigate('/notifications')}

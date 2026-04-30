@@ -5,7 +5,7 @@ const tabs = [
   { to: '/expenses',  icon: 'receipt_long',    label: 'Expenses' },
   { to: '/tasks',     icon: 'task_alt',        label: 'Tasks'    },
   { to: '/analytics', icon: 'bar_chart',       label: 'Analytics'},
-  { to: '/settings',  icon: 'manage_accounts', label: 'Settings' },
+  { to: '/ledger',    icon: 'account_balance', label: 'Ledger'   },
 ]
 
 export default function BottomNav() {

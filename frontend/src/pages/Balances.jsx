@@ -109,7 +109,7 @@ export default function Balances() {
             <div>
               <p className="text-xs font-bold uppercase tracking-widest text-on-surface-variant">Monthly Rent Payment</p>
               <h3 className="text-2xl font-headline font-black mt-1">{formatCurrency(rentDue, preferredCurrency)}</h3>
-              <p className="text-sm text-on-surface-variant mt-1">{currentBillMonth} â€¢ tracked separately from other expenses</p>
+              <p className="text-sm text-on-surface-variant mt-1">{currentBillMonth} tracked separately from other expenses</p>
             </div>
             <div className="flex flex-col items-end gap-2">
               <span className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest ${rentPaid ? 'bg-secondary-container text-on-secondary-container' : myRentItems.length === 0 ? 'bg-surface-container text-on-surface-variant' : 'bg-error-container text-on-error-container'}`}>
@@ -179,7 +179,7 @@ export default function Balances() {
             </span>
           </div>
           <p className="text-sm text-on-surface-variant mt-2">
-            {members.length} members Â· {displayDebts.length} active debts
+            {members.length} members {displayDebts.length} active debts
           </p>
         </section>
 

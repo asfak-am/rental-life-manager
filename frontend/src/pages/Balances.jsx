@@ -38,6 +38,16 @@ export default function Balances() {
     queryFn: () => houseService.getRentStatus().then(r => r.data),
   })
 
+  const payMemberRentMutation = useMutation({
+    mutationFn: ({ userId, month }) => houseService.payRentForMember(userId, month),
+    onSuccess: () => {
+      toast.success('Member rent marked as paid')
+      qc.invalidateQueries(['rent-status'])
+      qc.invalidateQueries(['rent-expenses', currentBillMonth])
+    },
+    onError: () => toast.error('Failed to mark member rent as paid'),
+  })
+
   const settleMutation = useMutation({
     mutationFn: (data) => balanceService.settle(data),
     onSuccess: () => {
@@ -161,6 +171,17 @@ export default function Balances() {
                         </p>
                       </div>
                     </div>
+                    {isAdmin && !paid && (
+                      <div className="mt-3">
+                        <button
+                          onClick={() => payMemberRentMutation.mutate({ userId: member.userId, month: rentStatus?.month || currentBillMonth })}
+                          disabled={payMemberRentMutation.isPending}
+                          className="mt-2 px-3 py-2 rounded-lg bg-primary text-on-primary font-bold text-sm"
+                        >
+                          {payMemberRentMutation.isPending ? 'Marking...' : 'Mark Paid'}
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )
               })}

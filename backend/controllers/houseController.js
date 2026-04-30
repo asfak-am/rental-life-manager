@@ -251,6 +251,51 @@ const payMonthlyRent = async (req, res, next) => {
 	}
 }
 
+const payMonthlyRentForMember = async (req, res, next) => {
+	try {
+		const house = await requireHouse(req.user._id)
+		if (!house) return res.status(404).json({ message: 'No house found' })
+
+		// only admins can mark other members as paid
+		const membership = house.members.find(member => String(member.userId) === String(req.user._id))
+		if (!membership || membership.role !== 'admin') {
+			return res.status(403).json({ message: 'Only admins can mark other members rent as paid' })
+		}
+
+		const memberId = String(req.body.userId || '')
+		if (!memberId) return res.status(400).json({ message: 'userId is required' })
+
+		const month = req.body.month ? String(req.body.month) : toMonthKey()
+
+		const rentRecord = await RentPayment.findOne({ houseId: house._id, userId: memberId, month })
+		if (!rentRecord) return res.status(404).json({ message: 'Rent record not found for member' })
+		if (rentRecord.status === 'paid') return res.json({ message: 'Rent already paid', rentStatus: await getRentStatusForUser({ house, userId: memberId, month, now: new Date() }) })
+
+		rentRecord.status = 'paid'
+		rentRecord.paidAt = new Date()
+		await rentRecord.save()
+
+		const notifications = house.members
+			.filter(member => String(member.userId) !== memberId)
+			.map(member => ({
+				userId: member.userId,
+				houseId: house._id,
+				type: 'payment',
+				title: 'Rent payment recorded',
+				body: `Rent for ${month} marked as paid for a member`,
+				amount: rentRecord.amountDue,
+				link: '/balances',
+			}))
+
+		if (notifications.length > 0) await Notification.insertMany(notifications)
+
+		const nextStatus = await getRentStatusForUser({ house, userId: memberId, month, now: new Date() })
+		return res.json({ message: 'Member rent marked as paid', rentStatus: nextStatus })
+	} catch (error) {
+		next(error)
+	}
+}
+
 const getRentHistory = async (req, res, next) => {
 	try {
 		const house = await requireHouse(req.user._id)
@@ -357,5 +402,6 @@ module.exports = {
 	updateMonthlyRent,
 	getRentStatus,
 	payMonthlyRent,
+ payMonthlyRentForMember,
 	getRentHistory,
 }

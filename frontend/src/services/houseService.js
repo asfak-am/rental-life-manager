@@ -12,6 +12,7 @@ export const houseService = {
   getRentHistory: () => api.get('/house/rent-history'),
   updateRentConfig: (monthlyRentAmount) => api.put('/house/rent-config', { monthlyRentAmount }),
   payRent: (month) => api.post('/house/pay-rent', { month }),
+  payRentForMember: (userId, month) => api.post('/house/pay-rent/member', { userId, month }),
   leave:         ()     => api.delete('/house/leave'),
   refreshCode:   ()     => api.post('/house/refresh-code'),
 }

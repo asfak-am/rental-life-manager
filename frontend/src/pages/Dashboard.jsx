@@ -20,20 +20,7 @@ const UTILITY_RANGE_OPTIONS = [
   { value: 'ALL', label: 'All', months: null },
 ]
 
-function harmonyScore(balances = [], totalExpenses = 0) {
-  if (totalExpenses === 0) return 100
-  const unsettled = balances.filter(b => Math.abs(b.amount) > 0.5).length
-  const score = Math.max(0, 100 - unsettled * 12)
-  return Math.min(100, score)
-}
-
-function scoreLabel(s) {
-  if (s >= 80) return { label: 'High', color: 'text-secondary' }
-  if (s >= 50) return { label: 'Medium', color: 'text-tertiary' }
-  return { label: 'Low', color: 'text-error' }
-}
-
-const CIRCUMFERENCE = 2 * Math.PI * 88
+// Harmony score removed — helpers deprecated
 
 function getMemberName(member) {
   return member?.displayName?.trim() || member?.name?.trim() || 'Unknown'
@@ -239,9 +226,7 @@ export default function Dashboard() {
   const myBalance = balanceData?.balances?.find(b => b.userId === user?._id)
   const netAmount = myBalance?.net ?? 0
   const isOwed = netAmount > 0
-  const score = harmonyScore(balanceData?.balances, summaryData?.totalExpenses)
-  const { label: sLabel, color: sColor } = scoreLabel(score)
-  const dashOffset = CIRCUMFERENCE - (score / 100) * CIRCUMFERENCE
+  // Harmony score removed
   const settledPercent = balanceData?.balances?.length
     ? Math.round((balanceData.balances.filter(balance => Math.abs(balance.net ?? balance.amount ?? 0) <= 0.5).length / balanceData.balances.length) * 100)
     : 0
@@ -339,37 +324,7 @@ export default function Dashboard() {
           <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="bg-surface-container-lowest rounded-[2rem] p-8 border border-outline-variant/10 flex flex-col justify-center">
               <div className="flex flex-col items-center gap-6 text-center">
-                <div className="relative w-48 h-48 flex items-center justify-center flex-shrink-0">
-                  <svg className="w-full h-full transform -rotate-90">
-                    <circle className="text-surface-container" cx="96" cy="96" fill="transparent" r="88" stroke="currentColor" strokeWidth="12" />
-                    <circle
-                      className="text-primary transition-all duration-700"
-                      cx="96" cy="96" fill="transparent" r="88"
-                      stroke="currentColor"
-                      strokeDasharray={CIRCUMFERENCE}
-                      strokeDashoffset={dashOffset}
-                      strokeLinecap="round"
-                      strokeWidth="12"
-                    />
-                  </svg>
-                  <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <span className="text-4xl font-extrabold tracking-tight text-on-surface">{score}</span>
-                    <span className={`text-xs font-bold uppercase tracking-widest ${sColor}`}>{sLabel}</span>
-                  </div>
-                </div>
-                <div className="space-y-3">
-                  <h2 className="text-2xl font-bold tracking-tight">House Harmony Score</h2>
-                  <p className="text-on-surface-variant text-sm leading-relaxed">
-                    {score >= 80
-                      ? 'Your household is running smoothly! Bills are paid and tasks are on track.'
-                      : 'Some balances need settling. Settle up to improve your score.'}
-                  </p>
-                  <div className="pt-2">
-                    <span className="inline-flex items-center px-4 py-1.5 rounded-full bg-secondary-container text-on-secondary-container text-xs font-bold uppercase tracking-wider">
-                      {house?.name || 'Your House'}
-                    </span>
-                  </div>
-                </div>
+                {/* Harmony score removed */}
               </div>
             </div>
 

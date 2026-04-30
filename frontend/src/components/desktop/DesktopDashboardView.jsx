@@ -46,12 +46,7 @@ export default function DesktopDashboardView({
   const displayName = user?.displayName || user?.name || 'Manager'
   const shortName = displayName.split(' ')[0]
 
-  const harmonyScore = useMemo(() => {
-    const balanceScore = settledPercent
-    const taskScore = taskCompletion
-    if (!balances.length && !tasks.length) return 0
-    return Math.max(0, Math.min(100, Math.round((balanceScore + taskScore) / 2)))
-  }, [balances.length, settledPercent, taskCompletion, tasks.length])
+  // Harmony score removed — deprecated UI
 
   const recent = expenses.slice(0, 4)
   const upcomingTasks = tasks.filter(task => task.status !== 'completed')
@@ -75,51 +70,7 @@ export default function DesktopDashboardView({
     >
       <div className="grid grid-cols-12 gap-5">
 
-        {/* Harmony Score */}
-        <section className="col-span-6 bg-white rounded-[30px] p-5 border border-slate-200">
-          <span className="inline-flex px-3 py-1 text-[11px] font-bold uppercase tracking-[0.22em] rounded-full bg-[#ecebff] text-[#5f52f2]">
-            Wellness Metric
-          </span>
-
-          <h3 className="text-[30px] font-black tracking-tight mt-4">
-            House Harmony Score
-          </h3>
-
-          <p className="text-slate-500 text-sm mt-1 max-w-xl">
-            Calculated based on chore completion and expense settlement.
-          </p>
-
-          <div className="mt-5 flex flex-col items-center gap-6">
-            <div className="w-40 h-40 rounded-full border-[10px] border-[#8a82f0] flex items-center justify-center">
-              <div className="text-center">
-                <p className="text-4xl font-black text-[#5f52f2]">{harmonyScore}</p>
-                <p className="text-xs text-slate-400 mt-1 uppercase tracking-widest">
-                  {harmonyScore >= 80
-                    ? 'Healthy'
-                    : harmonyScore >= 50
-                    ? 'Needs attention'
-                    : 'No activity'}
-                </p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3 w-full">
-              <div className="bg-[#f4f5f9] rounded-2xl p-4">
-                <p className="text-xs text-slate-400 uppercase tracking-widest">
-                  Settled
-                </p>
-                <p className="text-2xl font-black mt-1 leading-tight break-words">{settledLabel}</p>
-              </div>
-
-              <div className="bg-[#f4f5f9] rounded-2xl p-4">
-                <p className="text-xs text-slate-400 uppercase tracking-widest">
-                  Tasks
-                </p>
-                <p className="text-2xl font-black mt-1 leading-tight break-words">{taskLabel}</p>
-              </div>
-            </div>
-          </div>
-        </section>
+        {/* Harmony Score removed */}
 
         <section className="col-span-6 bg-white rounded-3xl p-6 border border-slate-200 flex flex-col">
           <div className="flex items-center justify-between gap-4 flex-wrap mb-4">

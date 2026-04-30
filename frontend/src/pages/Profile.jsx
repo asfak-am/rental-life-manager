@@ -6,6 +6,8 @@ import BottomNav from '../components/BottomNav'
 import DesktopAppShell from '../components/desktop/DesktopAppShell'
 import { useAuth } from '../context/AuthContext'
 import { authService } from '../services'
+import { houseService } from '../services'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { CURRENCY_OPTIONS } from '../utils/currency'
 
 const MAX_IMAGE_INPUT_SIZE = 10 * 1024 * 1024
@@ -383,6 +385,25 @@ export default function Profile() {
     </>
   )
 
+  // --- Embedded Settings ---
+  const qc = useQueryClient()
+  const { data: rentStatus } = useQuery({ queryKey: ['rent-status'], queryFn: () => houseService.getRentStatus().then(r => r.data), enabled: !!user })
+  const [monthlyRentInputLocal, setMonthlyRentInputLocal] = useState('')
+  const updateRentMutation = useMutation({ mutationFn: (value) => houseService.updateRentConfig(value), onSuccess: () => { toast.success('Monthly rent updated'); qc.invalidateQueries(['rent-status']); qc.invalidateQueries(['house']) }, onError: () => toast.error('Failed to update monthly rent') })
+
+  const notificationPrefs = user?.notifications || { expense: true, task: true, payment: true }
+  const toggleNotification = async (key, enabled) => {
+    try {
+      const res = await authService.updateProfile({ notifications: { ...(user.notifications || {}), [key]: enabled } })
+      // update user state via context
+      // updateUser is available from useAuth
+      updateUser(res.data.user)
+      toast.success('Notification settings updated')
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to update notification settings')
+    }
+  }
+
   return (
     <>
       <div className="hidden lg:block">
@@ -392,6 +413,42 @@ export default function Profile() {
           searchPlaceholder="Search settings..."
         >
           {profileForm}
+
+          <section className="mt-8 space-y-6">
+            <h3 className="text-2xl font-black">Settings</h3>
+            <div className="bg-white rounded-3xl border border-slate-200 p-6">
+              <h4 className="font-semibold">Notification Preferences</h4>
+              <div className="mt-4 grid grid-cols-1 gap-3">
+                {[
+                  { key: 'expense', label: 'Expense alerts', sub: 'When a new expense is added' },
+                  { key: 'task', label: 'Chore reminders', sub: 'When tasks are assigned or due' },
+                  { key: 'payment', label: 'Payment reminders', sub: 'When someone settles a debt' },
+                ].map(({ key, label, sub }) => (
+                  <div key={key} className="flex items-center justify-between p-4 rounded-xl bg-surface-container-lowest">
+                    <div>
+                      <p className="font-semibold">{label}</p>
+                      <p className="text-xs text-slate-500">{sub}</p>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input type="checkbox" className="sr-only peer" defaultChecked={notificationPrefs[key]} onChange={(e) => toggleNotification(key, e.target.checked)} />
+                      <div className="w-11 h-6 bg-surface-container-high peer-focus:outline-none rounded-full peer peer-checked:bg-primary transition-colors" />
+                      <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-5" />
+                    </label>
+                  </div>
+                ))}
+              </div>
+
+              {user && (
+                <div className="mt-6">
+                  <h4 className="font-semibold">Monthly Rent (Admins only)</h4>
+                  <div className="mt-3 flex gap-3">
+                    <input type="number" min="0" value={monthlyRentInputLocal} onChange={e => setMonthlyRentInputLocal(e.target.value)} placeholder={`${rentStatus?.totalRentAmount || ''}`} className="flex-1 rounded-xl border border-slate-200 px-4 py-3" />
+                    <button onClick={() => updateRentMutation.mutate(Number(monthlyRentInputLocal || rentStatus?.totalRentAmount || 0))} disabled={updateRentMutation.isPending} className="px-5 py-3 signature-gradient text-white rounded-xl">{updateRentMutation.isPending ? 'Saving...' : 'Save'}</button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </section>
         </DesktopAppShell>
       </div>
 
@@ -403,6 +460,43 @@ export default function Profile() {
             <p className="text-on-surface-variant mt-1">Manage your personal details and profile picture.</p>
           </div>
           {profileForm}
+
+          {/* Embedded settings for mobile */}
+          <section className="mt-6 space-y-4">
+            <h3 className="text-2xl font-black">Settings</h3>
+            <div className="bg-surface-container-lowest rounded-2xl p-4">
+              <h4 className="font-semibold">Notification Preferences</h4>
+              <div className="mt-3 space-y-3">
+                {[
+                  { key: 'expense', label: 'Expense alerts', sub: 'When a new expense is added' },
+                  { key: 'task', label: 'Chore reminders', sub: 'When tasks are assigned or due' },
+                  { key: 'payment', label: 'Payment reminders', sub: 'When someone settles a debt' },
+                ].map(({ key, label, sub }) => (
+                  <div key={key} className="flex items-center justify-between">
+                    <div>
+                      <p className="font-semibold">{label}</p>
+                      <p className="text-xs text-on-surface-variant">{sub}</p>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input type="checkbox" className="sr-only peer" defaultChecked={notificationPrefs[key]} onChange={(e) => toggleNotification(key, e.target.checked)} />
+                      <div className="w-11 h-6 bg-surface-container-high peer-focus:outline-none rounded-full peer peer-checked:bg-primary transition-colors" />
+                      <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-5" />
+                    </label>
+                  </div>
+                ))}
+              </div>
+
+              {user && (
+                <div className="mt-4">
+                  <h4 className="font-semibold">Monthly Rent (Admins only)</h4>
+                  <div className="mt-3 flex gap-3">
+                    <input type="number" min="0" value={monthlyRentInputLocal} onChange={e => setMonthlyRentInputLocal(e.target.value)} placeholder={`${rentStatus?.totalRentAmount || ''}`} className="flex-1 rounded-xl border border-slate-200 px-4 py-3" />
+                    <button onClick={() => updateRentMutation.mutate(Number(monthlyRentInputLocal || rentStatus?.totalRentAmount || 0))} disabled={updateRentMutation.isPending} className="px-5 py-3 signature-gradient text-white rounded-xl">{updateRentMutation.isPending ? 'Saving...' : 'Save'}</button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </section>
         </main>
         <BottomNav />
       </div>

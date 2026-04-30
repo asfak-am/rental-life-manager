@@ -112,6 +112,19 @@ export default function Balances() {
               )}
             </div>
           </div>
+          <button
+            onClick={() => payRent()}
+            disabled={payRentMutation.isPending || rentStatus?.myRent?.status === 'paid' || !rentStatus?.earlyPayAllowed || !isAdmin}
+            className="mt-6 w-full bg-primary text-on-primary font-bold py-3 px-4 rounded-full hover:bg-primary-container disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {rentStatus?.myRent?.status === 'paid'
+              ? 'Rent Paid'
+              : !isAdmin
+              ? 'Admin Only'
+              : payRentMutation.isPending
+              ? 'Paying...'
+              : 'Pay Monthly Rent'}
+          </button>
         </section>
 
         {/* Member Rent Payment Status */}
@@ -199,16 +212,10 @@ export default function Balances() {
                   </button>
                 </div>
               </div>
-                    disabled={payRentMutation.isPending || rentStatus?.myRent?.status === 'paid' || !rentStatus?.earlyPayAllowed || !isAdmin}
+            ))}
           </div>
         </section>
-                    {rentStatus?.myRent?.status === 'paid'
-                      ? 'Rent Paid'
-                      : !isAdmin
-                      ? 'Admin Only'
-                      : payRentMutation.isPending
-                      ? 'Paying...'
-                      : 'Pay Monthly Rent'}
+
         {/* Owed to you */}
         <section className="md:col-span-6 space-y-4">
           <div className="flex items-center justify-between px-2">

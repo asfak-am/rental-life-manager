@@ -48,6 +48,16 @@ export default function Balances() {
     onError: () => toast.error('Failed to settle'),
   })
 
+  const payRentMutation = useMutation({
+    mutationFn: (month) => houseService.payRent(month),
+    onSuccess: () => {
+      toast.success('Rent marked as paid')
+      qc.invalidateQueries(['rent-status'])
+      qc.invalidateQueries(['rent-expenses', currentBillMonth])
+    },
+    onError: () => toast.error('Failed to mark rent as paid'),
+  })
+
   const myBalance  = rawData?.balances?.find(b => b.userId === user?._id)
   const netAmount  = myBalance?.net ?? 0
   const iOwe       = rawData?.debts?.filter(d => d.from === user?._id) || []
@@ -113,7 +123,7 @@ export default function Balances() {
             </div>
           </div>
           <button
-            onClick={() => payRent()}
+            onClick={() => payRentMutation.mutate(currentBillMonth)}
             disabled={payRentMutation.isPending || rentStatus?.myRent?.status === 'paid' || !rentStatus?.earlyPayAllowed || !isAdmin}
             className="mt-6 w-full bg-primary text-on-primary font-bold py-3 px-4 rounded-full hover:bg-primary-container disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >

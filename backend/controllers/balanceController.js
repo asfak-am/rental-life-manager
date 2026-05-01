@@ -56,16 +56,20 @@ const getBalances = async (houseId) => {
 			}
 
 			const key = `${participantId}:${paidBy}`
-			rawDebts.set(key, (rawDebts.get(key) || 0) + amount)
+			const existing = rawDebts.get(key) || { amount: 0, reasons: new Set() }
+			existing.amount = roundMoney((existing.amount || 0) + amount)
+			existing.reasons.add(expense.title || expense.category || 'Expense')
+			rawDebts.set(key, existing)
 		})
 	})
 
-	const debts = Array.from(rawDebts.entries()).map(([key, amount]) => {
+	const debts = Array.from(rawDebts.entries()).map(([key, entry]) => {
 		const [from, to] = key.split(':')
 		return {
 			from,
 			to,
-			amount: roundMoney(amount),
+			amount: roundMoney(entry.amount),
+			reasons: Array.from(entry.reasons || []),
 		}
 	})
 

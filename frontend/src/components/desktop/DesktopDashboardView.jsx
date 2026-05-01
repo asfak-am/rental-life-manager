@@ -65,14 +65,11 @@ export default function DesktopDashboardView({
   return (
     <DesktopAppShell
       title={`Good Morning, ${shortName}`}
-      subtitle={houseName ? `${houseName} dashboard` : 'House dashboard overview'}
+      // subtitle={houseName ? `${houseName} dashboard` : 'House dashboard overview'}
       searchPlaceholder="Search property or resident..."
     >
       <div className="grid grid-cols-12 gap-5">
-
-        {/* Harmony Score removed */}
-
-        <section className="col-span-6 bg-white rounded-3xl p-6 border border-slate-200 flex flex-col">
+        <section className="col-span-8 bg-white rounded-3xl p-6 border border-slate-200 flex flex-col">
           <div className="flex items-center justify-between gap-4 flex-wrap mb-4">
             <div>
               <p className="text-xs uppercase tracking-widest text-slate-400">Utility Trend</p>
@@ -131,8 +128,41 @@ export default function DesktopDashboardView({
           )}
         </section>
 
+         {/* Invite Code */}
+        {inviteCode && (
+          <section className="col-span-4 bg-white rounded-[30px] p-6 border border-slate-200 flex flex-col">
+            <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Invite Code</p>
+            <h3 className="flex flex-col items-center justify-center text-2xl font-black tracking-widest text-[#5f52f2] mt-3 break-words">{inviteCode}</h3>
+            {inviteQrSrc && (
+              <div className="flex flex-col items-center justify-center mt-4 flex-1">
+                <div className="bg-[#f7f8fb] rounded-[16px] p-4 border border-slate-200">
+                  <img
+                    src={inviteQrSrc}
+                    alt="Invite QR Code"
+                    className="w-40 h-40"
+                  />
+                </div>
+              </div>
+            )}
+            <div className="mt-4 flex flex-col gap-2">
+              <button
+                onClick={onCopyInvite}
+                className="w-full px-4 py-2.5 signature-gradient text-white font-bold rounded-lg text-sm transition-transform active:scale-95"
+              >
+                Copy Code
+              </button>
+              <button
+                onClick={onOpenInvite}
+                className="w-full px-4 py-2.5 rounded-lg bg-slate-50 text-slate-700 font-bold border border-slate-300 text-sm hover:bg-white transition"
+              >
+                Refresh
+              </button>
+            </div>
+          </section>
+        )}
+
         {/* Recent Expenses */}
-        <section className="col-span-8 bg-white rounded-[30px] p-6 border border-slate-200">
+        <section className="col-span-6 bg-white rounded-[30px] p-6 border border-slate-200">
           <div className="flex items-center justify-between gap-3 mb-5">
             <h4 className="text-2xl font-black">Recent Expenses</h4>
             <button
@@ -169,38 +199,7 @@ export default function DesktopDashboardView({
           </div>
         </section>
 
-        {/* Invite Code */}
-        {inviteCode && (
-          <section className="col-span-4 bg-white rounded-[30px] p-6 border border-slate-200 flex flex-col">
-            <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Invite Code</p>
-            <h3 className="text-3xl font-black tracking-widest text-[#5f52f2] mt-3 break-words">{inviteCode}</h3>
-            {inviteQrSrc && (
-              <div className="flex flex-col items-center justify-center mt-4 flex-1">
-                <div className="bg-[#f7f8fb] rounded-[16px] p-4 border border-slate-200">
-                  <img
-                    src={inviteQrSrc}
-                    alt="Invite QR Code"
-                    className="w-40 h-40"
-                  />
-                </div>
-              </div>
-            )}
-            <div className="mt-4 flex flex-col gap-2">
-              <button
-                onClick={onCopyInvite}
-                className="w-full px-4 py-2.5 signature-gradient text-white font-bold rounded-lg text-sm transition-transform active:scale-95"
-              >
-                Copy Code
-              </button>
-              <button
-                onClick={onOpenInvite}
-                className="w-full px-4 py-2.5 rounded-lg bg-slate-50 text-slate-700 font-bold border border-slate-300 text-sm hover:bg-white transition"
-              >
-                Refresh
-              </button>
-            </div>
-          </section>
-        )}
+       
 
         {/* Tasks */}
         <section className="col-span-6 bg-white rounded-3xl p-6 border border-slate-200">
@@ -250,7 +249,7 @@ export default function DesktopDashboardView({
         </section>
 
         {/* Rent */}
-        <section className="col-span-6 bg-white rounded-[30px] p-6 border border-slate-200">
+        <section className="col-span-12 bg-white rounded-[30px] p-6 border border-slate-200">
           <div className="flex items-center justify-between gap-4 flex-wrap">
             <div>
               <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Monthly Rent</p>

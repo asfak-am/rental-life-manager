@@ -1,16 +1,25 @@
 import { useNavigate } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import api from '../services/api'
 import { useAuth } from '../context/AuthContext'
+import { useRef } from 'react'
 
 export default function TopBar() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
 
+  const qc = useQueryClient()
+  const lastCountRef = useRef(0)
   const { data: notificationData } = useQuery({
     queryKey: ['notifications', 'topbar-count'],
     queryFn: () => api.get('/notifications').then(r => r.data),
     staleTime: 30000,
+    refetchInterval: 15000,
+    onSuccess(data) {
+      const unread = (data?.notifications || []).filter(n => !n.read).length
+      if (unread > lastCountRef.current) qc.invalidateQueries(['rent-status'])
+      lastCountRef.current = unread
+    }
   })
 
   const unreadCount = (notificationData?.notifications || []).filter(notification => !notification.read).length

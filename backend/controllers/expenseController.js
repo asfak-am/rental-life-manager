@@ -360,13 +360,9 @@ const getSummary = async (req, res, next) => {
 			})
 		}
 
-		const now = new Date()
-		const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
-		const expenses = await Expense.find({
-			houseId: house._id,
-			date: { $gte: startOfMonth, $lte: now },
-		})
-			.select('amount paidBy participants category date')
+		// Fetch all expenses for the house to show in analytics
+		const expenses = await Expense.find({ houseId: house._id })
+			.select('amount paidBy participants category date billMonth')
 			.sort({ date: -1 })
 			.lean()
 

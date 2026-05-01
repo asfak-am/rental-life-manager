@@ -40,10 +40,25 @@ export default function Balances() {
 
   const payMemberRentMutation = useMutation({
     mutationFn: ({ userId, month }) => houseService.payRentForMember(userId, month),
-    onSuccess: () => {
+    onSuccess: (res) => {
+      try {
+        const payload = res?.data || res
+        if (payload?.rentStatus) {
+          qc.setQueryData(['rent-status'], payload.rentStatus)
+        } else {
+          qc.invalidateQueries(['rent-status'])
+        }
+        qc.invalidateQueries(['rent-expenses', currentBillMonth])
+        qc.invalidateQueries(['expenses-recent'])
+        qc.invalidateQueries({ queryKey: ['expense'] })
+        qc.invalidateQueries(['balance-raw'])
+      } catch (e) {
+        qc.invalidateQueries(['rent-status'])
+        qc.invalidateQueries(['rent-expenses', currentBillMonth])
+        qc.invalidateQueries(['expenses-recent'])
+        qc.invalidateQueries(['balance-raw'])
+      }
       toast.success('Member rent marked as paid')
-      qc.invalidateQueries(['rent-status'])
-      qc.invalidateQueries(['rent-expenses', currentBillMonth])
     },
     onError: () => toast.error('Failed to mark member rent as paid'),
   })
@@ -60,10 +75,25 @@ export default function Balances() {
 
   const payRentMutation = useMutation({
     mutationFn: (month) => houseService.payRent(month),
-    onSuccess: () => {
-      toast.success('Rent marked as paid')
-      qc.invalidateQueries(['rent-status'])
-      qc.invalidateQueries(['rent-expenses', currentBillMonth])
+      onSuccess: (res) => {
+        try {
+          const payload = res?.data || res
+          if (payload?.rentStatus) {
+            qc.setQueryData(['rent-status'], payload.rentStatus)
+          } else {
+            qc.invalidateQueries(['rent-status'])
+          }
+          qc.invalidateQueries(['rent-expenses', currentBillMonth])
+          qc.invalidateQueries(['expenses-recent'])
+          qc.invalidateQueries({ queryKey: ['expense'] })
+          qc.invalidateQueries(['balance-raw'])
+        } catch (e) {
+          qc.invalidateQueries(['rent-status'])
+          qc.invalidateQueries(['rent-expenses', currentBillMonth])
+          qc.invalidateQueries(['expenses-recent'])
+          qc.invalidateQueries(['balance-raw'])
+        }
+        toast.success('Rent marked as paid')
     },
     onError: () => toast.error('Failed to mark rent as paid'),
   })
@@ -231,9 +261,12 @@ export default function Balances() {
                   <div>
                     <p className="font-bold text-on-surface">{getName(debt.to)}</p>
                     <p className="text-xs text-outline font-medium">Pending payment</p>
+                    {debt.reasons && debt.reasons.length > 0 && (
+                      <p className="text-xs text-slate-500 mt-1 font-medium truncate">{debt.reasons[0]}</p>
+                    )}
                   </div>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex flex-col items-end gap-2">
                   <p className="font-black text-error text-lg">{formatCurrency(debt.amount, preferredCurrency)}</p>
                   <button
                     onClick={() => setSettling(debt)}
@@ -274,9 +307,12 @@ export default function Balances() {
                   <div>
                     <p className="font-bold text-on-surface">{getName(debt.from)}</p>
                     <p className="text-xs text-outline font-medium">Owes you</p>
+                    {debt.reasons && debt.reasons.length > 0 && (
+                      <p className="text-xs text-slate-500 mt-1 font-medium truncate">{debt.reasons[0]}</p>
+                    )}
                   </div>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex flex-col items-end gap-2">
                   <p className="font-black text-secondary text-lg">{formatCurrency(debt.amount, preferredCurrency)}</p>
                   <button
                     onClick={() => setSettling(debt)}

@@ -197,9 +197,13 @@ export default function Dashboard() {
   const payRentMutation = useMutation({
     mutationFn: () => houseService.payRent(rentStatus?.month),
     onSuccess: () => {
-      toast.success('Monthly rent paid')
+      qc.setQueryData(['rent-status'], prev => prev ? { ...prev, myRent: { ...prev.myRent, status: 'paid', paidAt: new Date() } } : prev)
       qc.invalidateQueries(['rent-status'])
       qc.invalidateQueries(['balance-raw'])
+      qc.invalidateQueries(['rent-expenses'])
+      qc.invalidateQueries(['expenses-recent'])
+      qc.invalidateQueries({ queryKey: ['expense'] })
+      toast.success('Monthly rent paid')
     },
     onError: (err) => toast.error(err.response?.data?.message || 'Failed to pay rent'),
   })

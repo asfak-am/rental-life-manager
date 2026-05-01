@@ -1,7 +1,8 @@
 import { NavLink, useNavigate } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import api from '../../services/api'
 import { useAuth } from '../../context/AuthContext'
+import { useRef } from 'react'
 
 const navItems = [
   { to: '/', label: 'Dashboard', icon: 'dashboard' },
@@ -23,10 +24,18 @@ export default function DesktopAppShell({
   const navigate = useNavigate()
   const displayName = user?.displayName || user?.name || 'Profile'
   const avatarUrl = user?.avatar || ''
+  const qc = useQueryClient()
+  const lastDesktopCount = useRef(0)
   const { data: notificationData } = useQuery({
     queryKey: ['notifications', 'desktop-topbar-count'],
     queryFn: () => api.get('/notifications').then(r => r.data),
     staleTime: 30000,
+    refetchInterval: 15000,
+    onSuccess(data) {
+      const unread = (data?.notifications || []).filter(n => !n.read).length
+      if (unread > lastDesktopCount.current) qc.invalidateQueries(['rent-status'])
+      lastDesktopCount.current = unread
+    }
   })
   const unreadCount = (notificationData?.notifications || []).filter(notification => !notification.read).length
   const initials = displayName

@@ -229,7 +229,19 @@ const payMonthlyRent = async (req, res, next) => {
 		rentRecord.status = 'paid'
 		rentRecord.paidAt = new Date()
 		await rentRecord.save()
-
+	// Also mark corresponding rent expenses as settled for this user
+	const Expense = require('../models/Expense')
+	const rentExpenses = await Expense.find({ houseId: house._id, category: 'Rent', billMonth: month })
+	
+	for (const expense of rentExpenses) {
+		const participant = expense.participants.find(p => String(p.userId) === String(req.user._id))
+		if (participant && !participant.settled) {
+			participant.settled = true
+			participant.settledAt = new Date()
+			expense.auditTrail.push({ action: 'Marked settled via rent payment', by: req.user._id })
+			await expense.save()
+		}
+	}
 		const notifications = house.members
 			.filter(member => String(member.userId) !== String(req.user._id))
 			.map(member => ({
@@ -267,25 +279,49 @@ const payMonthlyRentForMember = async (req, res, next) => {
 
 		const month = req.body.month ? String(req.body.month) : toMonthKey()
 
-		const rentRecord = await RentPayment.findOne({ houseId: house._id, userId: memberId, month })
+		const mongoose = require('mongoose')
+		let rentRecord = await RentPayment.findOne({ houseId: house._id, userId: memberId, month })
+		// try casting to ObjectId if initial lookup fails
+		if (!rentRecord) {
+			try {
+				const objId = mongoose.Types.ObjectId(memberId)
+				rentRecord = await RentPayment.findOne({ houseId: house._id, userId: objId, month })
+			} catch (err) {
+				// ignore cast error
+			}
+		}
 		if (!rentRecord) return res.status(404).json({ message: 'Rent record not found for member' })
+		console.debug(`payMonthlyRentForMember: found rentRecord ${rentRecord._id} for user ${memberId} month ${month} status=${rentRecord.status}`)
 		if (rentRecord.status === 'paid') return res.json({ message: 'Rent already paid', rentStatus: await getRentStatusForUser({ house, userId: memberId, month, now: new Date() }) })
 
 		rentRecord.status = 'paid'
 		rentRecord.paidAt = new Date()
 		await rentRecord.save()
-
-		const notifications = house.members
-			.filter(member => String(member.userId) !== memberId)
-			.map(member => ({
-				userId: member.userId,
-				houseId: house._id,
-				type: 'payment',
-				title: 'Rent payment recorded',
-				body: `Rent for ${month} marked as paid for a member`,
-				amount: rentRecord.amountDue,
-				link: '/balances',
-			}))
+		console.debug(`payMonthlyRentForMember: saved rentRecord ${rentRecord._id} status=${rentRecord.status}`)
+	// Also mark corresponding rent expenses as settled for this member
+	const Expense = require('../models/Expense')
+	const rentExpenses = await Expense.find({ houseId: house._id, category: 'Rent', billMonth: month })
+	console.debug(`payMonthlyRentForMember: found ${rentExpenses.length} rent expenses for month ${month}`)
+	
+	for (const expense of rentExpenses) {
+		const participant = expense.participants.find(p => String(p.userId) === memberId)
+		if (participant && !participant.settled) {
+			participant.settled = true
+			participant.settledAt = new Date()
+			expense.auditTrail.push({ action: 'Marked settled via rent payment', by: req.user._id })
+			await expense.save()
+			console.debug(`payMonthlyRentForMember: marked expense ${expense._id} participant settled`)
+		}
+	}
+		const notifications = house.members.map(member => ({
+			userId: member.userId,
+			houseId: house._id,
+			type: 'payment',
+			title: 'Rent payment recorded',
+			body: `Rent for ${month} marked as paid for a member`,
+			amount: rentRecord.amountDue,
+			link: '/balances',
+		}))
 
 		if (notifications.length > 0) await Notification.insertMany(notifications)
 

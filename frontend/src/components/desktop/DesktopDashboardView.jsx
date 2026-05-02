@@ -42,6 +42,10 @@ export default function DesktopDashboardView({
   rentStatus,
   onPayRent,
   payingRent,
+  rentStatuses = [],
+  onPayMemberRent,
+  payingMemberRent = false,
+  isAdmin = false,
 }) {
   const displayName = user?.displayName || user?.name || 'Manager'
   const shortName = displayName.split(' ')[0]
@@ -76,7 +80,7 @@ export default function DesktopDashboardView({
               <h4 className="text-2xl font-black mt-1">Water vs Electricity</h4>
               <p className="text-sm text-slate-500 mt-1">Tap a range to filter the graph.</p>
             </div>
-            <div className="inline-flex flex-wrap gap-2 rounded-2xl bg-[#f4f5f9] p-1.5 border border-slate-200">
+            <div className="inline-flex flex-wrap gap-2 rounded-2xl bg-surface-container p-1.5 border border-slate-200">
               {['3M', '6M', '12M', 'ALL'].map((range) => {
                 const active = utilityRange === range
                 return (
@@ -100,12 +104,12 @@ export default function DesktopDashboardView({
                 <AreaChart data={utilityTrendData}>
                   <defs>
                     <linearGradient id="waterFillDesktopDashboard" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#57d0c5" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#57d0c5" stopOpacity={0.05} />
+                      <stop offset="5%" stopColor="rgb(var(--primary-rgb))" stopOpacity={0.35} />
+                      <stop offset="95%" stopColor="rgb(var(--primary-rgb))" stopOpacity={0.06} />
                     </linearGradient>
                     <linearGradient id="electricFillDesktopDashboard" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#FFB800" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#FFB800" stopOpacity={0.05} />
+                      <stop offset="5%" stopColor="rgba(var(--primary-rgb), 0.72)" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="rgba(var(--primary-rgb), 0.72)" stopOpacity={0.05} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
@@ -116,13 +120,13 @@ export default function DesktopDashboardView({
                     contentStyle={{ borderRadius: '12px', border: 'none', background: '#ffffff', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}
                   />
                   <Legend />
-                  <Area type="monotone" dataKey="water" name="Water Bill" stroke="#57d0c5" fill="url(#waterFillDesktopDashboard)" strokeWidth={3} />
-                  <Area type="monotone" dataKey="electricity" name="Electricity Bill" stroke="#FFB800" fill="url(#electricFillDesktopDashboard)" strokeWidth={3} />
+                  <Area type="monotone" dataKey="water" name="Water Bill" stroke="rgb(var(--primary-rgb))" fill="url(#waterFillDesktopDashboard)" strokeWidth={3} />
+                  <Area type="monotone" dataKey="electricity" name="Electricity Bill" stroke="rgba(var(--primary-rgb), 0.72)" fill="url(#electricFillDesktopDashboard)" strokeWidth={3} />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
           ) : (
-            <div className="h-[220px] grid place-items-center rounded-2xl bg-[#f7f8fb] text-sm text-slate-500">
+            <div className="h-[220px] grid place-items-center rounded-2xl bg-surface-container-low text-sm text-slate-500">
               Add water and electricity expenses to see monthly variation.
             </div>
           )}
@@ -132,10 +136,10 @@ export default function DesktopDashboardView({
         {inviteCode && (
           <section className="col-span-4 bg-white rounded-[30px] p-6 border border-slate-200 flex flex-col">
             <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Invite Code</p>
-            <h3 className="flex flex-col items-center justify-center text-2xl font-black tracking-widest text-[#5f52f2] mt-3 break-words">{inviteCode}</h3>
+            <h3 className="flex flex-col items-center justify-center text-2xl font-black tracking-widest text-primary mt-3 break-words">{inviteCode}</h3>
             {inviteQrSrc && (
               <div className="flex flex-col items-center justify-center mt-4 flex-1">
-                <div className="bg-[#f7f8fb] rounded-[16px] p-4 border border-slate-200">
+                <div className="bg-surface-container-low rounded-[16px] p-4 border border-slate-200">
                   <img
                     src={inviteQrSrc}
                     alt="Invite QR Code"
@@ -168,7 +172,7 @@ export default function DesktopDashboardView({
             <button
               type="button"
               onClick={onViewExpenses}
-              className="px-3.5 py-1.5 rounded-lg bg-[#ecebff] text-[#5f52f2] text-xs font-bold uppercase tracking-wider hover:bg-[#ddd9ff] transition"
+              className="px-3.5 py-1.5 rounded-lg bg-primary-fixed/20 text-primary text-xs font-bold uppercase tracking-wider hover:bg-primary-fixed/30 transition"
             >
               View all
             </button>
@@ -192,7 +196,7 @@ export default function DesktopDashboardView({
                     <p className="text-sm font-semibold text-slate-900 truncate">{exp.title}</p>
                     <p className="text-xs text-slate-500 mt-0.5">Recently added</p>
                   </div>
-                  <p className="text-lg font-black text-[#5f52f2] flex-shrink-0">{formatCurrency(exp.amount, currency)}</p>
+                  <p className="text-lg font-black text-primary flex-shrink-0">{formatCurrency(exp.amount, currency)}</p>
                 </div>
               )
             })}
@@ -221,7 +225,7 @@ export default function DesktopDashboardView({
                 const isPending = !task.status || task.status === 'todo' || task.status === 'pending'
 
                 return (
-                  <div key={task._id} className="flex items-center gap-4 p-4 rounded-2xl bg-[#f7f8fb] border border-slate-100 hover:border-slate-300 transition">
+                  <div key={task._id} className="flex items-center gap-4 p-4 rounded-2xl bg-surface-container-low border border-slate-100 hover:border-slate-300 transition">
                     <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${isPending ? 'bg-amber-100 text-amber-600' : 'bg-emerald-100 text-emerald-600'}`}>
                       <span className="material-symbols-outlined text-[18px]" style={{ fontVariationSettings: "'FILL' 1" }}>
                         {isPending ? 'radio_button_unchecked' : 'check_circle'}
@@ -237,7 +241,7 @@ export default function DesktopDashboardView({
                       type="button"
                       onClick={() => onMarkTaskComplete?.(task)}
                       disabled={isMarkingTaskComplete}
-                      className="ml-3 px-3 py-1.5 rounded-lg text-xs font-semibold text-[#5f52f2] bg-white border border-[#d8d3ff] hover:bg-[#ecebff] disabled:opacity-60 disabled:cursor-not-allowed whitespace-nowrap transition"
+                      className="ml-3 px-3 py-1.5 rounded-lg text-xs font-semibold text-primary bg-white border border-primary-fixed/40 hover:bg-primary-fixed/20 disabled:opacity-60 disabled:cursor-not-allowed whitespace-nowrap transition"
                     >
                       Mark done
                     </button>
@@ -249,62 +253,78 @@ export default function DesktopDashboardView({
         </section>
 
         {/* Rent */}
-        <section className="col-span-12 bg-white rounded-[30px] p-6 border border-slate-200">
-          <div className="flex items-center justify-between gap-4 flex-wrap">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Monthly Rent</p>
-              <h3 className="text-2xl font-black mt-1">{formatCurrency(rentStatus?.myRent?.amountDue || 0, currency)}</h3>
-              <p className="text-sm text-slate-500 mt-1">{rentStatus?.month || 'Current month'} · {rentPaid ? 'Paid' : 'Pending'}</p>
-            </div>
-            <button
-              type="button"
-              onClick={onPayRent}
-              disabled={payingRent || rentPaid || !rentStatus?.earlyPayAllowed}
-              className="px-5 py-3 signature-gradient text-white font-bold rounded-xl disabled:opacity-60"
-            >
-              {rentPaid ? 'Rent Paid' : payingRent ? 'Paying...' : 'Pay Monthly Rent'}
-            </button>
-          </div>
-
-          {(rentStatus?.memberStatuses || []).length > 0 && (
-            <div className="mt-5 grid grid-cols-2 gap-3">
-              {rentStatus.memberStatuses.map(member => {
-                const paid = member.status === 'paid'
-                const houseMember = findMemberById(members, member.userId)
-                const memberAvatar = getMemberAvatar(houseMember)
-                return (
-                  <div
-                    key={member.userId}
-                    className={`p-4 rounded-2xl border ${paid ? 'bg-emerald-50 border-emerald-300' : 'bg-red-50 border-red-300'}`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full overflow-hidden bg-white border border-slate-200 flex-shrink-0">
-                        {memberAvatar ? (
-                          <img src={memberAvatar} alt={`${member.name} avatar`} className="w-full h-full object-cover" />
-                        ) : (
-                          <div className="w-full h-full grid place-items-center text-xs font-bold text-slate-600">
-                            {(member.name || 'U').charAt(0).toUpperCase()}
-                          </div>
-                        )}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="font-bold text-sm truncate">{member.name}</p>
-                        <p className={`text-xs font-semibold ${paid ? 'text-emerald-700' : 'text-red-700'}`}>
-                          {paid ? 'Paid' : 'Pending'}
-                        </p>
-                      </div>
-                      <div className={`w-7 h-7 rounded-md border-2 grid place-items-center flex-shrink-0 ${paid ? 'border-emerald-600 bg-emerald-600 text-white' : 'border-red-500 bg-white text-red-500'}`}>
-                        <span className="material-symbols-outlined text-[14px]" style={{ fontVariationSettings: "'FILL' 1" }}>
-                          {paid ? 'check' : 'close'}
-                        </span>
-                      </div>
-                    </div>
+        {(rentStatuses || []).filter(s => s.unpaidCount > 0).length > 0 && (
+          <section className="col-span-12 space-y-4">
+            {(rentStatuses || []).filter(s => s.unpaidCount > 0).map(status => (
+                  <div key={status.month} className="bg-surface-container-lowest rounded-[30px] p-6 border border-outline-variant/10">
+                <div className="flex items-center justify-between gap-4 flex-wrap mb-5">
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Monthly Rent</p>
+                    <h3 className="text-2xl font-black mt-1">{status.month}</h3>
+                    <p className="text-sm text-slate-500 mt-1">{status.unpaidCount} unpaid of {status.memberCount} members</p>
                   </div>
-                )
-              })}
-            </div>
-          )}
-        </section>
+                  {isAdmin && (
+                    <button
+                      type="button"
+                      onClick={() => onPayRent?.(status.month)}
+                      disabled={payingRent}
+                      className="px-5 py-3 signature-gradient text-white font-bold rounded-xl disabled:opacity-60"
+                    >
+                      {payingRent ? 'Paying...' : 'Mark Paid'}
+                    </button>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  {status.memberStatuses.map(member => {
+                    const paid = member.status === 'paid'
+                    const houseMember = findMemberById(members, member.userId)
+                    const memberAvatar = getMemberAvatar(houseMember)
+                    return (
+                      <div
+                        key={member.userId}
+                        className={`p-4 rounded-2xl border bg-transparent ${paid ? 'border-emerald-500/50' : 'border-red-500/50'}`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className={`w-10 h-10 rounded-full overflow-hidden bg-transparent border flex-shrink-0 ${paid ? 'border-emerald-500/60' : 'border-red-500/60'}`}>
+                            {memberAvatar ? (
+                              <img src={memberAvatar} alt={`${member.name} avatar`} className="w-full h-full object-cover" />
+                            ) : (
+                              <div className="w-full h-full grid place-items-center text-xs font-bold text-on-surface">
+                                {(member.name || 'U').charAt(0).toUpperCase()}
+                              </div>
+                            )}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="font-bold text-sm truncate text-on-surface">{member.name}</p>
+                            <p className={`text-xs font-semibold ${paid ? 'text-emerald-500' : 'text-red-500'}`}>
+                              {paid ? 'Paid' : 'Pending'}
+                            </p>
+                          </div>
+                          <div className={`w-7 h-7 rounded-md border-2 grid place-items-center flex-shrink-0 ${paid ? 'border-emerald-500 text-emerald-500 bg-transparent' : 'border-red-500 text-red-500 bg-transparent'}`}>
+                            <span className="material-symbols-outlined text-[14px]" style={{ fontVariationSettings: "'FILL' 1" }}>
+                              {paid ? 'check' : 'close'}
+                            </span>
+                          </div>
+                          {isAdmin && !paid && (
+                            <button
+                              type="button"
+                              onClick={() => onPayMemberRent?.({ userId: member.userId, month: status.month })}
+                              disabled={payingMemberRent}
+                              className="px-2 py-1 text-[10px] font-bold bg-transparent border border-primary text-primary rounded-md disabled:opacity-60"
+                            >
+                              {payingMemberRent ? 'Marking...' : 'Mark'}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            ))}
+          </section>
+        )}
 
         {/* Balance Section */}
         <section className="col-span-12 bg-white rounded-[30px] p-5 border border-slate-200 relative overflow-hidden">
@@ -314,7 +334,7 @@ export default function DesktopDashboardView({
               <p className="text-xs uppercase tracking-widest text-slate-400">House Roommates</p>
               <h3 className="text-[clamp(2rem,2.6vw,3rem)] leading-tight font-black mt-3 break-words">{houseName || 'Your House'}</h3>
             </div>
-            <div className="rounded-2xl bg-[#f4f5f9] px-4 py-3 border border-slate-200">
+            <div className="rounded-2xl bg-surface-container px-4 py-3 border border-slate-200">
               <p className="text-[11px] uppercase tracking-widest text-slate-400">House Balance</p>
               <p className="text-xl font-black mt-1 break-words">{balanceLabel}</p>
             </div>
@@ -325,7 +345,7 @@ export default function DesktopDashboardView({
               Add Expenses
             </button>
 
-            <button onClick={onViewLedger} className="px-5 py-3 rounded-xl bg-[#ecebff] text-[#5f52f2] font-semibold">
+            <button onClick={onViewLedger} className="px-5 py-3 rounded-xl bg-primary-fixed/20 text-primary font-semibold">
               View Ledger
             </button>
           </div>
@@ -344,12 +364,12 @@ export default function DesktopDashboardView({
                 const memberAvatar = getMemberAvatar(member)
 
                 return (
-                  <div key={member._id} className="bg-[#f7f8fb] p-4 rounded-2xl border border-slate-200 hover:border-slate-300 transition text-center">
-                    <div className="w-14 h-14 mx-auto rounded-full overflow-hidden bg-[#d9dbff] border border-slate-200">
+                  <div key={member._id} className="bg-surface-container-low p-4 rounded-2xl border border-slate-200 hover:border-slate-300 transition text-center">
+                    <div className="w-14 h-14 mx-auto rounded-full overflow-hidden bg-primary-fixed/25 border border-slate-200">
                       {memberAvatar ? (
                         <img src={memberAvatar} alt={`${memberName} avatar`} className="w-full h-full object-cover" />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center text-[#5f52f2] font-bold text-lg">
+                        <div className="w-full h-full flex items-center justify-center text-primary font-bold text-lg">
                           {(memberName || 'R')[0]}
                         </div>
                       )}

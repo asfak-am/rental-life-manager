@@ -2,7 +2,8 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import api from '../../services/api'
 import { useAuth } from '../../context/AuthContext'
-import { useRef } from 'react'
+import ThemeCustomizer from '../ThemeCustomizer'
+import { useRef, useState, useEffect } from 'react'
 
 const navItems = [
   { to: '/', label: 'Dashboard', icon: 'dashboard' },
@@ -26,6 +27,15 @@ export default function DesktopAppShell({
   const avatarUrl = user?.avatar || ''
   const qc = useQueryClient()
   const lastDesktopCount = useRef(0)
+  const [isHoverExpanded, setIsHoverExpanded] = useState(false)
+
+  const isSidebarExpanded = isHoverExpanded
+
+  const toggleSidebar = () => {
+    const newState = !isCollapsed
+    setIsCollapsed(newState)
+    localStorage.setItem('sidebar-collapsed', JSON.stringify(newState))
+  }
   const { data: notificationData } = useQuery({
     queryKey: ['notifications', 'desktop-topbar-count'],
     queryFn: () => api.get('/notifications').then(r => r.data),
@@ -46,90 +56,91 @@ export default function DesktopAppShell({
     .slice(0, 2)
 
   return (
-    <div className="h-screen bg-[#f2f4f8] text-slate-900 flex overflow-hidden">
-      <aside className="w-[220px] h-screen sticky top-0 bg-[#f7f8fb] border-r border-slate-200 px-5 py-6 flex flex-col overflow-y-auto">
-        <div>
-          <h1 className="text-[28px] font-black tracking-tight text-[#6a5df6] leading-none">Rental Life</h1>
-          <p className="text-[10px] uppercase tracking-[0.25em] text-slate-400 mt-1">Elevated Living</p>
+    <div className="h-screen bg-surface text-on-surface flex overflow-hidden">
+      <aside
+        className={`h-screen sticky top-0 bg-surface-container-lowest border-r border-outline-variant/20 flex flex-col overflow-y-auto transition-all duration-300 ${isSidebarExpanded ? 'w-[220px] px-5' : 'w-[80px] px-3'} py-6`}
+        onMouseEnter={() => setIsHoverExpanded(true)}
+        onMouseLeave={() => setIsHoverExpanded(false)}
+      >
+        <div className={`flex items-start ${isSidebarExpanded ? 'justify-start' : 'justify-center'} gap-3`}>
+          <div className={`flex flex-col min-w-0 ${isSidebarExpanded ? '' : 'opacity-0 pointer-events-none select-none'}`}>
+            <div className="leading-[0.9]">
+              <h1 className="text-[24px] font-black tracking-tight text-primary whitespace-nowrap">Rental Life</h1>
+            </div>
+          </div>
         </div>
 
-        <nav className="mt-10 space-y-2">
+        <nav className={`mt-10 space-y-2 ${isSidebarExpanded ? '' : 'flex flex-col items-center'}`}>
           {navItems.map(item => (
             <NavLink
               key={item.to}
               to={item.to}
               end={item.to === '/'}
               className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold transition ${
+                `flex items-center gap-3 px-3 py-2.5 rounded-lg font-semibold transition ${
                   isActive
-                    ? 'bg-[#ecebff] text-[#5e51f2]'
-                    : 'text-slate-500 hover:bg-white hover:text-slate-800'
-                }`
+                    ? 'bg-primary-fixed/20 text-primary'
+                    : 'text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface'
+                } ${isSidebarExpanded ? 'text-sm' : 'justify-center w-10 h-10 px-0'}`
               }
+              title={isSidebarExpanded ? undefined : item.label}
             >
               <span className="material-symbols-outlined text-[18px]">{item.icon}</span>
-              <span>{item.label}</span>
+              {isSidebarExpanded && <span>{item.label}</span>}
             </NavLink>
           ))}
         </nav>
 
-        <div className="mt-auto">
-          <button
-            type="button"
-            onClick={() => {
-              logout()
-              navigate('/login')
-            }}
-            className="w-full rounded-xl py-3 font-semibold bg-red-600 text-white shadow-lg shadow-red-300/40 hover:bg-red-700 transition"
-          >
-            Logout
-          </button>
+        <div className="mt-auto space-y-3">
           <button
             type="button"
             onClick={() => navigate('/profile')}
-            className="mt-5 w-full flex items-center gap-3 rounded-xl bg-white p-3 border border-slate-200 text-left hover:bg-slate-50 transition"
+            className={`w-full flex items-center gap-3 rounded-xl bg-transparent p-3 border border-outline-variant/30 text-left hover:border-primary hover:text-primary hover:bg-surface-container-low transition ${isSidebarExpanded ? '' : 'justify-center px-0'}`}
+            title={isSidebarExpanded ? undefined : 'Profile'}
           >
-            <div className="w-9 h-9 rounded-full bg-[#5e51f2] text-white font-bold flex items-center justify-center text-xs overflow-hidden">
+            <div className="w-9 h-9 rounded-full bg-transparent border border-outline-variant/30 text-on-surface-variant font-bold flex items-center justify-center text-xs overflow-hidden flex-shrink-0">
               {avatarUrl ? (
                 <img src={avatarUrl} alt="Profile avatar" className="w-full h-full object-cover" />
               ) : (
                 initials || 'RL'
               )}
             </div>
-            <div className="min-w-0">
-              <p className="text-sm font-semibold truncate">{displayName}</p>
-              <p className="text-xs text-slate-500 truncate">Property Manager</p>
-            </div>
+            {isSidebarExpanded && (
+              <div className="min-w-0">
+                <p className="text-sm font-semibold truncate">{displayName}</p>
+                <p className="text-xs text-on-surface-variant truncate">Property Manager</p>
+              </div>
+            )}
           </button>
         </div>
       </aside>
 
-      <div className="flex-1 h-screen overflow-y-auto px-8 py-6 bg-white/40">
+      <div className="flex-1 h-screen overflow-y-auto px-8 py-6 bg-surface">
         <header className="flex items-center gap-4 mb-8">
           <div className="relative flex-1 max-w-[420px]">
-            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">search</span>
+            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]">search</span>
             <input
-              className="w-full bg-[#ebedf2] rounded-xl py-2.5 pl-10 pr-4 text-sm text-slate-600 placeholder:text-slate-400 border border-transparent focus:outline-none focus:border-[#bdb8ff]"
+              className="w-full bg-surface-container rounded-xl py-2.5 pl-10 pr-4 text-sm text-on-surface placeholder:text-on-surface-variant border border-transparent focus:outline-none focus:border-primary-fixed/40"
               placeholder={searchPlaceholder}
             />
           </div>
-          <div className="ml-auto flex items-center gap-3 text-slate-500">
+          <div className="ml-auto flex items-center gap-3 text-primary">
             <button
               type="button"
               onClick={() => navigate('/notifications')}
-              className="relative w-8 h-8 rounded-full hover:bg-white grid place-items-center"
+              className="relative w-8 h-8 rounded-full bg-transparent border border-primary/35 grid place-items-center hover:bg-transparent hover:border-primary transition"
               aria-label="Open notifications"
               title="Notifications"
             >
               <span className="material-symbols-outlined text-[18px]">notifications</span>
               {unreadCount > 0 && (
-                <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-error border border-[#f2f4f8]" />
+                <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-error border border-surface" />
               )}
             </button>
             <button
               type="button"
               onClick={() => navigate('/messages')}
-              className="w-8 h-8 rounded-full hover:bg-white grid place-items-center"
+              className="w-8 h-8 rounded-full bg-transparent border border-primary/35 grid place-items-center hover:bg-transparent hover:border-primary transition"
               aria-label="Open messages"
               title="Messages"
             >
@@ -138,23 +149,23 @@ export default function DesktopAppShell({
             <button
               type="button"
               onClick={() => navigate('/help')}
-              className="w-8 h-8 rounded-full hover:bg-white grid place-items-center"
+              className="w-8 h-8 rounded-full bg-transparent border border-primary/35 grid place-items-center hover:bg-transparent hover:border-primary transition"
               aria-label="Open help and settings"
               title="Help"
             >
               <span className="material-symbols-outlined text-[18px]">help</span>
             </button>
           </div>
-          <div className="h-6 w-px bg-slate-300" />
+          <div className="h-6 w-px bg-outline-variant/30" />
           <button
             type="button"
             onClick={() => navigate('/profile')}
-            className="flex items-center gap-2 rounded-lg px-2 py-1 hover:bg-white transition"
+            className="flex items-center gap-3 rounded-lg px-3 py-1 bg-transparent border border-primary/35 text-primary hover:border-primary hover:bg-transparent transition"
             aria-label="Open profile settings"
             title="Profile settings"
           >
-            <span className="text-xs uppercase tracking-[0.2em] text-slate-400">Profile</span>
-            <div className="w-8 h-8 rounded-full bg-slate-800 text-white grid place-items-center text-xs font-bold overflow-hidden">
+            <span className="text-xs uppercase tracking-[0.2em] text-current">Profile</span>
+            <div className="w-8 h-8 rounded-full bg-transparent border border-primary/35 text-current grid place-items-center text-xs font-bold overflow-hidden">
               {avatarUrl ? (
                 <img src={avatarUrl} alt="Profile avatar" className="w-full h-full object-cover" />
               ) : (
@@ -174,6 +185,8 @@ export default function DesktopAppShell({
 
         {children}
       </div>
+
+      <ThemeCustomizer />
     </div>
   )
 }

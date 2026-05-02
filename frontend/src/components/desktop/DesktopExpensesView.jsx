@@ -25,7 +25,6 @@ export default function DesktopExpensesView({
     : []
   const totalExpenses = summaryData?.totalExpenses || 0
   const myShare = summaryData?.myShare || 0
-  const savings = summaryData?.savings || 0
 
   const exportPdf = () => {
     exportExpensesPdf({
@@ -53,17 +52,19 @@ export default function DesktopExpensesView({
       )}
     >
       <div className="grid grid-cols-12 gap-4 mb-6">
-        <div className="col-span-3 bg-white rounded-2xl p-5 border border-slate-200">
+        <div className="col-span-6 bg-white rounded-2xl p-5 border border-slate-200">
           <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Total Outflow</p>
           <p className="text-[clamp(1.5rem,2vw,2.2rem)] font-black mt-2 leading-tight break-words">{formatCurrency(totalExpenses, currency)}</p>
         </div>
-        <div className="col-span-3 bg-white rounded-2xl p-5 border border-slate-200">
-          <p className="text-xs uppercase tracking-[0.2em] text-slate-400">My Share</p>
-          <p className="text-[clamp(1.5rem,2vw,2.2rem)] font-black mt-2 leading-tight break-words">{formatCurrency(myShare, currency)}</p>
-        </div>
-        <div className="col-span-6 signature-gradient rounded-2xl p-5 text-white">
-          <p className="text-xs uppercase tracking-[0.2em] opacity-80">House Savings</p>
-          <p className="text-[clamp(1.9rem,2.6vw,3rem)] font-black mt-2 leading-tight break-words">{formatCurrency(savings, currency)}</p>
+        <div
+          className="col-span-6 rounded-2xl p-5 text-white shadow-lg transition-colors duration-300"
+          style={{
+            backgroundColor: 'rgb(var(--primary-rgb))',
+            boxShadow: 'var(--primary-color) 0 0 24px 0.2',
+          }}
+        >
+          <p className="text-xs uppercase tracking-[0.2em] opacity-80">My Share</p>
+          <p className="text-[clamp(1.9rem,2.6vw,3rem)] font-black mt-2 leading-tight break-words">{formatCurrency(myShare, currency)}</p>
         </div>
       </div>
 
@@ -86,7 +87,7 @@ export default function DesktopExpensesView({
 
       <section className="bg-white rounded-3xl border border-slate-200 overflow-hidden">
         <div className="px-5 py-4 border-b border-slate-200 bg-[#f8f9fc] flex items-center justify-between gap-3 flex-wrap">
-          <span className="text-xs font-bold uppercase tracking-widest text-slate-500">Filter by Date</span>
+          <span className="text-xs font-bold uppercase tracking-widest text-[#5f52f2]">Expense History</span>
           <div className="flex items-center gap-2 flex-wrap">
             <div>
               <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">From</p>
@@ -119,7 +120,7 @@ export default function DesktopExpensesView({
           <table className="w-full text-left">
             <thead>
               <tr className="text-xs uppercase tracking-widest text-slate-400 border-b border-slate-200">
-                <th className="px-5 py-3">Service</th>
+                <th className="px-5 py-3">Title</th>
                 <th className="px-5 py-3">Date</th>
                 <th className="px-5 py-3">Category</th>
                 <th className="px-5 py-3">Amount</th>
@@ -142,7 +143,7 @@ export default function DesktopExpensesView({
       </section>
 
       <section className="mt-6 bg-white rounded-3xl border border-slate-200 overflow-hidden">
-        <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between gap-3 flex-wrap">
+        <div className="px-5 py-4 border-b border-slate-200 bg-[#f8f9fc] flex items-center justify-between gap-3 flex-wrap">
           <span className="text-xs font-bold uppercase tracking-widest text-[#5f52f2]">Rent Paid History</span>
           <div className="flex items-center gap-2 flex-wrap">
             <div>
@@ -176,7 +177,7 @@ export default function DesktopExpensesView({
           <table className="w-full text-left">
             <thead>
               <tr className="text-xs uppercase tracking-widest text-slate-400 border-b border-slate-200">
-                <th className="px-5 py-3">Paid By</th>
+                <th className="px-5 py-3">Name</th>
                 <th className="px-5 py-3">Date</th>
                 <th className="px-5 py-3">Month</th>
                 <th className="px-5 py-3">Amount</th>

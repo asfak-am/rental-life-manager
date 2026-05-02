@@ -6,6 +6,7 @@ import toast from 'react-hot-toast'
 import { useAuth } from '../context/AuthContext'
 import { useHouse } from '../context/HouseContext'
 import { houseService } from '../services'
+import ThemeCustomizer from '../components/ThemeCustomizer'
 
 function LoginForm({ variant, onSubmit, handleGoogleLogin, loading, googleLoading, defaultEmail }) {
   const [showPass, setShowPass] = useState(false)
@@ -232,6 +233,8 @@ export default function Login() {
             </div>
           </div>
         </main>
+
+        <ThemeCustomizer />
     </div>
   )
 }

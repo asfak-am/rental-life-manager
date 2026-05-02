@@ -7,6 +7,7 @@ import { useAuth } from '../context/AuthContext'
 import TopBar from '../components/TopBar'
 import BottomNav from '../components/BottomNav'
 import DesktopAppShell from '../components/desktop/DesktopAppShell'
+import ThemeCustomizer from '../components/ThemeCustomizer'
 import { formatCurrency } from '../utils/currency'
 
 export default function Balances() {
@@ -33,28 +34,58 @@ export default function Balances() {
     queryFn: () => expenseService.getAll({ category: 'Rent' }).then(r => r.data),
   })
 
+  const { data: rentHistory } = useQuery({
+    queryKey: ['rent-history'],
+    queryFn: () => houseService.getRentHistory().then(r => r.data),
+  })
+
   const { data: rentStatus } = useQuery({
-    queryKey: ['rent-status'],
-    queryFn: () => houseService.getRentStatus().then(r => r.data),
+    queryKey: ['rent-status', currentBillMonth],
+    queryFn: () => houseService.getRentStatus(currentBillMonth).then(r => r.data),
+  })
+
+  // Fetch rent status for multiple months: from rent history + current month
+  const rentMonths = (() => {
+    const months = new Set([
+      currentBillMonth,
+      ...(rentHistory?.history || []).map(h => h.month),
+      ...(rentData?.expenses || []).map(exp => exp.billMonth || (() => {
+        const d = new Date(exp.date)
+        return `${d.getFullYear()}-${`${d.getMonth() + 1}`.padStart(2, '0')}`
+      })()),
+    ])
+    return Array.from(months).sort((a, b) => b.localeCompare(a))
+  })()
+
+  const { data: rentStatuses } = useQuery({
+    queryKey: ['rent-statuses', rentMonths],
+    queryFn: async () => {
+      const months = rentMonths.length ? rentMonths : [currentBillMonth]
+      const results = await Promise.all(months.map(m => houseService.getRentStatus(m).then(r => r.data).catch(() => null)))
+      return results.filter(Boolean)
+    },
+    enabled: Boolean(rentMonths.length),
   })
 
   const payMemberRentMutation = useMutation({
     mutationFn: ({ userId, month }) => houseService.payRentForMember(userId, month),
-    onSuccess: (res) => {
+    onSuccess: (res, vars) => {
+      const month = vars?.month || currentBillMonth
       try {
         const payload = res?.data || res
         if (payload?.rentStatus) {
-          qc.setQueryData(['rent-status'], payload.rentStatus)
+          qc.setQueryData(['rent-status', month], payload.rentStatus)
         } else {
-          qc.invalidateQueries(['rent-status'])
+          qc.invalidateQueries(['rent-status', month])
         }
-        qc.invalidateQueries(['rent-expenses', currentBillMonth])
+        qc.invalidateQueries(['rent-statuses'])
+        qc.invalidateQueries(['rent-expenses', month])
         qc.invalidateQueries(['expenses-recent'])
         qc.invalidateQueries({ queryKey: ['expense'] })
         qc.invalidateQueries(['balance-raw'])
       } catch (e) {
-        qc.invalidateQueries(['rent-status'])
-        qc.invalidateQueries(['rent-expenses', currentBillMonth])
+        qc.invalidateQueries(['rent-statuses'])
+        qc.invalidateQueries(['rent-expenses', month])
         qc.invalidateQueries(['expenses-recent'])
         qc.invalidateQueries(['balance-raw'])
       }
@@ -75,25 +106,27 @@ export default function Balances() {
 
   const payRentMutation = useMutation({
     mutationFn: (month) => houseService.payRent(month),
-      onSuccess: (res) => {
-        try {
-          const payload = res?.data || res
-          if (payload?.rentStatus) {
-            qc.setQueryData(['rent-status'], payload.rentStatus)
-          } else {
-            qc.invalidateQueries(['rent-status'])
-          }
-          qc.invalidateQueries(['rent-expenses', currentBillMonth])
-          qc.invalidateQueries(['expenses-recent'])
-          qc.invalidateQueries({ queryKey: ['expense'] })
-          qc.invalidateQueries(['balance-raw'])
-        } catch (e) {
-          qc.invalidateQueries(['rent-status'])
-          qc.invalidateQueries(['rent-expenses', currentBillMonth])
-          qc.invalidateQueries(['expenses-recent'])
-          qc.invalidateQueries(['balance-raw'])
+    onSuccess: (res, month) => {
+      const m = month || currentBillMonth
+      try {
+        const payload = res?.data || res
+        if (payload?.rentStatus) {
+          qc.setQueryData(['rent-status', m], payload.rentStatus)
+        } else {
+          qc.invalidateQueries(['rent-status', m])
         }
-        toast.success('Rent marked as paid')
+        qc.invalidateQueries(['rent-statuses'])
+        qc.invalidateQueries(['rent-expenses', m])
+        qc.invalidateQueries(['expenses-recent'])
+        qc.invalidateQueries({ queryKey: ['expense'] })
+        qc.invalidateQueries(['balance-raw'])
+      } catch (e) {
+        qc.invalidateQueries(['rent-statuses'])
+        qc.invalidateQueries(['rent-expenses', m])
+        qc.invalidateQueries(['expenses-recent'])
+        qc.invalidateQueries(['balance-raw'])
+      }
+      toast.success('Rent marked as paid')
     },
     onError: () => toast.error('Failed to mark rent as paid'),
   })
@@ -177,44 +210,66 @@ export default function Balances() {
           </button>
         </section>
 
-        {/* Member Rent Payment Status */}
-        {(rentStatus?.memberStatuses || []).length > 0 && (
+        {/* Member Rent Payment Status for unpaid months */}
+        {(rentStatuses || []).filter(s => s.unpaidCount > 0).length > 0 && (
           <section className="md:col-span-12">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-              {rentStatus.memberStatuses.map(member => {
-                const paid = member.status === 'paid'
-                return (
-                  <div
-                    key={member.userId}
-                    className={`p-4 rounded-2xl border ${paid ? 'bg-emerald-50 border-emerald-300' : 'bg-red-50 border-red-300'}`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className={`w-8 h-8 rounded-lg border-2 grid place-items-center flex-shrink-0 ${paid ? 'border-emerald-600 bg-emerald-600 text-white' : 'border-red-500 bg-white text-red-500'}`}>
-                        <span className="material-symbols-outlined text-[16px]" style={{ fontVariationSettings: "'FILL' 1" }}>
-                          {paid ? 'check' : 'close'}
-                        </span>
-                      </div>
-                      <div className="min-w-0">
-                        <p className="font-bold text-sm truncate">{member.name}</p>
-                        <p className={`text-xs font-semibold ${paid ? 'text-emerald-700' : 'text-red-700'}`}>
-                          {paid ? 'Paid' : 'Pending'}
-                        </p>
-                      </div>
+            <div className="space-y-4">
+              {(rentStatuses || []).filter(s => s.unpaidCount > 0).map(status => (
+                <div key={status.month} className="bg-surface-container-lowest p-4 rounded-2xl border border-outline-variant/10">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-bold">{status.month}</p>
+                      <p className="text-xs text-on-surface-variant">{status.unpaidCount} unpaid of {status.memberCount}</p>
                     </div>
-                    {isAdmin && !paid && (
-                      <div className="mt-3">
-                        <button
-                          onClick={() => payMemberRentMutation.mutate({ userId: member.userId, month: rentStatus?.month || currentBillMonth })}
-                          disabled={payMemberRentMutation.isPending}
-                          className="mt-2 px-3 py-2 rounded-lg bg-primary text-on-primary font-bold text-sm"
-                        >
-                          {payMemberRentMutation.isPending ? 'Marking...' : 'Mark Paid'}
-                        </button>
-                      </div>
-                    )}
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => payRentMutation.mutate(status.month)}
+                        disabled={payRentMutation.isPending || !isAdmin}
+                        className="px-3 py-2 rounded-full bg-primary text-on-primary font-bold text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {payRentMutation.isPending ? 'Paying...' : 'Pay Rent (mark month paid)'}
+                      </button>
+                    </div>
                   </div>
-                )
-              })}
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-4">
+                    {status.memberStatuses.map(member => {
+                      const paid = member.status === 'paid'
+                      return (
+                        <div
+                          key={member.userId}
+                          className={`p-4 rounded-2xl border bg-transparent ${paid ? 'border-emerald-500/50' : 'border-red-500/50'}`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className={`w-8 h-8 rounded-lg border-2 grid place-items-center flex-shrink-0 ${paid ? 'border-emerald-500 text-emerald-500 bg-transparent' : 'border-red-500 text-red-500 bg-transparent'}`}>
+                              <span className="material-symbols-outlined text-[16px]" style={{ fontVariationSettings: "'FILL' 1" }}>
+                                {paid ? 'check' : 'close'}
+                              </span>
+                            </div>
+                            <div className="min-w-0">
+                              <p className="font-bold text-sm truncate text-on-surface">{member.name}</p>
+                              <p className={`text-xs font-semibold ${paid ? 'text-emerald-500' : 'text-red-500'}`}>
+                                {paid ? 'Paid' : 'Pending'}
+                              </p>
+                            </div>
+                          </div>
+                          {isAdmin && !paid && (
+                            <div className="mt-3">
+                              <button
+                                onClick={() => payMemberRentMutation.mutate({ userId: member.userId, month: status.month })}
+                                disabled={payMemberRentMutation.isPending}
+                                  className="mt-2 px-3 py-2 rounded-lg bg-transparent border border-primary text-primary font-bold text-sm"
+                              >
+                                {payMemberRentMutation.isPending ? 'Marking...' : 'Mark Paid'}
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              ))}
             </div>
           </section>
         )}
@@ -366,6 +421,8 @@ export default function Balances() {
           </div>
         </div>
       )}
+
+      <ThemeCustomizer />
     </>
   )
 }

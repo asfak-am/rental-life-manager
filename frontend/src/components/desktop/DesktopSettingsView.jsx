@@ -33,12 +33,12 @@ export default function DesktopSettingsView({
                 <h4 className="text-xl font-black tracking-tight">House Members</h4>
                 <p className="text-sm text-slate-500">{members.length} active residents</p>
               </div>
-              <button onClick={onInvite} type="button" className="text-[#5f52f2] font-semibold">+ Invite Member</button>
+              <button onClick={onInvite} type="button" className="text-primary font-semibold">+ Invite Member</button>
             </div>
             <div className="grid grid-cols-2 gap-3">
               {members.map(member => (
-                <div key={member._id} className="bg-[#f7f8fb] rounded-2xl p-3 flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-xl bg-[#dbdeff] grid place-items-center text-[#5f52f2] font-black">
+                <div key={member._id} className="bg-surface-container-low rounded-2xl p-3 flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-xl bg-primary-fixed/25 grid place-items-center text-primary font-black">
                     {(member.displayName || member.name || 'R').slice(0, 1).toUpperCase()}
                   </div>
                   <div className="min-w-0">
@@ -57,7 +57,7 @@ export default function DesktopSettingsView({
               ['Task Updates', 'task', notificationPrefs.task],
               ['House Announcements', 'payment', notificationPrefs.payment],
             ].map(([label, key, active]) => (
-              <div key={label} className="flex items-center justify-between p-4 rounded-2xl bg-[#f7f8fb] mb-3 last:mb-0">
+              <div key={label} className="flex items-center justify-between p-4 rounded-2xl bg-surface-container-low mb-3 last:mb-0">
                 <div>
                   <p className="font-semibold">{label}</p>
                   <p className="text-xs text-slate-500">Alerts for important activity and reminders</p>
@@ -65,7 +65,7 @@ export default function DesktopSettingsView({
                 <button
                   type="button"
                   onClick={() => onToggleNotification?.(key, !active)}
-                  className={`w-11 h-6 rounded-full relative transition ${active ? 'bg-[#5f52f2]' : 'bg-slate-300'}`}
+                  className={`w-11 h-6 rounded-full relative transition ${active ? 'bg-primary' : 'bg-slate-300'}`}
                   aria-pressed={Boolean(active)}
                 >
                   <span className={`absolute top-1 w-4 h-4 rounded-full bg-white transition ${active ? 'right-1' : 'left-1'}`} />
@@ -79,14 +79,14 @@ export default function DesktopSettingsView({
               <h4 className="text-xl font-black tracking-tight mb-2">Monthly Rent</h4>
               <p className="text-sm text-slate-500">Set the default rent amount for each month. Only admins can edit this.</p>
               <div className="mt-4 flex gap-3">
-                <span className="px-3 py-3 rounded-xl bg-[#f7f8fb] text-slate-600 font-semibold">LKR</span>
+                <span className="px-3 py-3 rounded-xl bg-surface-container-low text-slate-600 font-semibold">LKR</span>
                 <input
                   type="number"
                   min="0"
                   value={monthlyRentInput}
                   onChange={e => onMonthlyRentInput?.(e.target.value)}
                   placeholder={`${monthlyRentAmount || 0}`}
-                  className="flex-1 rounded-xl border border-slate-200 bg-[#f7f8fb] px-4 py-3 text-slate-900"
+                  className="flex-1 rounded-xl border border-slate-200 bg-surface-container-low px-4 py-3 text-slate-900"
                 />
                 <button
                   type="button"
@@ -104,8 +104,8 @@ export default function DesktopSettingsView({
         <section className="col-span-4 space-y-5">
           <div className="bg-white rounded-3xl p-5 border border-slate-200">
             <h4 className="text-lg font-black">Invite Code</h4>
-            <p className="text-[clamp(1.8rem,2.1vw,2.5rem)] leading-tight break-all font-black tracking-wider mt-3 text-[#5f52f2]">{inviteCode || '----'}</p>
-            <div className="mt-4 w-full rounded-2xl border border-slate-200 bg-[#f7f8fb] p-3 flex flex-col items-center gap-2">
+            <p className="text-[clamp(1.8rem,2.1vw,2.5rem)] leading-tight break-all font-black tracking-wider mt-3 text-primary">{inviteCode || '----'}</p>
+            <div className="mt-4 w-full rounded-2xl border border-slate-200 bg-surface-container-low p-3 flex flex-col items-center gap-2">
               <div className="bg-white p-2 rounded-lg">
                 {inviteQrSrc ? (
                   <img

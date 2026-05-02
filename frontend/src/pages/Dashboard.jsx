@@ -10,6 +10,7 @@ import TopBar from '../components/TopBar'
 import BottomNav from '../components/BottomNav'
 import DesktopAppShell from '../components/desktop/DesktopAppShell'
 import DesktopDashboardView from '../components/desktop/DesktopDashboardView'
+import ThemeCustomizer from '../components/ThemeCustomizer'
 import { formatCurrency } from '../utils/currency'
 import { buildInviteLink, buildInviteQrSrc } from '../utils/inviteLink'
 
@@ -20,7 +21,20 @@ const UTILITY_RANGE_OPTIONS = [
   { value: 'ALL', label: 'All', months: null },
 ]
 
-// Harmony score removed — helpers deprecated
+function harmonyScore(balances = [], totalExpenses = 0) {
+  if (totalExpenses === 0) return 100
+  const unsettled = balances.filter(b => Math.abs(b.amount) > 0.5).length
+  const score = Math.max(0, 100 - unsettled * 12)
+  return Math.min(100, score)
+}
+
+function scoreLabel(s) {
+  if (s >= 80) return { label: 'High', color: 'text-secondary' }
+  if (s >= 50) return { label: 'Medium', color: 'text-tertiary' }
+  return { label: 'Low', color: 'text-error' }
+}
+
+const CIRCUMFERENCE = 2 * Math.PI * 88
 
 function getMemberName(member) {
   return member?.displayName?.trim() || member?.name?.trim() || 'Unknown'
@@ -54,7 +68,7 @@ export default function Dashboard() {
           searchPlaceholder="Search..."
         >
           <section className="max-w-2xl mx-auto mt-8 bg-white rounded-3xl p-10 border border-slate-200 shadow-xl shadow-slate-200/60 text-center">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-[#ecebff] text-[#5e51f2] mb-5">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary-fixed/20 text-primary mb-5">
               <span className="material-symbols-outlined text-3xl" style={{ fontVariationSettings: "'FILL' 1" }}>home_work</span>
             </div>
 
@@ -170,9 +184,9 @@ export default function Dashboard() {
     enabled: !!house,
   })
 
-  const { data: utilityTrendData } = useQuery({
-    queryKey: ['dashboard-utility-trend', utilityRange],
-    queryFn: () => expenseService.utilityTrend(utilityRange).then(r => r.data),
+  const { data: utilityExpensesData } = useQuery({
+    queryKey: ['dashboard-utility-expenses'],
+    queryFn: () => expenseService.getAll().then(r => r.data),
     enabled: !!house,
   })
 
@@ -188,24 +202,63 @@ export default function Dashboard() {
     enabled: !!house,
   })
 
-  const { data: rentStatus } = useQuery({
-    queryKey: ['rent-status'],
-    queryFn: () => houseService.getRentStatus().then(r => r.data),
+  const { data: rentHistory } = useQuery({
+    queryKey: ['rent-history'],
+    queryFn: () => houseService.getRentHistory().then(r => r.data),
     enabled: !!house,
   })
 
+  const currentBillMonth = (() => {
+    const now = new Date()
+    const month = `${now.getMonth() + 1}`.padStart(2, '0')
+    return `${now.getFullYear()}-${month}`
+  })()
+
+  const { data: rentStatus } = useQuery({
+    queryKey: ['rent-status', currentBillMonth],
+    queryFn: () => houseService.getRentStatus(currentBillMonth).then(r => r.data),
+    enabled: !!house,
+  })
+
+  const rentMonths = (() => {
+    const months = new Set([currentBillMonth, ...(rentHistory?.history || []).map(h => h.month)])
+    return Array.from(months).sort((a, b) => b.localeCompare(a))
+  })()
+
+  const { data: rentStatuses } = useQuery({
+    queryKey: ['rent-statuses', rentMonths],
+    queryFn: async () => {
+      const months = rentMonths.length ? rentMonths : [currentBillMonth]
+      const results = await Promise.all(months.map(m => houseService.getRentStatus(m).then(r => r.data).catch(() => null)))
+      return results.filter(Boolean)
+    },
+    enabled: Boolean(rentMonths.length && house),
+  })
+
+  const isAdmin = house?.members?.find(m => String(m.userId) === String(user?._id))?.role === 'admin'
+
   const payRentMutation = useMutation({
-    mutationFn: () => houseService.payRent(rentStatus?.month),
-    onSuccess: () => {
-      qc.setQueryData(['rent-status'], prev => prev ? { ...prev, myRent: { ...prev.myRent, status: 'paid', paidAt: new Date() } } : prev)
-      qc.invalidateQueries(['rent-status'])
-      qc.invalidateQueries(['balance-raw'])
-      qc.invalidateQueries(['rent-expenses'])
-      qc.invalidateQueries(['expenses-recent'])
-      qc.invalidateQueries({ queryKey: ['expense'] })
+    mutationFn: (month) => houseService.payRent(month),
+    onSuccess: (res, month) => {
+      const m = month || currentBillMonth
       toast.success('Monthly rent paid')
+      qc.invalidateQueries(['rent-status', m])
+      qc.invalidateQueries(['rent-statuses'])
+      qc.invalidateQueries(['balance-raw'])
     },
     onError: (err) => toast.error(err.response?.data?.message || 'Failed to pay rent'),
+  })
+
+  const payMemberRentMutation = useMutation({
+    mutationFn: ({ userId, month }) => houseService.payRentForMember(userId, month),
+    onSuccess: (res, vars) => {
+      const month = vars?.month || currentBillMonth
+      toast.success('Member rent marked as paid')
+      qc.invalidateQueries(['rent-status', month])
+      qc.invalidateQueries(['rent-statuses'])
+      qc.invalidateQueries(['balance-raw'])
+    },
+    onError: () => toast.error('Failed to mark member rent as paid'),
   })
 
   const completeTaskMutation = useMutation({
@@ -230,7 +283,9 @@ export default function Dashboard() {
   const myBalance = balanceData?.balances?.find(b => b.userId === user?._id)
   const netAmount = myBalance?.net ?? 0
   const isOwed = netAmount > 0
-  // Harmony score removed
+  const score = harmonyScore(balanceData?.balances, summaryData?.totalExpenses)
+  const { label: sLabel, color: sColor } = scoreLabel(score)
+  const dashOffset = CIRCUMFERENCE - (score / 100) * CIRCUMFERENCE
   const settledPercent = balanceData?.balances?.length
     ? Math.round((balanceData.balances.filter(balance => Math.abs(balance.net ?? balance.amount ?? 0) <= 0.5).length / balanceData.balances.length) * 100)
     : 0
@@ -242,18 +297,44 @@ export default function Dashboard() {
   const inviteQrSrc = buildInviteQrSrc(inviteLink)
   const rentPaid = rentStatus?.myRent?.status === 'paid'
 
-  const filteredUtilityTrendData = useMemo(() => {
-    const data = utilityTrendData?.trend || []
-    return data.map(item => {
-      const [year, month] = String(item.month || '').split('-')
-      const date = new Date(Number(year), Number(month) - 1, 1)
-      return {
-        month: date.toLocaleDateString('en-US', { month: 'short' }),
-        water: Number(item.water || 0),
-        electricity: Number(item.electricity || 0),
+  const utilityTrendData = useMemo(() => {
+    const expenses = utilityExpensesData?.expenses || []
+    const monthMap = new Map()
+
+    expenses.forEach(expense => {
+      if (expense.category !== 'Water Bill' && expense.category !== 'Electricity Bill') return
+
+      const key = expense.billMonth
+        ? expense.billMonth
+        : new Date(expense.date).toISOString().slice(0, 7)
+
+      if (!monthMap.has(key)) {
+        monthMap.set(key, { key, water: 0, electricity: 0 })
       }
+
+      const item = monthMap.get(key)
+      if (expense.category === 'Water Bill') item.water += Number(expense.amount || 0)
+      if (expense.category === 'Electricity Bill') item.electricity += Number(expense.amount || 0)
     })
-  }, [utilityTrendData])
+
+    return [...monthMap.values()]
+      .sort((a, b) => a.key.localeCompare(b.key))
+      .map(item => {
+        const [year, month] = item.key.split('-')
+        const date = new Date(Number(year), Number(month) - 1, 1)
+        return {
+          month: date.toLocaleDateString('en-US', { month: 'short' }),
+          water: item.water,
+          electricity: item.electricity,
+        }
+      })
+  }, [utilityExpensesData?.expenses])
+
+  const filteredUtilityTrendData = useMemo(() => {
+    const selected = UTILITY_RANGE_OPTIONS.find(option => option.value === utilityRange)
+    if (!selected || selected.months == null) return utilityTrendData
+    return utilityTrendData.slice(-selected.months)
+  }, [utilityRange, utilityTrendData])
 
   const categoryIcons = {
     Food: { icon: 'shopping_basket', bg: 'bg-amber-100', text: 'text-amber-700' },
@@ -313,13 +394,17 @@ export default function Dashboard() {
             toast.success('Invite code copied')
           }}
           rentStatus={rentStatus}
-          onPayRent={() => payRentMutation.mutate()}
+          onPayRent={(month) => payRentMutation.mutate(month)}
           payingRent={payRentMutation.isPending}
+          rentStatuses={rentStatuses || []}
+          onPayMemberRent={(data) => payMemberRentMutation.mutate(data)}
+          payingMemberRent={payMemberRentMutation.isPending}
+          isAdmin={isAdmin}
         />
       </div>
 
-      <div className="lg:hidden relative overflow-hidden bg-[linear-gradient(180deg,#f1eeff_0%,#eaf9ff_38%,#fff8ee_100%)] font-body text-on-surface min-h-screen pb-32">
-        <div className="pointer-events-none absolute -top-24 left-[-14%] h-64 w-64 rounded-full bg-[#5f52f2]/18 blur-3xl" />
+      <div className="lg:hidden relative overflow-hidden app-light-gradient font-body text-on-surface min-h-screen pb-32">
+        <div className="pointer-events-none absolute -top-24 left-[-14%] h-64 w-64 rounded-full bg-primary-fixed/20 blur-3xl" />
         <div className="pointer-events-none absolute top-44 right-[-16%] h-72 w-72 rounded-full bg-[#59dad1]/20 blur-3xl" />
         <div className="pointer-events-none absolute bottom-16 left-[-12%] h-60 w-60 rounded-full bg-[#f6b15a]/18 blur-3xl" />
         <TopBar />
@@ -328,7 +413,37 @@ export default function Dashboard() {
           <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="bg-surface-container-lowest rounded-[2rem] p-8 border border-outline-variant/10 flex flex-col justify-center">
               <div className="flex flex-col items-center gap-6 text-center">
-                {/* Harmony score removed */}
+                <div className="relative w-48 h-48 flex items-center justify-center flex-shrink-0">
+                  <svg className="w-full h-full transform -rotate-90">
+                    <circle className="text-surface-container" cx="96" cy="96" fill="transparent" r="88" stroke="currentColor" strokeWidth="12" />
+                    <circle
+                      className="text-primary transition-all duration-700"
+                      cx="96" cy="96" fill="transparent" r="88"
+                      stroke="currentColor"
+                      strokeDasharray={CIRCUMFERENCE}
+                      strokeDashoffset={dashOffset}
+                      strokeLinecap="round"
+                      strokeWidth="12"
+                    />
+                  </svg>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <span className="text-4xl font-extrabold tracking-tight text-on-surface">{score}</span>
+                    <span className={`text-xs font-bold uppercase tracking-widest ${sColor}`}>{sLabel}</span>
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  <h2 className="text-2xl font-bold tracking-tight">House Harmony Score</h2>
+                  <p className="text-on-surface-variant text-sm leading-relaxed">
+                    {score >= 80
+                      ? 'Your household is running smoothly! Bills are paid and tasks are on track.'
+                      : 'Some balances need settling. Settle up to improve your score.'}
+                  </p>
+                  <div className="pt-2">
+                    <span className="inline-flex items-center px-4 py-1.5 rounded-full bg-secondary-container text-on-secondary-container text-xs font-bold uppercase tracking-wider">
+                      {house?.name || 'Your House'}
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -362,12 +477,12 @@ export default function Dashboard() {
                     <AreaChart data={filteredUtilityTrendData}>
                       <defs>
                         <linearGradient id="waterFillDashboard" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#59dad1" stopOpacity={0.35} />
-                          <stop offset="95%" stopColor="#59dad1" stopOpacity={0.05} />
+                          <stop offset="5%" stopColor="rgb(var(--primary-rgb))" stopOpacity={0.35} />
+                          <stop offset="95%" stopColor="rgb(var(--primary-rgb))" stopOpacity={0.06} />
                         </linearGradient>
                         <linearGradient id="electricFillDashboard" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#FFB800" stopOpacity={0.35} />
-                          <stop offset="95%" stopColor="#FFB800" stopOpacity={0.05} />
+                          <stop offset="5%" stopColor="rgba(var(--primary-rgb), 0.72)" stopOpacity={0.35} />
+                          <stop offset="95%" stopColor="rgba(var(--primary-rgb), 0.72)" stopOpacity={0.05} />
                         </linearGradient>
                       </defs>
                       <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.25)" />
@@ -378,8 +493,8 @@ export default function Dashboard() {
                         contentStyle={{ borderRadius: '12px', border: 'none', background: '#ffffff', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}
                       />
                       <Legend />
-                      <Area type="monotone" dataKey="water" name="Water Bill" stroke="#59dad1" fill="url(#waterFillDashboard)" strokeWidth={3} />
-                      <Area type="monotone" dataKey="electricity" name="Electricity Bill" stroke="#FFB800" fill="url(#electricFillDashboard)" strokeWidth={3} />
+                      <Area type="monotone" dataKey="water" name="Water Bill" stroke="rgb(var(--primary-rgb))" fill="url(#waterFillDashboard)" strokeWidth={3} />
+                      <Area type="monotone" dataKey="electricity" name="Electricity Bill" stroke="rgba(var(--primary-rgb), 0.72)" fill="url(#electricFillDashboard)" strokeWidth={3} />
                     </AreaChart>
                   </ResponsiveContainer>
                 ) : (
@@ -499,61 +614,78 @@ export default function Dashboard() {
             </div>
           </section>
 
-          <section className="bg-surface-container-lowest rounded-[2rem] p-6 border border-outline-variant/10">
-            <div className="flex items-center justify-between gap-4 flex-wrap">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-widest text-on-surface-variant">Monthly Rent</p>
-                <h3 className="text-xl sm:text-2xl font-extrabold mt-1 tracking-tight text-on-surface">{formatCurrency(rentStatus?.myRent?.amountDue || 0, preferredCurrency)}</h3>
-                <p className="text-sm text-on-surface-variant mt-1">{rentStatus?.month || 'Current month'} · {rentStatus?.myRent?.status === 'paid' ? 'Paid' : 'Pending'}</p>
-                {rentStatus?.warningVisible ? <p className="text-xs text-error mt-1">Payment overdue. Reminder notifications are active.</p> : null}
-              </div>
-              <button
-                type="button"
-                onClick={() => payRentMutation.mutate()}
-                disabled={payRentMutation.isPending || rentStatus?.myRent?.status === 'paid' || !rentStatus?.earlyPayAllowed}
-                className="px-5 py-3 signature-gradient text-on-primary font-bold rounded-xl disabled:opacity-60"
-              >
-                {rentStatus?.myRent?.status === 'paid' ? 'Rent Paid' : payRentMutation.isPending ? 'Paying...' : 'Pay Monthly Rent'}
-              </button>
-            </div>
-
-            <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {(rentStatus?.memberStatuses || []).map(member => {
-                const paid = member.status === 'paid'
-                const houseMember = findMemberById(members, member.userId)
-                const memberAvatar = getMemberAvatar(houseMember)
-                return (
-                  <div
-                    key={member.userId}
-                    className={`p-3 rounded-xl border ${paid ? 'bg-emerald-50 border-emerald-300' : 'bg-red-50 border-red-300'}`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <div className="w-10 h-10 rounded-full overflow-hidden bg-white border border-outline-variant/10 flex-shrink-0">
-                        {memberAvatar ? (
-                          <img src={memberAvatar} alt={`${member.name} avatar`} className="w-full h-full object-cover" />
-                        ) : (
-                          <div className="w-full h-full grid place-items-center text-xs font-bold text-on-surface-variant">
-                            {(member.name || 'U').charAt(0).toUpperCase()}
-                          </div>
-                        )}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="font-bold text-sm truncate">{member.name}</p>
-                        <p className={`text-[11px] font-semibold ${paid ? 'text-emerald-700' : 'text-red-700'}`}>
-                          {paid ? 'Paid' : 'Pending'}
-                        </p>
-                      </div>
-                      <div className={`w-7 h-7 rounded-md border-2 grid place-items-center flex-shrink-0 ${paid ? 'border-emerald-600 bg-emerald-600 text-white' : 'border-red-500 bg-white text-red-500'}`}>
-                        <span className="material-symbols-outlined text-[14px]" style={{ fontVariationSettings: "'FILL' 1" }}>
-                          {paid ? 'check' : 'close'}
-                        </span>
-                      </div>
+          {(rentStatuses || []).filter(s => s.unpaidCount > 0).length > 0 && (
+            <section className="space-y-4">
+              {(rentStatuses || []).filter(s => s.unpaidCount > 0).map(status => (
+                <div key={status.month} className="bg-surface-container-lowest rounded-[2rem] p-6 border border-outline-variant/10">
+                  <div className="flex items-center justify-between gap-4 flex-wrap mb-5">
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-widest text-on-surface-variant">Monthly Rent</p>
+                      <h3 className="text-xl sm:text-2xl font-extrabold mt-1 tracking-tight text-on-surface">{status.month}</h3>
+                      <p className="text-sm text-on-surface-variant mt-1">{status.unpaidCount} unpaid of {status.memberCount} members</p>
                     </div>
+                    {isAdmin && (
+                      <button
+                        type="button"
+                        onClick={() => payRentMutation.mutate(status.month)}
+                        disabled={payRentMutation.isPending}
+                        className="px-5 py-3 signature-gradient text-on-primary font-bold rounded-xl disabled:opacity-60"
+                      >
+                        {payRentMutation.isPending ? 'Paying...' : 'Mark Paid'}
+                      </button>
+                    )}
                   </div>
-                )
-              })}
-            </div>
-          </section>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {status.memberStatuses.map(member => {
+                      const paid = member.status === 'paid'
+                      const houseMember = findMemberById(members, member.userId)
+                      const memberAvatar = getMemberAvatar(houseMember)
+                      return (
+                        <div
+                          key={member.userId}
+                          className={`p-3 rounded-xl border ${paid ? 'bg-emerald-50 border-emerald-300' : 'bg-red-50 border-red-300'}`}
+                        >
+                          <div className="flex items-center gap-2">
+                            <div className="w-10 h-10 rounded-full overflow-hidden bg-white border border-outline-variant/10 flex-shrink-0">
+                              {memberAvatar ? (
+                                <img src={memberAvatar} alt={`${member.name} avatar`} className="w-full h-full object-cover" />
+                              ) : (
+                                <div className="w-full h-full grid place-items-center text-xs font-bold text-on-surface-variant">
+                                  {(member.name || 'U').charAt(0).toUpperCase()}
+                                </div>
+                              )}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="font-bold text-sm truncate">{member.name}</p>
+                              <p className={`text-[11px] font-semibold ${paid ? 'text-emerald-700' : 'text-red-700'}`}>
+                                {paid ? 'Paid' : 'Pending'}
+                              </p>
+                            </div>
+                            <div className={`w-7 h-7 rounded-md border-2 grid place-items-center flex-shrink-0 ${paid ? 'border-emerald-600 bg-emerald-600 text-white' : 'border-red-500 bg-white text-red-500'}`}>
+                              <span className="material-symbols-outlined text-[14px]" style={{ fontVariationSettings: "'FILL' 1" }}>
+                                {paid ? 'check' : 'close'}
+                              </span>
+                            </div>
+                            {isAdmin && !paid && (
+                              <button
+                                type="button"
+                                onClick={() => payMemberRentMutation.mutate({ userId: member.userId, month: status.month })}
+                                disabled={payMemberRentMutation.isPending}
+                                className="px-2 py-1 text-[10px] font-bold bg-primary text-on-primary rounded-md disabled:opacity-60"
+                              >
+                                {payMemberRentMutation.isPending ? 'Marking...' : 'Mark'}
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              ))}
+            </section>
+          )}
 
           <section className="bg-gradient-to-br from-primary to-primary-container rounded-[2rem] p-8 text-on-primary flex flex-col justify-between shadow-xl">
             <div>
@@ -657,6 +789,7 @@ export default function Dashboard() {
         </main>
 
         <BottomNav />
+        <ThemeCustomizer />
       </div>
     </>
   )

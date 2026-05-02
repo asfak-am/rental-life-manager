@@ -159,7 +159,6 @@ export function exportExpensesPdf({
   let y = drawStatCards(doc, [
     { label: 'Total Outflow', value: formatCurrency(summaryData?.totalExpenses || 0, currency) },
     { label: 'My Share', value: formatCurrency(summaryData?.myShare || 0, currency) },
-    { label: 'Savings', value: formatCurrency(summaryData?.savings || 0, currency) },
   ])
 
   doc.setFont('helvetica', 'bold')

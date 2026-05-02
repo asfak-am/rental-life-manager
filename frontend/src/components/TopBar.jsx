@@ -32,7 +32,7 @@ export default function TopBar() {
     .slice(0, 2) || 'RL'
 
   return (
-    <header className="bg-slate-50/80 backdrop-blur-xl sticky top-0 z-50 border-b border-outline-variant/10">
+    <header className="bg-surface-container-high/80 backdrop-blur-xl sticky top-0 z-50 border-b border-outline-variant/10">
       <div className="flex items-center justify-between gap-3 w-full px-4 sm:px-6 py-4 max-w-screen-xl mx-auto">
         <button
           type="button"
@@ -41,33 +41,33 @@ export default function TopBar() {
           aria-label="Open profile"
           title="Profile"
         >
-          <div className="w-10 h-10 rounded-full bg-primary-fixed flex items-center justify-center text-on-primary-fixed-variant font-bold text-sm overflow-hidden flex-shrink-0">
+          <div className="w-10 h-10 rounded-full bg-transparent border border-primary/35 flex items-center justify-center text-primary font-bold text-sm overflow-hidden flex-shrink-0">
             {user?.avatar ? (
               <img src={user.avatar} alt="avatar" className="w-full h-full object-cover rounded-full" />
             ) : (
               initials
             )}
           </div>
-          <span className="text-xl font-black text-slate-900 font-headline tracking-tight">Rental Life</span>
+          <span className="text-xl font-black text-on-surface font-headline tracking-tight">Rental Life</span>
         </button>
 
-        <div className="flex items-center gap-1 sm:gap-2 text-slate-500">
+        <div className="flex items-center gap-1 sm:gap-2 text-primary">
           <button
             type="button"
             onClick={() => navigate('/notifications')}
-            className="relative w-10 h-10 flex items-center justify-center rounded-full text-violet-700 hover:bg-slate-200/50 transition-all duration-200 active:scale-95"
+            className="relative w-10 h-10 flex items-center justify-center rounded-full bg-transparent border border-primary/35 text-primary hover:border-primary hover:bg-transparent transition-all duration-200 active:scale-95"
             aria-label="Open notifications"
             title="Notifications"
           >
             <span className="material-symbols-outlined">notifications</span>
             {unreadCount > 0 && (
-              <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 rounded-full bg-error border-2 border-slate-50" />
+              <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 rounded-full bg-error border-2 border-surface" />
             )}
           </button>
           <button
             type="button"
             onClick={() => navigate('/messages')}
-            className="w-10 h-10 flex items-center justify-center rounded-full text-violet-700 hover:bg-slate-200/50 transition-all duration-200 active:scale-95"
+            className="w-10 h-10 flex items-center justify-center rounded-full bg-transparent border border-primary/35 text-primary hover:border-primary hover:bg-transparent transition-all duration-200 active:scale-95"
             aria-label="Open messages"
             title="Messages"
           >
@@ -76,7 +76,7 @@ export default function TopBar() {
           <button
             type="button"
             onClick={() => navigate('/help')}
-            className="w-10 h-10 flex items-center justify-center rounded-full text-violet-700 hover:bg-slate-200/50 transition-all duration-200 active:scale-95"
+            className="w-10 h-10 flex items-center justify-center rounded-full bg-transparent border border-primary/35 text-primary hover:border-primary hover:bg-transparent transition-all duration-200 active:scale-95"
             aria-label="Open help"
             title="Help"
           >
@@ -88,7 +88,7 @@ export default function TopBar() {
               logout()
               navigate('/login')
             }}
-            className="w-10 h-10 flex items-center justify-center rounded-full text-rose-700 hover:bg-rose-100 transition-all duration-200 active:scale-95"
+            className="w-10 h-10 flex items-center justify-center rounded-full bg-transparent border border-primary/35 text-primary hover:border-primary hover:bg-transparent transition-all duration-200 active:scale-95"
             aria-label="Logout"
             title="Logout"
           >

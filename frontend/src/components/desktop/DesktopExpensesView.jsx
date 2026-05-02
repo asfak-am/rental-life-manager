@@ -87,7 +87,7 @@ export default function DesktopExpensesView({
 
       <section className="bg-white rounded-3xl border border-slate-200 overflow-hidden">
         <div className="px-5 py-4 border-b border-slate-200 bg-[#f8f9fc] flex items-center justify-between gap-3 flex-wrap">
-          <span className="text-xs font-bold uppercase tracking-widest text-[#5f52f2]">Expense History</span>
+          <span className="text-xs font-bold uppercase tracking-widest text-primary">Expense History</span>
           <div className="flex items-center gap-2 flex-wrap">
             <div>
               <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">From</p>
@@ -144,7 +144,7 @@ export default function DesktopExpensesView({
 
       <section className="mt-6 bg-white rounded-3xl border border-slate-200 overflow-hidden">
         <div className="px-5 py-4 border-b border-slate-200 bg-[#f8f9fc] flex items-center justify-between gap-3 flex-wrap">
-          <span className="text-xs font-bold uppercase tracking-widest text-[#5f52f2]">Rent Paid History</span>
+          <span className="text-xs font-bold uppercase tracking-widest text-primary">Rent Paid History</span>
           <div className="flex items-center gap-2 flex-wrap">
             <div>
               <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">From</p>

@@ -134,15 +134,12 @@ export default function ThemeCustomizer() {
   return (
     <>
       {/* Floating Button */}
-     <button
-  onClick={() => setIsOpen(!isOpen)}
-  className="fixed top-20 right-3 z-40 w-11 h-11 
-             rounded-l-lg rounded-tr-none rounded-br-none 
-             text-white shadow-2xl hover:shadow-3xl hover:scale-105 
-             flex items-center justify-center transition-all duration-300 active:scale-95"
-  style={{ backgroundColor: theme.primaryColor }}
-  title="Theme Customizer"
->
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="fixed top-20 right-0 md:right-3 z-40 w-11 h-11 rounded-l-lg rounded-tr-none rounded-br-none text-white shadow-2xl hover:shadow-3xl hover:scale-105 flex items-center justify-center transition-all duration-300 active:scale-95"
+        style={{ backgroundColor: theme.primaryColor }}
+        title="Theme Customizer"
+      >
         <span className="material-symbols-outlined text-xl">settings</span>
         {isOpen && <span className="absolute top-1 right-1 w-3 h-3 rounded-full bg-red-500 animate-pulse" />}
       </button>

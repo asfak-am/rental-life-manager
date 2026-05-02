@@ -31,13 +31,13 @@ function ConversationPill({ active, label, unread, onClick }) {
       onClick={onClick}
       className={`shrink-0 flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition ${
         active
-          ? 'bg-[#5f52f2] text-white'
-          : 'bg-[#eceff4] text-slate-700 hover:bg-[#dfe5ee]'
+          ? 'bg-primary text-on-primary'
+          : 'bg-surface-container text-on-surface-variant hover:bg-surface-container-high'
       }`}
     >
       <span>{label}</span>
       {unread > 0 ? (
-        <span className={`text-[10px] px-2 py-0.5 rounded-full ${active ? 'bg-white text-[#5f52f2]' : 'bg-[#5f52f2] text-white'}`}>
+        <span className={`text-[10px] px-2 py-0.5 rounded-full ${active ? 'bg-white/20 text-on-primary' : 'bg-primary text-on-primary'}`}>
           {unread}
         </span>
       ) : null}
@@ -53,9 +53,9 @@ function MessagesPanel({ messages, meId, conversationType }) {
   }, [messages])
 
   return (
-    <div className="flex-1 overflow-y-auto px-3 py-4 space-y-3 bg-[#f7f8fb] rounded-2xl border border-slate-200">
+    <div className="flex-1 overflow-y-auto px-3 py-4 space-y-3 bg-surface-container-low rounded-2xl border border-outline-variant/15">
       {messages.length === 0 ? (
-        <div className="h-full grid place-items-center text-center text-slate-500 text-sm px-8">
+        <div className="h-full grid place-items-center text-center text-on-surface-variant text-sm px-8">
           No messages yet. Start the conversation.
         </div>
       ) : (
@@ -63,14 +63,14 @@ function MessagesPanel({ messages, meId, conversationType }) {
           const mine = String(message.senderId) === String(meId)
           return (
             <div key={message._id} className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
-              <div className={`max-w-[75%] rounded-2xl px-4 py-3 shadow-sm ${mine ? 'bg-[#5f52f2] text-white rounded-br-md' : 'bg-white text-slate-900 rounded-bl-md border border-slate-200'}`}>
+              <div className={`max-w-[75%] rounded-2xl px-4 py-3 shadow-sm ${mine ? 'bg-primary text-on-primary rounded-br-md' : 'bg-surface-container-lowest text-on-surface rounded-bl-md border border-outline-variant/20'}`}>
                 {!mine && conversationType === 'group' ? (
-                  <p className="text-[11px] font-bold uppercase tracking-wide text-slate-500 mb-1">
+                  <p className="text-[11px] font-bold uppercase tracking-wide text-on-surface-variant mb-1">
                     {message.sender?.displayName || message.sender?.name || 'Member'}
                   </p>
                 ) : null}
                 <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.text}</p>
-                <p className={`text-[10px] mt-1 ${mine ? 'text-white/80' : 'text-slate-500'}`}>
+                <p className={`text-[10px] mt-1 ${mine ? 'text-on-primary/80' : 'text-on-surface-variant'}`}>
                   {formatChatTime(message.createdAt)}
                 </p>
               </div>
@@ -159,9 +159,9 @@ export default function Messages() {
   const totalUnread = conversations.reduce((sum, conversation) => sum + (conversation.unreadCount || 0), 0)
 
   const desktopSidebar = (
-    <aside className="col-span-4 bg-white rounded-3xl border border-slate-200 p-5">
+    <aside className="col-span-4 bg-surface-container-lowest rounded-3xl border border-outline-variant/15 p-5">
       <h3 className="text-xl font-black tracking-tight">Conversations</h3>
-      <p className="text-slate-500 text-sm mt-1">Chat with your housemates one-to-one or in group.</p>
+      <p className="text-on-surface-variant text-sm mt-1">Chat with your housemates one-to-one or in group.</p>
 
       <div className="mt-5 space-y-2">
         {conversations.map(conversation => (
@@ -171,22 +171,22 @@ export default function Messages() {
             onClick={() => setActiveChat({ type: conversation.type, id: conversation.id, name: conversation.name })}
             className={`w-full text-left rounded-2xl px-4 py-3 transition border ${
               activeChat.type === conversation.type && activeChat.id === conversation.id
-                ? 'bg-[#ecebff] border-[#c8c3ff]'
-                : 'bg-[#f7f8fb] border-transparent hover:border-slate-200'
+                ? 'bg-primary-fixed/20 border-primary-fixed/40'
+                : 'bg-surface-container-low border-transparent hover:border-outline-variant/30'
             }`}
           >
             <div className="flex items-center justify-between gap-3">
-              <p className="font-semibold text-slate-900 truncate">{conversation.name}</p>
+              <p className="font-semibold text-on-surface truncate">{conversation.name}</p>
               {conversation.unreadCount > 0 ? (
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#5f52f2] text-white">
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary text-on-primary">
                   {conversation.unreadCount}
                 </span>
               ) : null}
             </div>
-            <p className="text-xs text-slate-500 truncate mt-1">
+            <p className="text-xs text-on-surface-variant truncate mt-1">
               {conversation.lastMessage?.text || 'No messages yet'}
             </p>
-            <p className="text-[11px] text-slate-400 mt-1">{relativeTime(conversation.lastAt)}</p>
+            <p className="text-[11px] text-outline mt-1">{relativeTime(conversation.lastAt)}</p>
           </button>
         ))}
       </div>
@@ -194,11 +194,11 @@ export default function Messages() {
   )
 
   const desktopChatPane = (
-    <section className="col-span-8 bg-white rounded-3xl border border-slate-200 p-5 flex flex-col min-h-[70vh]">
-      <div className="flex items-center justify-between border-b border-slate-200 pb-3 mb-4">
+    <section className="col-span-8 bg-surface-container-lowest rounded-3xl border border-outline-variant/15 p-5 flex flex-col min-h-[70vh]">
+      <div className="flex items-center justify-between border-b border-outline-variant/15 pb-3 mb-4">
         <div>
-          <h3 className="text-xl font-black tracking-tight text-slate-900">{activeChat.name}</h3>
-          <p className="text-xs text-slate-500">
+          <h3 className="text-xl font-black tracking-tight text-on-surface">{activeChat.name}</h3>
+          <p className="text-xs text-on-surface-variant">
             {activeChat.type === 'group' ? 'Everyone in your house' : 'Direct conversation'}
           </p>
         </div>
@@ -206,7 +206,7 @@ export default function Messages() {
 
       {loadingMessages ? (
         <div className="flex-1 space-y-3">
-          {[1, 2, 3].map(i => <div key={i} className="h-16 rounded-2xl bg-[#f7f8fb] animate-pulse" />)}
+          {[1, 2, 3].map(i => <div key={i} className="h-16 rounded-2xl bg-surface-container animate-pulse" />)}
         </div>
       ) : (
         <MessagesPanel messages={messages} meId={user?._id} conversationType={activeChat.type} />
@@ -218,7 +218,7 @@ export default function Messages() {
           onChange={event => setText(event.target.value)}
           placeholder={activeChat.type === 'group' ? 'Message the house group...' : 'Send a direct message...'}
           rows={2}
-          className="flex-1 resize-none rounded-2xl border border-slate-200 bg-[#f7f8fb] px-4 py-3 text-sm text-slate-900 outline-none focus:border-[#bdb8ff]"
+          className="flex-1 resize-none rounded-2xl border border-outline-variant/20 bg-surface-container-low px-4 py-3 text-sm text-on-surface outline-none focus:border-primary"
           onKeyDown={event => {
             if (event.key === 'Enter' && !event.shiftKey) {
               event.preventDefault()
@@ -246,7 +246,7 @@ export default function Messages() {
           subtitle={house ? 'House group and direct chats.' : 'Join a house to start chatting.'}
           searchPlaceholder="Search people..."
           rightActions={(
-            <span className="px-4 py-2 rounded-xl bg-[#ecebff] text-[#5f52f2] text-sm font-semibold">
+            <span className="px-4 py-2 rounded-xl bg-primary-fixed/20 text-primary text-sm font-semibold">
               {totalUnread} unread
             </span>
           )}
@@ -300,7 +300,7 @@ export default function Messages() {
                 onChange={event => setText(event.target.value)}
                 placeholder="Write a message..."
                 rows={2}
-                className="flex-1 resize-none rounded-2xl border border-outline-variant/20 bg-white px-4 py-3 text-sm"
+                className="flex-1 resize-none rounded-2xl border border-outline-variant/20 bg-surface-container-lowest px-4 py-3 text-sm text-on-surface outline-none focus:border-primary"
                 onKeyDown={event => {
                   if (event.key === 'Enter' && !event.shiftKey) {
                     event.preventDefault()

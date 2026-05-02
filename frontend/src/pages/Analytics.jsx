@@ -8,6 +8,7 @@ import TopBar from '../components/TopBar'
 import BottomNav from '../components/BottomNav'
 import DesktopAnalyticsView from '../components/desktop/DesktopAnalyticsView'
 import { formatCurrency, normalizeCurrency } from '../utils/currency'
+import ThemeCustomizer from '../components/ThemeCustomizer'
 
 const THEME_COLORS = [
   'rgb(var(--primary-rgb))',
@@ -295,6 +296,7 @@ export default function Analytics() {
       </main>
 
         <BottomNav />
+                <ThemeCustomizer />
       </div>
     </>
   )

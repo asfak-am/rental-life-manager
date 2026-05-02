@@ -139,7 +139,7 @@ export default function DesktopDashboardView({
             <h3 className="flex flex-col items-center justify-center text-2xl font-black tracking-widest text-primary mt-3 break-words">{inviteCode}</h3>
             {inviteQrSrc && (
               <div className="flex flex-col items-center justify-center mt-4 flex-1">
-                <div className="bg-surface-container-low rounded-[16px] p-4 border border-slate-200">
+                <div className="bg-surface-container-low rounded-[16px] p-4">
                   <img
                     src={inviteQrSrc}
                     alt="Invite QR Code"
@@ -256,7 +256,7 @@ export default function DesktopDashboardView({
         {(rentStatuses || []).filter(s => s.unpaidCount > 0).length > 0 && (
           <section className="col-span-12 space-y-4">
             {(rentStatuses || []).filter(s => s.unpaidCount > 0).map(status => (
-                  <div key={status.month} className="bg-surface-container-lowest rounded-[30px] p-6 border border-outline-variant/10">
+              <div key={status.month} className="bg-white rounded-[30px] p-6 border border-slate-200">
                 <div className="flex items-center justify-between gap-4 flex-wrap mb-5">
                   <div>
                     <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Monthly Rent</p>
@@ -286,17 +286,17 @@ export default function DesktopDashboardView({
                         className={`p-4 rounded-2xl border bg-transparent ${paid ? 'border-emerald-500/50' : 'border-red-500/50'}`}
                       >
                         <div className="flex items-center gap-3">
-                          <div className={`w-10 h-10 rounded-full overflow-hidden bg-transparent border flex-shrink-0 ${paid ? 'border-emerald-500/60' : 'border-red-500/60'}`}>
+                          <div className="w-10 h-10 rounded-full overflow-hidden bg-white border border-slate-200 flex-shrink-0">
                             {memberAvatar ? (
                               <img src={memberAvatar} alt={`${member.name} avatar`} className="w-full h-full object-cover" />
                             ) : (
-                              <div className="w-full h-full grid place-items-center text-xs font-bold text-on-surface">
+                              <div className="w-full h-full grid place-items-center text-xs font-bold text-slate-600">
                                 {(member.name || 'U').charAt(0).toUpperCase()}
                               </div>
                             )}
                           </div>
                           <div className="min-w-0 flex-1">
-                            <p className="font-bold text-sm truncate text-on-surface">{member.name}</p>
+                            <p className="font-bold text-sm truncate">{member.name}</p>
                             <p className={`text-xs font-semibold ${paid ? 'text-emerald-500' : 'text-red-500'}`}>
                               {paid ? 'Paid' : 'Pending'}
                             </p>
@@ -311,7 +311,7 @@ export default function DesktopDashboardView({
                               type="button"
                               onClick={() => onPayMemberRent?.({ userId: member.userId, month: status.month })}
                               disabled={payingMemberRent}
-                              className="px-2 py-1 text-[10px] font-bold bg-transparent border border-primary text-primary rounded-md disabled:opacity-60"
+                              className="px-2 py-1 text-[10px] font-bold bg-primary text-on-primary rounded-md disabled:opacity-60"
                             >
                               {payingMemberRent ? 'Marking...' : 'Mark'}
                             </button>
@@ -325,72 +325,6 @@ export default function DesktopDashboardView({
             ))}
           </section>
         )}
-
-        {/* Balance Section */}
-        <section className="col-span-12 bg-white rounded-[30px] p-5 border border-slate-200 relative overflow-hidden">
-          <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#6a5df6] via-[#57d0c5] to-[#f6b15a]" />
-          <div className="flex items-start justify-between gap-4 flex-wrap">
-            <div>
-              <p className="text-xs uppercase tracking-widest text-slate-400">House Roommates</p>
-              <h3 className="text-[clamp(2rem,2.6vw,3rem)] leading-tight font-black mt-3 break-words">{houseName || 'Your House'}</h3>
-            </div>
-            <div className="rounded-2xl bg-surface-container px-4 py-3 border border-slate-200">
-              <p className="text-[11px] uppercase tracking-widest text-slate-400">House Balance</p>
-              <p className="text-xl font-black mt-1 break-words">{balanceLabel}</p>
-            </div>
-          </div>
-
-          <div className="mt-5 flex gap-3">
-            <button onClick={onTransferFunds} className="px-5 py-3 signature-gradient rounded-xl text-white font-semibold">
-              Add Expenses
-            </button>
-
-            <button onClick={onViewLedger} className="px-5 py-3 rounded-xl bg-primary-fixed/20 text-primary font-semibold">
-              View Ledger
-            </button>
-          </div>
-
-          {/* Members */}
-          <div className="mt-5 grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-            {members.length === 0 ? (
-              <p className="col-span-full text-center text-slate-500">
-                No house members yet.
-              </p>
-            ) : (
-              members.map(member => {
-                const memberBalance = balances.find(b => b.userId === member._id)
-                const amount = memberBalance?.net ?? 0
-                const memberName = getMemberName(member)
-                const memberAvatar = getMemberAvatar(member)
-
-                return (
-                  <div key={member._id} className="bg-surface-container-low p-4 rounded-2xl border border-slate-200 hover:border-slate-300 transition text-center">
-                    <div className="w-14 h-14 mx-auto rounded-full overflow-hidden bg-primary-fixed/25 border border-slate-200">
-                      {memberAvatar ? (
-                        <img src={memberAvatar} alt={`${memberName} avatar`} className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-primary font-bold text-lg">
-                          {(memberName || 'R')[0]}
-                        </div>
-                      )}
-                    </div>
-
-                    <p className="text-sm font-semibold mt-3 truncate">{(memberName || '').split(' ')[0]}</p>
-
-                    <p className={`text-xs font-semibold mt-1 ${amount > 0 ? 'text-amber-700' : amount < 0 ? 'text-emerald-700' : 'text-slate-500'}`}>
-                      {amount > 0
-                        ? `Owes ${formatCurrency(amount, currency)}`
-                        : amount < 0
-                        ? `Gets ${formatCurrency(Math.abs(amount), currency)}`
-                        : 'Settled'}
-                    </p>
-                  </div>
-                )
-              })
-            )}
-          </div>
-        </section>
-
       </div>
     </DesktopAppShell>
   )

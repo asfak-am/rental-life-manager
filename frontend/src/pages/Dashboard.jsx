@@ -411,41 +411,6 @@ export default function Dashboard() {
 
         <main className="relative z-10 max-w-screen-xl mx-auto px-6 pt-6 space-y-8">
           <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="bg-surface-container-lowest rounded-[2rem] p-8 border border-outline-variant/10 flex flex-col justify-center">
-              <div className="flex flex-col items-center gap-6 text-center">
-                <div className="relative w-48 h-48 flex items-center justify-center flex-shrink-0">
-                  <svg className="w-full h-full transform -rotate-90">
-                    <circle className="text-surface-container" cx="96" cy="96" fill="transparent" r="88" stroke="currentColor" strokeWidth="12" />
-                    <circle
-                      className="text-primary transition-all duration-700"
-                      cx="96" cy="96" fill="transparent" r="88"
-                      stroke="currentColor"
-                      strokeDasharray={CIRCUMFERENCE}
-                      strokeDashoffset={dashOffset}
-                      strokeLinecap="round"
-                      strokeWidth="12"
-                    />
-                  </svg>
-                  <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <span className="text-4xl font-extrabold tracking-tight text-on-surface">{score}</span>
-                    <span className={`text-xs font-bold uppercase tracking-widest ${sColor}`}>{sLabel}</span>
-                  </div>
-                </div>
-                <div className="space-y-3">
-                  <h2 className="text-2xl font-bold tracking-tight">House Harmony Score</h2>
-                  <p className="text-on-surface-variant text-sm leading-relaxed">
-                    {score >= 80
-                      ? 'Your household is running smoothly! Bills are paid and tasks are on track.'
-                      : 'Some balances need settling. Settle up to improve your score.'}
-                  </p>
-                  <div className="pt-2">
-                    <span className="inline-flex items-center px-4 py-1.5 rounded-full bg-secondary-container text-on-secondary-container text-xs font-bold uppercase tracking-wider">
-                      {house?.name || 'Your House'}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
 
             <div className="bg-gradient-to-br from-primary to-primary-container rounded-[2rem] p-8 text-on-primary flex flex-col shadow-xl overflow-hidden min-w-0">
               <div className="flex items-start justify-between gap-4 flex-wrap mb-4">
@@ -644,7 +609,7 @@ export default function Dashboard() {
                       return (
                         <div
                           key={member.userId}
-                          className={`p-3 rounded-xl border ${paid ? 'bg-emerald-50 border-emerald-300' : 'bg-red-50 border-red-300'}`}
+                          className={`p-3 rounded-xl border bg-transparent ${paid ? 'border-emerald-500/50' : 'border-red-500/50'}`}
                         >
                           <div className="flex items-center gap-2">
                             <div className="w-10 h-10 rounded-full overflow-hidden bg-white border border-outline-variant/10 flex-shrink-0">
@@ -658,11 +623,11 @@ export default function Dashboard() {
                             </div>
                             <div className="min-w-0 flex-1">
                               <p className="font-bold text-sm truncate">{member.name}</p>
-                              <p className={`text-[11px] font-semibold ${paid ? 'text-emerald-700' : 'text-red-700'}`}>
+                              <p className={`text-[11px] font-semibold ${paid ? 'text-emerald-500' : 'text-red-500'}`}>
                                 {paid ? 'Paid' : 'Pending'}
                               </p>
                             </div>
-                            <div className={`w-7 h-7 rounded-md border-2 grid place-items-center flex-shrink-0 ${paid ? 'border-emerald-600 bg-emerald-600 text-white' : 'border-red-500 bg-white text-red-500'}`}>
+                            <div className={`w-7 h-7 rounded-md border-2 grid place-items-center flex-shrink-0 ${paid ? 'border-emerald-500 text-emerald-500 bg-transparent' : 'border-red-500 text-red-500 bg-transparent'}`}>
                               <span className="material-symbols-outlined text-[14px]" style={{ fontVariationSettings: "'FILL' 1" }}>
                                 {paid ? 'check' : 'close'}
                               </span>

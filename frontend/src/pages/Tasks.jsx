@@ -7,6 +7,7 @@ import { useHouse } from '../context/HouseContext'
 import TopBar from '../components/TopBar'
 import BottomNav from '../components/BottomNav'
 import DesktopAppShell from '../components/desktop/DesktopAppShell'
+import ThemeCustomizer from '../components/ThemeCustomizer'
 
 const PRIORITY_STYLES = {
   high:   { bg: 'bg-error-container',     text: 'text-on-error-container',   label: 'High Priority'   },
@@ -273,6 +274,7 @@ export default function Tasks() {
           </div>
         </div>
       )}
+              <ThemeCustomizer />
     </>
   )
 }

@@ -62,10 +62,15 @@ export default function DesktopAppShell({
         onMouseEnter={() => setIsHoverExpanded(true)}
         onMouseLeave={() => setIsHoverExpanded(false)}
       >
-        <div className={`flex items-start ${isSidebarExpanded ? 'justify-start' : 'justify-center'} gap-3`}>
-          <div className={`flex flex-col min-w-0 ${isSidebarExpanded ? '' : 'opacity-0 pointer-events-none select-none'}`}>
+        <div className={`flex items-center ${isSidebarExpanded ? 'justify-start gap-3' : 'justify-center'}`}>
+          {!isSidebarExpanded && (
+            <div className="w-12 h-12 rounded-lg bg-primary-fixed flex items-center justify-center flex-shrink-0">
+              <span className="material-symbols-outlined text-[24px]" style={{ color: 'rgb(var(--primary-rgb))', fontVariationSettings: "'FILL' 1" }}>apartment</span>
+            </div>
+          )}
+          <div className={`${isSidebarExpanded ? '' : 'hidden'}`}>
             <div className="leading-[0.9]">
-              <h1 className="text-[24px] font-black tracking-tight text-primary whitespace-nowrap">Rental Life</h1>
+              <h1 className="text-[24px] font-black tracking-tight whitespace-nowrap" style={{ color: 'rgb(var(--primary-rgb))' }}>Rental Life</h1>
             </div>
           </div>
         </div>

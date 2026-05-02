@@ -205,7 +205,8 @@ export default function Dashboard() {
   const { data: rentHistory } = useQuery({
     queryKey: ['rent-history'],
     queryFn: () => houseService.getRentHistory().then(r => r.data),
-    enabled: !!house,
+    enabled: !!user,
+    placeholderData: () => qc.getQueryData(['rent-history']),
   })
 
   const currentBillMonth = (() => {
@@ -217,7 +218,8 @@ export default function Dashboard() {
   const { data: rentStatus } = useQuery({
     queryKey: ['rent-status', currentBillMonth],
     queryFn: () => houseService.getRentStatus(currentBillMonth).then(r => r.data),
-    enabled: !!house,
+    enabled: !!user,
+    placeholderData: () => qc.getQueryData(['rent-status', currentBillMonth]),
   })
 
   const rentMonths = (() => {
@@ -232,7 +234,8 @@ export default function Dashboard() {
       const results = await Promise.all(months.map(m => houseService.getRentStatus(m).then(r => r.data).catch(() => null)))
       return results.filter(Boolean)
     },
-    enabled: Boolean(rentMonths.length && house),
+    enabled: Boolean(rentMonths.length && user),
+    placeholderData: () => qc.getQueryData(['rent-statuses', rentMonths]),
   })
 
   const isAdmin = house?.members?.find(m => String(m.userId) === String(user?._id))?.role === 'admin'

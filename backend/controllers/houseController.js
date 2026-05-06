@@ -1,6 +1,8 @@
 const House = require('../models/House')
 const User = require('../models/User')
 const Notification = require('../models/Notification')
+const Expense = require('../models/Expense')
+const Task = require('../models/Task')
 const { generateInviteCode } = require('../utils/inviteCode')
 const RentPayment = require('../models/RentPayment')
 const { getRentStatusForUser, runRentRemindersForMonth, toMonthKey } = require('../services/rentService')
@@ -427,6 +429,169 @@ const leaveHouse = async (req, res, next) => {
 	}
 }
 
+const removeMember = async (req, res, next) => {
+	try {
+		const house = await requireHouse(req.user._id)
+		if (!house) return res.status(404).json({ message: 'No house found' })
+
+		const membership = house.members.find(member => String(member.userId) === String(req.user._id))
+		if (!membership || membership.role !== 'admin') {
+			return res.status(403).json({ message: 'Only house admins can remove members' })
+		}
+
+		const targetId = String(req.params.userId || req.body.userId || '')
+		if (!targetId) return res.status(400).json({ message: 'userId is required' })
+
+		const targetMember = house.members.find(member => String(member.userId) === String(targetId))
+		if (!targetMember) return res.status(404).json({ message: 'Member not found in house' })
+
+		if (String(targetMember.userId) === String(req.user._id)) {
+			return res.status(400).json({ message: 'Admins cannot remove themselves via this endpoint' })
+		}
+
+		if (targetMember.role === 'admin') {
+			return res.status(403).json({ message: 'Cannot remove another admin' })
+		}
+
+		// detect outstanding items: expenses, rent, tasks
+		const mongoose = require('mongoose')
+		const targetObjId = (() => {
+			try { return mongoose.Types.ObjectId(targetId) } catch (e) { return null }
+		})()
+
+		// Expenses where target owes others
+		const owedExpenses = await Expense.find({ houseId: house._id, 'participants.userId': targetId })
+		let totalOwedByTarget = 0
+		let totalOwedToTarget = 0
+		const unsettledExpenses = []
+		const warningPeople = new Map()
+
+		const addWarningPerson = (userId, kind) => {
+			const key = String(userId)
+			if (!key) return
+			const current = warningPeople.get(key) || { userId: key, name: 'Member', kinds: new Set() }
+			current.kinds.add(kind)
+			warningPeople.set(key, current)
+		}
+
+		const userDocs = await User.find({ _id: { $in: Array.from(new Set(owedExpenses.flatMap(exp => [exp.paidBy, ...exp.participants.map(p => p.userId)]).filter(Boolean).map(id => String(id)))) } }).select('name displayName')
+		const userNameById = new Map(userDocs.map(user => [String(user._id), user.displayName || user.name || 'Member']))
+		for (const exp of owedExpenses) {
+			// participant owed amounts
+			for (const p of exp.participants) {
+				if (String(p.userId) === String(targetId) && !p.settled) {
+					totalOwedByTarget += Number(p.amountOwed || 0)
+					unsettledExpenses.push({ expenseId: exp._id, title: exp.title, amount: p.amountOwed, paidBy: exp.paidBy })
+					addWarningPerson(exp.paidBy, 'owedByTarget')
+				}
+			}
+			// if target paid this expense and others owe him
+			if (String(exp.paidBy) === String(targetId)) {
+				for (const p of exp.participants) {
+					if (String(p.userId) !== String(targetId) && !p.settled) {
+						totalOwedToTarget += Number(p.amountOwed || 0)
+						addWarningPerson(p.userId, 'owedToTarget')
+					}
+				}
+			}
+		}
+
+		// Rent records for this user
+		const rentRecords = await RentPayment.find({ houseId: house._id, userId: targetId })
+		let totalUnpaidRent = 0
+		for (const r of rentRecords) {
+			if (r.status !== 'paid') totalUnpaidRent += Number(r.amountDue || 0)
+		}
+
+		// Tasks assigned to this user
+		const taskCountAssigned = await Task.countDocuments({ houseId: house._id, assignedTo: targetId })
+
+		const hasOutstanding = totalOwedByTarget > 0 || totalOwedToTarget > 0 || totalUnpaidRent > 0 || taskCountAssigned > 0
+
+		const confirmed = req.query.confirm === 'true' || req.body?.confirm === true
+		if (hasOutstanding && !confirmed) {
+			const warnings = Array.from(warningPeople.values()).map(person => ({
+				userId: person.userId,
+				name: userNameById.get(String(person.userId)) || person.name,
+				kinds: Array.from(person.kinds),
+			}))
+			return res.status(409).json({
+				message: 'Member has outstanding balances or assignments',
+				totals: { totalOwedByTarget, totalOwedToTarget, totalUnpaidRent, taskCountAssigned },
+				unsettledExpenses: unsettledExpenses.slice(0, 10),
+				warnings,
+			})
+		}
+
+		// If confirmed, perform cleanup: settle related expense participant entries, delete rent records, unassign tasks
+		if (confirmed) {
+			// settle participant entries where target owed
+			for (const exp of owedExpenses) {
+				let changed = false
+				// settle participants who are the target
+				for (const p of exp.participants) {
+					if (String(p.userId) === String(targetId) && !p.settled) {
+						p.settled = true
+						p.settledAt = new Date()
+						changed = true
+					}
+				}
+				// if target paid the expense, mark others as settled as well
+				if (String(exp.paidBy) === String(targetId)) {
+					for (const p of exp.participants) {
+						if (String(p.userId) !== String(targetId) && !p.settled) {
+							p.settled = true
+							p.settledAt = new Date()
+							changed = true
+						}
+					}
+				}
+				if (changed) {
+					exp.auditTrail = exp.auditTrail || []
+					exp.auditTrail.push({ action: 'Settled due to member removal', by: req.user._id })
+					await exp.save()
+				}
+			}
+
+			// remove rent records for this user
+			await RentPayment.deleteMany({ houseId: house._id, userId: targetId })
+
+			// unassign tasks
+			await Task.updateMany({ houseId: house._id, assignedTo: targetId }, { $unset: { assignedTo: '' } })
+		}
+
+		// remove member from house
+		house.members = house.members.filter(m => String(m.userId) !== String(targetId))
+		await house.save()
+
+		// clear user's houseId
+		try {
+			const u = await User.findById(targetId)
+			if (u) {
+				u.houseId = null
+				await u.save()
+			}
+		} catch (err) {
+			// ignore
+		}
+
+		const notifications = house.members.map(member => ({
+			userId: member.userId,
+			houseId: house._id,
+			type: 'member',
+			title: 'House member removed',
+			body: `A member was removed from ${house.name}`,
+			link: '/settings',
+		}))
+		if (notifications.length > 0) await Notification.insertMany(notifications)
+
+		const payload = await buildHousePayload(house)
+		return res.json({ message: 'Member removed', ...payload })
+	} catch (error) {
+		next(error)
+	}
+}
+
 module.exports = {
 	createHouse,
 	inviteMember,
@@ -440,4 +605,5 @@ module.exports = {
 	payMonthlyRent,
  payMonthlyRentForMember,
 	getRentHistory,
+	removeMember,
 }

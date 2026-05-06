@@ -89,6 +89,36 @@ export default function HouseSettings() {
     onError: () => toast.error('Failed to leave house'),
   })
 
+  const removeMemberMutation = useMutation({
+    mutationFn: ({ userId, confirm } = {}) => houseService.removeMember(userId, { confirm }),
+    onSuccess: () => {
+      toast.success('Member removed')
+      qc.invalidateQueries(['house'])
+    },
+    onError: (err, variables) => {
+      const status = err?.response?.status
+      if (status === 409) {
+        const data = err.response.data || {}
+        const totals = data.totals || {}
+        const warnings = Array.isArray(data.warnings) ? data.warnings : []
+        const parts = []
+        const names = warnings.map(w => w.name).filter(Boolean)
+        if (names.length) parts.push(`Involved members: ${Array.from(new Set(names)).join(', ')}`)
+        if (totals.totalOwedByTarget) parts.push(`They owe ${totals.totalOwedByTarget}`)
+        if (totals.totalOwedToTarget) parts.push(`Owed to them ${totals.totalOwedToTarget}`)
+        if (totals.totalUnpaidRent) parts.push(`Unpaid rent ${totals.totalUnpaidRent}`)
+        if (totals.taskCountAssigned) parts.push(`${totals.taskCountAssigned} assigned tasks`)
+        const msg = `This member has outstanding items: ${parts.join(', ')}. Confirm to clear these and remove the member?`
+        if (window.confirm(msg)) {
+          // retry with confirm
+          removeMemberMutation.mutate({ userId: variables.userId, confirm: true })
+        }
+        return
+      }
+      toast.error(err.response?.data?.message || 'Failed to remove member')
+    },
+  })
+
   const copyCode = () => {
     navigator.clipboard.writeText(inviteCode)
     setCopied(true)
@@ -126,6 +156,12 @@ export default function HouseSettings() {
           refreshCode={() => refreshMutation.mutate()}
           refreshing={refreshMutation.isPending}
           isAdmin={isAdmin}
+          houseMembers={house?.members}
+          currentUserId={user?._id}
+          onRemoveMember={(member) => {
+            if (!window.confirm(`Remove ${member.name || 'this member'} from the house?`)) return
+            removeMemberMutation.mutate({ userId: member._id })
+          }}
           notificationPrefs={notificationPrefs}
           onToggleNotification={toggleNotification}
           monthlyRentAmount={rentStatus?.totalRentAmount || house?.monthlyRentAmount || 0}
@@ -237,6 +273,19 @@ export default function HouseSettings() {
                       Joined {new Date(member.createdAt || Date.now()).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })}
                     </p>
                   </div>
+                  {isAdmin && !isMe && (
+                    <button
+                      onClick={() => {
+                        if (mIsAdmin) return
+                        if (!window.confirm(`Remove ${member.name || 'this member'} from the house?`)) return
+                        removeMemberMutation.mutate(member._id)
+                      }}
+                      disabled={mIsAdmin}
+                      className={`mt-2 px-3 py-1 rounded-lg text-sm font-semibold ${mIsAdmin ? 'bg-surface text-slate-500 cursor-not-allowed' : 'bg-error text-on-error'}`}
+                    >
+                      {mIsAdmin ? 'ADMIN' : 'Remove'}
+                    </button>
+                  )}
                 </div>
               )
             })}

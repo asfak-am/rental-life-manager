@@ -11,6 +11,9 @@ export default function DesktopSettingsView({
   refreshCode,
   refreshing,
   isAdmin,
+  currentUserId,
+  onRemoveMember,
+  houseMembers = [],
   notificationPrefs = {},
   onToggleNotification,
   monthlyRentAmount = 0,
@@ -36,17 +39,34 @@ export default function DesktopSettingsView({
               <button onClick={onInvite} type="button" className="text-primary font-semibold">+ Invite Member</button>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              {members.map(member => (
-                <div key={member._id} className="bg-surface-container-low rounded-2xl p-3 flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-xl bg-primary-fixed/25 grid place-items-center text-primary font-black">
-                    {(member.displayName || member.name || 'R').slice(0, 1).toUpperCase()}
+              {members.map(member => {
+                const mIsAdmin = houseMembers?.find(hm => String(hm.userId) === String(member._id))?.role === 'admin'
+                return (
+                  <div key={member._id} className="bg-surface-container-low rounded-2xl p-3 flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-xl bg-primary-fixed/25 grid place-items-center text-primary font-black">
+                      {(member.displayName || member.name || 'R').slice(0, 1).toUpperCase()}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-semibold truncate">{member.displayName || member.name}</p>
+                      <p className="text-xs text-slate-500">Resident</p>
+                    </div>
+                    {isAdmin && member._id !== currentUserId && (
+                      <div className="ml-auto">
+                        <button
+                          onClick={() => {
+                            if (mIsAdmin) return
+                            onRemoveMember?.(member)
+                          }}
+                          disabled={mIsAdmin}
+                          className={`px-3 py-1 rounded-lg text-sm font-semibold ${mIsAdmin ? 'bg-surface text-slate-500 cursor-not-allowed' : 'bg-error text-on-error'}`}
+                        >
+                          {mIsAdmin ? 'ADMIN' : 'Remove'}
+                        </button>
+                      </div>
+                    )}
                   </div>
-                  <div className="min-w-0">
-                    <p className="font-semibold truncate">{member.displayName || member.name}</p>
-                    <p className="text-xs text-slate-500">Resident</p>
-                  </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           </div>
 

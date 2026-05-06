@@ -13,6 +13,7 @@ const {
 	payMonthlyRent,
 	payMonthlyRentForMember,
 	getRentHistory,
+    removeMember,
 } = require('../controllers/houseController')
 
 const router = express.Router()
@@ -30,5 +31,6 @@ router.get('/rent-history', getRentHistory)
 router.post('/pay-rent', payMonthlyRent)
 router.post('/pay-rent/member', payMonthlyRentForMember)
 router.delete('/leave', leaveHouse)
+router.delete('/members/:userId', removeMember)
 
 module.exports = router

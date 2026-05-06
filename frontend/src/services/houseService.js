@@ -14,5 +14,6 @@ export const houseService = {
   payRent: (month) => api.post('/house/pay-rent', { month }),
   payRentForMember: (userId, month) => api.post('/house/pay-rent/member', { userId, month }),
   leave:         ()     => api.delete('/house/leave'),
+  removeMember:  (userId, opts = {}) => api.delete(`/house/members/${userId}`, { params: { confirm: opts.confirm ? true : undefined } }),
   refreshCode:   ()     => api.post('/house/refresh-code'),
 }

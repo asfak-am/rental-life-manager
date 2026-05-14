@@ -1,13 +1,30 @@
 import DesktopAppShell from './DesktopAppShell'
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, AreaChart, Area, CartesianGrid, Legend } from 'recharts'
 
+// Palette based on provided swatches — one of them is the theme color.
+// Order: purple, theme (teal), orange, pink
+const PALETTE_PURPLE = 'rgb(139,92,246)'
+const PALETTE_ORANGE = 'rgb(251,146,60)'
+const PALETTE_PINK = 'rgb(236,72,153)'
+
+const ACCENT_COLOR = PALETTE_PURPLE
+const ACCENT_RGBA = 'rgba(139,92,246,0.72)'
+
 const THEME_COLORS = [
+  PALETTE_PURPLE,
   'rgb(var(--primary-rgb))',
-  'rgba(var(--primary-rgb), 0.82)',
-  'rgba(var(--primary-rgb), 0.66)',
-  'rgba(var(--primary-rgb), 0.5)',
-  'rgba(var(--primary-rgb), 0.36)',
+  PALETTE_ORANGE,
+  PALETTE_PINK,
 ]
+
+function getCategoryColor(name, idx) {
+  if (!name) return THEME_COLORS[idx % THEME_COLORS.length]
+  const key = name.toLowerCase()
+  if (key.includes('water')) return 'rgb(var(--primary-rgb))'
+  if (key.includes('electric')) return ACCENT_COLOR
+  if (key.includes('other')) return PALETTE_ORANGE
+  return THEME_COLORS[idx % THEME_COLORS.length]
+}
 
 const UTILITY_RANGE_OPTIONS = [
   { value: '3M', label: 'Last 3 Months' },
@@ -81,7 +98,7 @@ export default function DesktopAnalyticsView({
                       dataKey="value"
                     >
                       {categoryData.map((item, idx) => (
-                        <Cell key={`${item.name}-${idx}`} fill={THEME_COLORS[idx % THEME_COLORS.length]} />
+                        <Cell key={`${item.name}-${idx}`} fill={getCategoryColor(item.name, idx)} />
                       ))}
                     </Pie>
                     <Tooltip
@@ -100,11 +117,11 @@ export default function DesktopAnalyticsView({
             <p className="text-[10px] uppercase tracking-widest text-slate-400">Total Spent</p>
           </div>
           {hasCategoryData ? (
-            <ul className="mt-5 space-y-2">
+                    <ul className="mt-5 space-y-2">
               {categoryData.slice(0, 3).map((item, idx) => (
                 <li key={item.name} className="flex items-center justify-between text-sm">
                   <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full" style={{ background: THEME_COLORS[idx % THEME_COLORS.length] }} />
+                    <span className="w-2.5 h-2.5 rounded-full" style={{ background: getCategoryColor(item.name, idx) }} />
                     <span>{item.name}</span>
                   </div>
                   <span className="font-semibold">{item.percent || `${Math.round((item.value / Math.max(1, categoryData.reduce((s, c) => s + c.value, 0))) * 100)}%`}</span>
@@ -147,8 +164,8 @@ export default function DesktopAnalyticsView({
                       <stop offset="95%" stopColor="rgb(var(--primary-rgb))" stopOpacity={0.06} />
                     </linearGradient>
                     <linearGradient id="electricFillDesktop" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="rgba(var(--primary-rgb), 0.72)" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="rgba(var(--primary-rgb), 0.72)" stopOpacity={0.05} />
+                      <stop offset="5%" stopColor={ACCENT_RGBA} stopOpacity={0.3} />
+                      <stop offset="95%" stopColor={ACCENT_RGBA} stopOpacity={0.05} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
@@ -160,7 +177,7 @@ export default function DesktopAnalyticsView({
                   />
                   <Legend />
                   <Area type="monotone" dataKey="water" name="Water Bill" stroke="rgb(var(--primary-rgb))" fill="url(#waterFillDesktop)" strokeWidth={3} />
-                  <Area type="monotone" dataKey="electricity" name="Electricity Bill" stroke="rgba(var(--primary-rgb), 0.72)" fill="url(#electricFillDesktop)" strokeWidth={3} />
+                  <Area type="monotone" dataKey="electricity" name="Electricity Bill" stroke={ACCENT_COLOR} fill="url(#electricFillDesktop)" strokeWidth={3} />
                 </AreaChart>
               </ResponsiveContainer>
             </div>

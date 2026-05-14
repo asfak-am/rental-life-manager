@@ -6,6 +6,22 @@ const Task = require('../models/Task')
 const { generateInviteCode } = require('../utils/inviteCode')
 const RentPayment = require('../models/RentPayment')
 const { getRentStatusForUser, runRentRemindersForMonth, toMonthKey } = require('../services/rentService')
+const redis = require('../utils/redisClient')
+
+// helper: delete keys by pattern using SCAN
+async function clearKeysByPattern(pattern) {
+	if (!redis) return
+	try {
+		const stream = redis.scanStream({ match: pattern, count: 100 })
+		const keys = []
+		for await (const resultKeys of stream) {
+			if (resultKeys.length) keys.push(...resultKeys)
+		}
+		if (keys.length) await redis.del(...keys)
+	} catch (err) {
+		console.warn('Redis clearKeysByPattern failed for', pattern, err && err.message)
+	}
+}
 
 const DEFAULT_CLIENT_URL = 'https://rental-life.vercel.app'
 
@@ -206,7 +222,31 @@ const getRentStatus = async (req, res, next) => {
 		const now = new Date()
 
 		runRentRemindersSafely({ month, now, houseIds: [house._id] })
+
+		// Try cache first
+		const cacheKey = `rent-status:${house._id}:${req.user._id}:${month}`
+		if (redis) {
+			try {
+				const cached = await redis.get(cacheKey)
+				if (cached) {
+					return res.json(JSON.parse(cached))
+				}
+			} catch (err) {
+				console.warn('Redis get failed for', cacheKey, err)
+			}
+		}
+
 		const status = await getRentStatusForUser({ house, userId: req.user._id, month, now })
+
+		// Cache result for a short time (default 60s)
+		if (redis) {
+			try {
+				const ttl = parseInt(process.env.RENT_STATUS_CACHE_TTL || '60', 10)
+				await redis.set(cacheKey, JSON.stringify(status), 'EX', ttl)
+			} catch (err) {
+				console.warn('Redis set failed for', cacheKey, err)
+			}
+		}
 
 		return res.json(status)
 	} catch (error) {
@@ -231,9 +271,21 @@ const payMonthlyRent = async (req, res, next) => {
 		rentRecord.status = 'paid'
 		rentRecord.paidAt = new Date()
 		await rentRecord.save()
-	// Also mark corresponding rent expenses as settled for this user
-	const Expense = require('../models/Expense')
-	const rentExpenses = await Expense.find({ houseId: house._id, category: 'Rent', billMonth: month })
+
+		// Invalidate cache for rent status for this house/month (all members)
+		if (redis) {
+			try {
+				await clearKeysByPattern(`rent-status:${house._id}:*:${month}`)
+				await clearKeysByPattern(`rent-history:${house._id}`)
+				await clearKeysByPattern(`expense-summary:${house._id}:*`)
+			} catch (err) {
+				console.warn('Redis cache invalidation failed for rent status', err)
+			}
+		}
+
+		// Also mark corresponding rent expenses as settled for this user
+		const Expense = require('../models/Expense')
+		const rentExpenses = await Expense.find({ houseId: house._id, category: 'Rent', billMonth: month })
 	
 	for (const expense of rentExpenses) {
 		const participant = expense.participants.find(p => String(p.userId) === String(req.user._id))
@@ -300,6 +352,22 @@ const payMonthlyRentForMember = async (req, res, next) => {
 		rentRecord.paidAt = new Date()
 		await rentRecord.save()
 		console.debug(`payMonthlyRentForMember: saved rentRecord ${rentRecord._id} status=${rentRecord.status}`)
+
+		// Invalidate cache for this member and the house/month
+		if (redis) {
+			try {
+				// delete specific member key
+				const memberKey = `rent-status:${house._id}:${memberId}:${month}`
+				await redis.del(memberKey)
+				// delete any other cached keys for this house/month
+				await clearKeysByPattern(`rent-status:${house._id}:*:${month}`)
+				await clearKeysByPattern(`rent-history:${house._id}`)
+				await clearKeysByPattern(`expense-summary:${house._id}:*`)
+			} catch (err) {
+				console.warn('Redis cache invalidation failed for rent status (member)', err)
+			}
+		}
+
 	// Also mark corresponding rent expenses as settled for this member
 	const Expense = require('../models/Expense')
 	const rentExpenses = await Expense.find({ houseId: house._id, category: 'Rent', billMonth: month })
@@ -339,6 +407,14 @@ const getRentHistory = async (req, res, next) => {
 		const house = await requireHouse(req.user._id)
 		if (!house) return res.status(404).json({ message: 'No house found' })
 
+		const cacheKey = `rent-history:${house._id}`
+		if (redis) {
+			try {
+				const cached = await redis.get(cacheKey)
+				if (cached) return res.json({ history: JSON.parse(cached) })
+			} catch (err) { console.warn('Redis get failed for', cacheKey, err && err.message) }
+		}
+
 		const payments = await RentPayment.find({ houseId: house._id, status: 'paid' })
 			.sort({ paidAt: -1, createdAt: -1 })
 			.populate('userId', 'name displayName')
@@ -351,6 +427,10 @@ const getRentHistory = async (req, res, next) => {
 			userId: payment.userId?._id || payment.userId,
 			name: payment.userId?.displayName || payment.userId?.name || 'Member',
 		}))
+
+		if (redis) {
+			try { await redis.set(cacheKey, JSON.stringify(history), 'EX', parseInt(process.env.RENT_HISTORY_CACHE_TTL || '300', 10)) } catch (err) { console.warn('Redis set failed for', cacheKey, err && err.message) }
+		}
 
 		return res.json({ history })
 	} catch (error) {

@@ -1,6 +1,7 @@
 import DesktopAppShell from './DesktopAppShell'
 import { formatCurrency } from '../../utils/currency'
 import { exportExpensesPdf } from '../../utils/pdfExport'
+import { useHouse } from '../../context/HouseContext'
 
 export default function DesktopExpensesView({
   expenses = [],
@@ -25,6 +26,7 @@ export default function DesktopExpensesView({
     : []
   const totalExpenses = summaryData?.totalExpenses || 0
   const myShare = summaryData?.myShare || 0
+  const { members } = useHouse()
 
   const exportPdf = () => {
     exportExpensesPdf({
@@ -124,7 +126,7 @@ export default function DesktopExpensesView({
                 <th className="px-5 py-3">Date</th>
                 <th className="px-5 py-3">Category</th>
                 <th className="px-5 py-3">Amount</th>
-                <th className="px-5 py-3">Status</th>
+                <th className="px-5 py-3">Paid By</th>
               </tr>
             </thead>
             <tbody>
@@ -134,7 +136,11 @@ export default function DesktopExpensesView({
                   <td className="px-5 py-4 text-slate-500">{exp.billMonth || new Date(exp.date).toLocaleDateString()}</td>
                   <td className="px-5 py-4"><span className="px-2 py-1 rounded-full text-[10px] uppercase tracking-widest bg-[#ecebff] text-[#5f52f2]">{exp.category || 'Other'}</span></td>
                   <td className="px-5 py-4 font-black">{formatCurrency(exp.amount || 0, currency)}</td>
-                  <td className="px-5 py-4 text-emerald-600 text-xs font-semibold uppercase tracking-widest">Recorded</td>
+                  <td className="px-5 py-4 font-semibold text-on-surface">{(() => {
+                    const payerId = String(exp.paidBy || '')
+                    const payer = (members || []).find(m => String(m._id) === payerId)
+                    return payer ? payer.name : payerId ? payerId.slice(0,6) : 'Unknown'
+                  })()}</td>
                 </tr>
               ))}
             </tbody>

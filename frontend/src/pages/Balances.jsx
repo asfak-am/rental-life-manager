@@ -21,6 +21,7 @@ export default function Balances() {
   const { data: rawData } = useQuery({
     queryKey: ['balance-raw'],
     queryFn: () => balanceService.getRaw().then(r => r.data),
+    refetchOnMount: 'always',
   })
 
   const currentBillMonth = (() => {

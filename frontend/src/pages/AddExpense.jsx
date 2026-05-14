@@ -64,9 +64,9 @@ export default function AddExpense() {
     mutationFn: (data) => expenseService.add(data),
     onSuccess: () => {
       toast.success('Expense added!')
-      qc.invalidateQueries(['expenses'])
-      qc.invalidateQueries(['expense-summary'])
-      qc.invalidateQueries(['balance-raw'])
+      qc.invalidateQueries({ queryKey: ['expenses'] })
+      qc.invalidateQueries({ queryKey: ['expense-summary'] })
+      qc.invalidateQueries({ queryKey: ['balance-raw'] })
       navigate('/expenses')
     },
     onError: (err) => toast.error(err.response?.data?.message || 'Failed to add expense'),

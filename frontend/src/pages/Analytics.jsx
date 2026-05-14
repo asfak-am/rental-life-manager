@@ -10,13 +10,28 @@ import DesktopAnalyticsView from '../components/desktop/DesktopAnalyticsView'
 import { formatCurrency, normalizeCurrency } from '../utils/currency'
 import ThemeCustomizer from '../components/ThemeCustomizer'
 
+const PALETTE_PURPLE = 'rgb(139,92,246)'
+const PALETTE_ORANGE = 'rgb(251,146,60)'
+const PALETTE_PINK = 'rgb(236,72,153)'
+const MOBILE_WATER = 'rgb(20,184,166)'
+const MOBILE_ELECTRIC = 'rgb(139,92,246)'
+const MOBILE_ELECTRIC_RGBA = 'rgba(139,92,246,0.72)'
+
 const THEME_COLORS = [
   'rgb(var(--primary-rgb))',
-  'rgba(var(--primary-rgb), 0.82)',
-  'rgba(var(--primary-rgb), 0.66)',
-  'rgba(var(--primary-rgb), 0.5)',
-  'rgba(var(--primary-rgb), 0.36)',
+  PALETTE_PURPLE,
+  PALETTE_ORANGE,
+  PALETTE_PINK,
 ]
+
+function getCategoryColor(name, idx) {
+  if (!name) return THEME_COLORS[idx % THEME_COLORS.length]
+  const key = name.toLowerCase()
+  if (key.includes('water')) return 'rgb(var(--primary-rgb))'
+  if (key.includes('electric')) return PALETTE_PURPLE
+  if (key.includes('other')) return PALETTE_ORANGE
+  return THEME_COLORS[idx % THEME_COLORS.length]
+}
 const UTILITY_RANGE_OPTIONS = [
   { value: '3M', label: '3M', months: 3 },
   { value: '6M', label: '6M', months: 6 },
@@ -134,8 +149,8 @@ export default function Analytics() {
                       paddingAngle={3}
                       dataKey="value"
                     >
-                      {categoryData.map((_, i) => (
-                        <Cell key={i} fill={THEME_COLORS[i % THEME_COLORS.length]} />
+                      {categoryData.map((item, i) => (
+                        <Cell key={i} fill={getCategoryColor(item.name, i)} />
                       ))}
                     </Pie>
                     <Tooltip
@@ -160,7 +175,7 @@ export default function Analytics() {
               ) : categoryData.map((cat, i) => (
                 <div key={cat.name} className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-3 h-3 rounded-full" style={{ background: THEME_COLORS[i % THEME_COLORS.length] }} />
+                    <div className="w-3 h-3 rounded-full" style={{ background: getCategoryColor(cat.name, i) }} />
                     <span className="text-sm font-medium text-on-surface">{cat.name}</span>
                   </div>
                   <span className="font-bold text-on-surface">
@@ -230,12 +245,12 @@ export default function Analytics() {
                 <AreaChart data={filteredUtilityTrendData}>
                   <defs>
                     <linearGradient id="waterFillMobile" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="rgb(var(--primary-rgb))" stopOpacity={0.35} />
-                      <stop offset="95%" stopColor="rgb(var(--primary-rgb))" stopOpacity={0.05} />
+                      <stop offset="5%" stopColor={MOBILE_WATER} stopOpacity={0.35} />
+                      <stop offset="95%" stopColor={MOBILE_WATER} stopOpacity={0.05} />
                     </linearGradient>
                     <linearGradient id="electricFillMobile" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="rgba(var(--primary-rgb), 0.72)" stopOpacity={0.35} />
-                      <stop offset="95%" stopColor="rgba(var(--primary-rgb), 0.72)" stopOpacity={0.05} />
+                      <stop offset="5%" stopColor={MOBILE_ELECTRIC_RGBA} stopOpacity={0.35} />
+                      <stop offset="95%" stopColor={MOBILE_ELECTRIC_RGBA} stopOpacity={0.05} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
@@ -246,8 +261,8 @@ export default function Analytics() {
                     contentStyle={{ borderRadius: '12px', border: 'none', background: '#ffffff', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}
                   />
                   <Legend />
-                  <Area type="monotone" dataKey="water" name="Water Bill" stroke="rgb(var(--primary-rgb))" fill="url(#waterFillMobile)" strokeWidth={3} />
-                  <Area type="monotone" dataKey="electricity" name="Electricity Bill" stroke="rgba(var(--primary-rgb), 0.72)" fill="url(#electricFillMobile)" strokeWidth={3} />
+                  <Area type="monotone" dataKey="water" name="Water Bill" stroke={MOBILE_WATER} fill="url(#waterFillMobile)" strokeWidth={3} />
+                  <Area type="monotone" dataKey="electricity" name="Electricity Bill" stroke={MOBILE_ELECTRIC} fill="url(#electricFillMobile)" strokeWidth={3} />
                 </AreaChart>
               </ResponsiveContainer>
             ) : (

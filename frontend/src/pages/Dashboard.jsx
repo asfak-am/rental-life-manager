@@ -14,12 +14,19 @@ import ThemeCustomizer from '../components/ThemeCustomizer'
 import { formatCurrency } from '../utils/currency'
 import { buildInviteLink, buildInviteQrSrc } from '../utils/inviteLink'
 
+const PALETTE_PURPLE = 'rgb(64, 228, 31)'
+const ACCENT_RGBA = 'rgba(0, 106, 23, 0.72)'
+
 const UTILITY_RANGE_OPTIONS = [
   { value: '3M', label: '3M', months: 3 },
   { value: '6M', label: '6M', months: 6 },
   { value: '12M', label: '12M', months: 12 },
   { value: 'ALL', label: 'All', months: null },
 ]
+
+const MOBILE_DASH_WATER = 'rgb(20,184,166)'
+const MOBILE_DASH_ELECTRIC = 'rgb(139,92,246)'
+const MOBILE_DASH_ELECTRIC_RGBA = 'rgba(139,92,246,0.72)'
 
 function harmonyScore(balances = [], totalExpenses = 0) {
   if (totalExpenses === 0) return 100
@@ -415,14 +422,14 @@ export default function Dashboard() {
         <main className="relative z-10 max-w-screen-xl mx-auto px-6 pt-6 space-y-8">
           <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
-            <div className="bg-gradient-to-br from-primary to-primary-container rounded-[2rem] p-8 text-on-primary flex flex-col shadow-xl overflow-hidden min-w-0">
+            <div className="bg-white rounded-[2rem] p-8 border border-outline-variant/15 text-on-surface flex flex-col shadow-[0_20px_50px_-24px_rgba(26,28,29,0.22)] overflow-hidden min-w-0">
               <div className="flex items-start justify-between gap-4 flex-wrap mb-4">
                 <div>
-                  <span className="text-on-primary-container/80 text-sm font-semibold uppercase tracking-widest">Utility Trend</span>
-                  <h2 className="text-2xl font-extrabold mt-2 tracking-tight">Water vs Electricity</h2>
-                  <p className="text-sm text-on-primary/80 mt-1">Tap a range to filter the chart.</p>
+                  <span className="text-on-surface-variant text-sm font-semibold uppercase tracking-widest">Utility Trend</span>
+                  <h2 className="text-2xl font-extrabold mt-2 tracking-tight text-on-surface">Water vs Electricity</h2>
+                  <p className="text-sm text-on-surface-variant mt-1">Tap a range to filter the chart.</p>
                 </div>
-                <div className="inline-flex flex-wrap gap-2 rounded-2xl bg-white/10 p-1.5 border border-white/10 backdrop-blur-sm">
+                <div className="inline-flex flex-wrap gap-2 rounded-2xl bg-surface-container-high/80 p-1.5 border border-outline-variant/20 backdrop-blur-sm">
                   {UTILITY_RANGE_OPTIONS.map((option) => {
                     const active = utilityRange === option.value
                     return (
@@ -430,7 +437,7 @@ export default function Dashboard() {
                         key={option.value}
                         type="button"
                         onClick={() => setUtilityRange(option.value)}
-                        className={`min-w-[3.5rem] px-3 py-2 rounded-xl text-xs font-bold tracking-wide transition-all ${active ? 'bg-white text-primary shadow-lg' : 'text-white/85 hover:text-white hover:bg-white/10'}`}
+                        className={`min-w-[3.5rem] px-3 py-2 rounded-xl text-xs font-bold tracking-wide transition-all ${active ? 'bg-primary text-on-primary shadow-md shadow-primary/20' : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container'}`}
                         aria-pressed={active}
                       >
                         {option.label}
@@ -445,28 +452,28 @@ export default function Dashboard() {
                     <AreaChart data={filteredUtilityTrendData}>
                       <defs>
                         <linearGradient id="waterFillDashboard" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="rgb(var(--primary-rgb))" stopOpacity={0.35} />
-                          <stop offset="95%" stopColor="rgb(var(--primary-rgb))" stopOpacity={0.06} />
+                          <stop offset="5%" stopColor={MOBILE_DASH_WATER} stopOpacity={0.35} />
+                          <stop offset="95%" stopColor={MOBILE_DASH_WATER} stopOpacity={0.06} />
                         </linearGradient>
                         <linearGradient id="electricFillDashboard" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="rgba(var(--primary-rgb), 0.72)" stopOpacity={0.35} />
-                          <stop offset="95%" stopColor="rgba(var(--primary-rgb), 0.72)" stopOpacity={0.05} />
+                          <stop offset="5%" stopColor={MOBILE_DASH_ELECTRIC_RGBA} stopOpacity={0.35} />
+                          <stop offset="95%" stopColor={MOBILE_DASH_ELECTRIC_RGBA} stopOpacity={0.05} />
                         </linearGradient>
                       </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.25)" />
-                      <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 12, fontWeight: 700, fill: 'rgba(255,255,255,0.78)' }} />
+                      <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                      <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 12, fontWeight: 700, fill: '#787586' }} />
                       <YAxis hide />
                       <Tooltip
-                        formatter={(value) => [`?${Number(value || 0).toLocaleString()}`, 'Amount']}
+                        formatter={(value) => [`LKR ${Number(value || 0).toLocaleString('en-LK')}`, 'Amount']}
                         contentStyle={{ borderRadius: '12px', border: 'none', background: '#ffffff', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}
                       />
                       <Legend />
-                      <Area type="monotone" dataKey="water" name="Water Bill" stroke="rgb(var(--primary-rgb))" fill="url(#waterFillDashboard)" strokeWidth={3} />
-                      <Area type="monotone" dataKey="electricity" name="Electricity Bill" stroke="rgba(var(--primary-rgb), 0.72)" fill="url(#electricFillDashboard)" strokeWidth={3} />
+                      <Area type="monotone" dataKey="water" name="Water Bill" stroke={MOBILE_DASH_WATER} fill="url(#waterFillDashboard)" strokeWidth={3} />
+                      <Area type="monotone" dataKey="electricity" name="Electricity Bill" stroke={MOBILE_DASH_ELECTRIC} fill="url(#electricFillDashboard)" strokeWidth={3} />
                     </AreaChart>
                   </ResponsiveContainer>
                 ) : (
-                  <div className="h-full grid place-items-center rounded-2xl bg-white/10 text-sm text-on-primary/80">
+                  <div className="h-full grid place-items-center rounded-2xl bg-surface-container-low text-sm text-on-surface-variant">
                     Add water and electricity expenses to see monthly variation.
                   </div>
                 )}

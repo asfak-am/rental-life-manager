@@ -3,6 +3,10 @@ import DesktopAppShell from './DesktopAppShell'
 import { AreaChart, Area, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { formatCurrency } from '../../utils/currency'
 
+// Palette to match analytics view
+const PALETTE_PURPLE = 'rgb(139,92,246)'
+const ACCENT_RGBA_DASH = 'rgba(139,92,246,0.72)'
+
 function getMemberName(member) {
   return member?.displayName?.trim() || member?.name?.trim() || 'Unknown'
 }
@@ -108,8 +112,8 @@ export default function DesktopDashboardView({
                       <stop offset="95%" stopColor="rgb(var(--primary-rgb))" stopOpacity={0.06} />
                     </linearGradient>
                     <linearGradient id="electricFillDesktopDashboard" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="rgba(var(--primary-rgb), 0.72)" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="rgba(var(--primary-rgb), 0.72)" stopOpacity={0.05} />
+                      <stop offset="5%" stopColor={ACCENT_RGBA_DASH} stopOpacity={0.3} />
+                      <stop offset="95%" stopColor={ACCENT_RGBA_DASH} stopOpacity={0.05} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
@@ -121,7 +125,7 @@ export default function DesktopDashboardView({
                   />
                   <Legend />
                   <Area type="monotone" dataKey="water" name="Water Bill" stroke="rgb(var(--primary-rgb))" fill="url(#waterFillDesktopDashboard)" strokeWidth={3} />
-                  <Area type="monotone" dataKey="electricity" name="Electricity Bill" stroke="rgba(var(--primary-rgb), 0.72)" fill="url(#electricFillDesktopDashboard)" strokeWidth={3} />
+                  <Area type="monotone" dataKey="electricity" name="Electricity Bill" stroke={PALETTE_PURPLE} fill="url(#electricFillDesktopDashboard)" strokeWidth={3} />
                 </AreaChart>
               </ResponsiveContainer>
             </div>

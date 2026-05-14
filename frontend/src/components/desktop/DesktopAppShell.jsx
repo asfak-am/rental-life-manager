@@ -4,6 +4,7 @@ import api from '../../services/api'
 import { useAuth } from '../../context/AuthContext'
 import ThemeCustomizer from '../ThemeCustomizer'
 import { useRef, useState, useEffect } from 'react'
+import appIcon32 from '../../assets/favicon-32x32.png'
 
 const navItems = [
   { to: '/', label: 'Dashboard', icon: 'dashboard' },
@@ -64,8 +65,8 @@ export default function DesktopAppShell({
       >
         <div className={`flex items-center ${isSidebarExpanded ? 'justify-start gap-3' : 'justify-center'}`}>
           {!isSidebarExpanded && (
-            <div className="w-12 h-12 rounded-lg bg-primary-fixed flex items-center justify-center flex-shrink-0">
-              <span className="material-symbols-outlined text-[24px]" style={{ color: 'rgb(var(--primary-rgb))', fontVariationSettings: "'FILL' 1" }}>apartment</span>
+            <div className="w-12 h-12 rounded-lg bg-primary-fixed flex items-center justify-center flex-shrink-0 overflow-hidden">
+              <img src={appIcon32} alt="Rental Life logo" className="w-full h-full object-contain scale-[1.15]" />
             </div>
           )}
           <div className={`${isSidebarExpanded ? '' : 'hidden'}`}>
@@ -97,6 +98,20 @@ export default function DesktopAppShell({
         </nav>
 
         <div className="mt-auto space-y-3">
+          <button
+            type="button"
+            onClick={() => {
+              logout()
+              navigate('/login')
+            }}
+            className={`w-full flex items-center gap-3 rounded-xl bg-transparent p-3 border border-error/35 text-error text-left hover:border-error hover:text-error hover:bg-error/10 transition ${isSidebarExpanded ? '' : 'justify-center px-0'}`}
+            title={isSidebarExpanded ? undefined : 'Logout'}
+            aria-label="Logout"
+          >
+            <span className="material-symbols-outlined text-[18px]">logout</span>
+            {isSidebarExpanded && <span className="text-sm font-semibold">Logout</span>}
+          </button>
+
           <button
             type="button"
             onClick={() => navigate('/profile')}

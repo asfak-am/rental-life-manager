@@ -7,6 +7,7 @@ import { useAuth } from '../context/AuthContext'
 import { useHouse } from '../context/HouseContext'
 import { houseService } from '../services'
 import ThemeCustomizer from '../components/ThemeCustomizer'
+import appIcon192 from '../assets/android-chrome-192x192.png'
 
 function LoginForm({ variant, onSubmit, handleGoogleLogin, loading, googleLoading, defaultEmail }) {
   const [showPass, setShowPass] = useState(false)
@@ -191,8 +192,8 @@ export default function Login() {
 
           {/* Brand */}
           <div className="mb-12 text-center">
-            <div className="inline-flex items-center justify-center p-3 mb-6 bg-surface-container-highest rounded-xl text-primary">
-              <span className="material-symbols-outlined text-4xl" style={{ fontVariationSettings: "'FILL' 1" }}>apartment</span>
+            <div className="inline-flex items-center justify-center mb-6 bg-surface-container-highest rounded-xl text-primary w-24 h-24 overflow-hidden">
+              <img src={appIcon192} alt="Rental Life logo" className="w-full h-full object-contain scale-[1.2]" />
             </div>
             <h1 className="font-headline font-extrabold text-3xl tracking-tight text-on-surface">Rental Life</h1>
             <p className="text-on-surface-variant font-medium mt-2">The Architectural Ledger for Modern Living</p>

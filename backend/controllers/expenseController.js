@@ -2,6 +2,7 @@ const Expense = require('../models/Expense')
 const House = require('../models/House')
 const User = require('../models/User')
 const Notification = require('../models/Notification')
+const redis = require('../utils/redisClient')
 
 const getHouseForUser = async (userId) => {
 	const user = await User.findById(userId)
@@ -196,9 +197,31 @@ const addExpense = async (req, res, next) => {
 			link: `/expenses/${expense._id}`,
 		}))
 
+		// invalidate caches related to expenses and summaries
+		if (redis) {
+			clearKeysByPattern(`expenses:house:${house._id}:*`)
+			clearKeysByPattern(`expense-summary:${house._id}:*`)
+			clearKeysByPattern(`utility-trend:${house._id}:*`)
+		}
+
 		return res.status(201).json({ expense })
 	} catch (error) {
 		next(error)
+	}
+}
+
+// Helper to delete keys by pattern using SCAN (safer than KEYS)
+async function clearKeysByPattern(pattern) {
+	if (!redis) return
+	try {
+		const stream = redis.scanStream({ match: pattern, count: 100 })
+		const keys = []
+		for await (const resultKeys of stream) {
+			if (resultKeys.length) keys.push(...resultKeys)
+		}
+		if (keys.length) await redis.del(...keys)
+	} catch (err) {
+		console.warn('Redis clearKeysByPattern failed for', pattern, err && err.message)
 	}
 }
 
@@ -214,11 +237,26 @@ const getAllExpenses = async (req, res, next) => {
 		if (search) query.title = { $regex: search, $options: 'i' }
 		if (billMonth && BILL_MONTH_REGEX.test(String(billMonth))) query.billMonth = String(billMonth)
 
+		const cacheKey = `expenses:house:${house._id}:q:${JSON.stringify({ category, search, billMonth, limit })}`
+		if (redis) {
+			try {
+				const cached = await redis.get(cacheKey)
+				if (cached) return res.json(JSON.parse(cached))
+			} catch (err) { console.warn('Redis get failed for', cacheKey, err && err.message) }
+		}
+
 		const expenses = await Expense.find(query)
 			.select('title amount paidBy splitType participants category billMonth date recurring recurrenceRule createdAt updatedAt')
 			.sort({ date: -1, createdAt: -1 })
 			.limit(limit ? Number(limit) : 0)
 			.lean()
+
+		// cache result briefly
+		if (redis) {
+			try {
+				await redis.set(cacheKey, JSON.stringify({ expenses }), 'EX', parseInt(process.env.EXPENSES_CACHE_TTL || '60', 10))
+			} catch (err) { console.warn('Redis set failed for', cacheKey, err && err.message) }
+		}
 
 		return res.json({ expenses })
 	} catch (error) {
@@ -240,6 +278,14 @@ const getUtilityTrend = async (req, res, next) => {
 
 		if (rangeStart) {
 			match.date = { $gte: rangeStart }
+		}
+
+		const cacheKey = `utility-trend:${house._id}:${range}`
+		if (redis) {
+			try {
+				const cached = await redis.get(cacheKey)
+				if (cached) return res.json({ trend: JSON.parse(cached) })
+			} catch (err) { console.warn('Redis get failed for', cacheKey, err && err.message) }
 		}
 
 		const trend = await Expense.aggregate([
@@ -273,6 +319,10 @@ const getUtilityTrend = async (req, res, next) => {
 			},
 		])
 
+		if (redis) {
+			try { await redis.set(cacheKey, JSON.stringify(trend), 'EX', parseInt(process.env.UTILITY_CACHE_TTL || '300', 10)) } catch (err) { console.warn('Redis set failed for', cacheKey, err && err.message) }
+		}
+
 		return res.json({ trend })
 	} catch (error) {
 		next(error)
@@ -284,8 +334,19 @@ const getExpenseById = async (req, res, next) => {
 		const house = await getHouseForUser(req.user._id)
 		if (!house) return res.status(404).json({ message: 'House not found' })
 
+		const cacheKey = `expense:${house._id}:${req.params.id}`
+		if (redis) {
+			try {
+				const cached = await redis.get(cacheKey)
+				if (cached) return res.json(JSON.parse(cached))
+			} catch (err) { console.warn('Redis get failed for', cacheKey, err && err.message) }
+		}
 		const expense = await Expense.findOne({ _id: req.params.id, houseId: house._id })
 		if (!expense) return res.status(404).json({ message: 'Expense not found' })
+
+		if (redis) {
+			try { await redis.set(cacheKey, JSON.stringify({ expense, auditTrail: expense.auditTrail }), 'EX', parseInt(process.env.EXPENSES_CACHE_TTL || '60', 10)) } catch (err) { console.warn('Redis set failed for', cacheKey, err && err.message) }
+		}
 
 		return res.json({ expense, auditTrail: expense.auditTrail })
 	} catch (error) {
@@ -325,6 +386,14 @@ const updateExpense = async (req, res, next) => {
 		expense.auditTrail.push({ action: 'Expense updated', by: req.user._id })
 		await expense.save()
 
+		// invalidate related caches
+		if (redis) {
+			clearKeysByPattern(`expenses:house:${house._id}:*`)
+			clearKeysByPattern(`expense:${house._id}:${expense._id}`)
+			clearKeysByPattern(`expense-summary:${house._id}:*`)
+			clearKeysByPattern(`utility-trend:${house._id}:*`)
+		}
+
 		return res.json({ expense })
 	} catch (error) {
 		next(error)
@@ -338,6 +407,14 @@ const deleteExpense = async (req, res, next) => {
 
 		const expense = await Expense.findOneAndDelete({ _id: req.params.id, houseId: house._id })
 		if (!expense) return res.status(404).json({ message: 'Expense not found' })
+
+		// invalidate related caches
+		if (redis) {
+			clearKeysByPattern(`expenses:house:${house._id}:*`)
+			clearKeysByPattern(`expense:${house._id}:${expense._id}`)
+			clearKeysByPattern(`expense-summary:${house._id}:*`)
+			clearKeysByPattern(`utility-trend:${house._id}:*`)
+		}
 
 		return res.json({ message: 'Expense deleted' })
 	} catch (error) {
@@ -360,6 +437,14 @@ const getSummary = async (req, res, next) => {
 			})
 		}
 
+		const cacheKey = `expense-summary:${house._id}:${req.user._id}`
+		if (redis) {
+			try {
+				const cached = await redis.get(cacheKey)
+				if (cached) return res.json(JSON.parse(cached))
+			} catch (err) { console.warn('Redis get failed for', cacheKey, err && err.message) }
+		}
+
 		// Fetch all expenses for the house to show in analytics
 		const expenses = await Expense.find({ houseId: house._id })
 			.select('amount paidBy participants category date billMonth')
@@ -375,7 +460,12 @@ const getSummary = async (req, res, next) => {
 			amount: roundMoney(summary.contributions[String(member.userId)] || 0),
 		}))
 
-		return res.json({ ...summary, contributions })
+		const payload = { ...summary, contributions }
+		if (redis) {
+			try { await redis.set(cacheKey, JSON.stringify(payload), 'EX', parseInt(process.env.EXPENSES_CACHE_TTL || '60', 10)) } catch (err) { console.warn('Redis set failed for', cacheKey, err && err.message) }
+		}
+
+		return res.json(payload)
 	} catch (error) {
 		next(error)
 	}

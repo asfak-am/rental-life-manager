@@ -9,6 +9,7 @@ import BottomNav from '../components/BottomNav'
 import DesktopAppShell from '../components/desktop/DesktopAppShell'
 import ThemeCustomizer from '../components/ThemeCustomizer'
 import { formatCurrency } from '../utils/currency'
+import RentStatusCard from '../components/RentStatusCard'
 
 export default function Balances() {
   const { house, members } = useHouse()
@@ -170,13 +171,6 @@ export default function Balances() {
 
   const ledgerContent = (
     <>
-      {/* Header */}
-      <section className="mb-10">
-        <div className="max-w-2xl">
-          <p className="text-on-surface-variant max-w-md font-medium">Keep the house harmony high by settling balances.</p>
-        </div>
-      </section>
-
       <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
         <section className="md:col-span-12 bg-surface-container-lowest rounded-3xl p-6 border border-outline-variant/10">
           <div className="flex flex-wrap items-center justify-between gap-4">
@@ -196,19 +190,6 @@ export default function Balances() {
               )}
             </div>
           </div>
-          <button
-            onClick={() => payRentMutation.mutate(currentBillMonth)}
-            disabled={payRentMutation.isPending || rentStatus?.myRent?.status === 'paid' || !rentStatus?.earlyPayAllowed || !isAdmin}
-            className="mt-6 w-full bg-primary text-on-primary font-bold py-3 px-4 rounded-full hover:bg-primary-container disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            {rentStatus?.myRent?.status === 'paid'
-              ? 'Rent Paid'
-              : !isAdmin
-              ? 'Admin Only'
-              : payRentMutation.isPending
-              ? 'Paying...'
-              : 'Pay Monthly Rent'}
-          </button>
         </section>
 
         {/* Member Rent Payment Status for unpaid months */}
@@ -216,60 +197,14 @@ export default function Balances() {
           <section className="md:col-span-12">
             <div className="space-y-4">
               {(rentStatuses || []).filter(s => s.unpaidCount > 0).map(status => (
-                <div key={status.month} className="bg-surface-container-lowest p-4 rounded-2xl border border-outline-variant/10">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-bold">{status.month}</p>
-                      <p className="text-xs text-on-surface-variant">{status.unpaidCount} unpaid of {status.memberCount}</p>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <button
-                        onClick={() => payRentMutation.mutate(status.month)}
-                        disabled={payRentMutation.isPending || !isAdmin}
-                        className="px-3 py-2 rounded-full bg-primary text-on-primary font-bold text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {payRentMutation.isPending ? 'Paying...' : 'Pay Rent (mark month paid)'}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-4">
-                    {status.memberStatuses.map(member => {
-                      const paid = member.status === 'paid'
-                      return (
-                        <div
-                          key={member.userId}
-                          className={`p-4 rounded-2xl border bg-transparent ${paid ? 'border-emerald-500/50' : 'border-red-500/50'}`}
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className={`w-8 h-8 rounded-lg border-2 grid place-items-center flex-shrink-0 ${paid ? 'border-emerald-500 text-emerald-500 bg-transparent' : 'border-red-500 text-red-500 bg-transparent'}`}>
-                              <span className="material-symbols-outlined text-[16px]" style={{ fontVariationSettings: "'FILL' 1" }}>
-                                {paid ? 'check' : 'close'}
-                              </span>
-                            </div>
-                            <div className="min-w-0">
-                              <p className="font-bold text-sm truncate text-on-surface">{member.name}</p>
-                              <p className={`text-xs font-semibold ${paid ? 'text-emerald-500' : 'text-red-500'}`}>
-                                {paid ? 'Paid' : 'Pending'}
-                              </p>
-                            </div>
-                          </div>
-                          {isAdmin && !paid && (
-                            <div className="mt-3">
-                              <button
-                                onClick={() => payMemberRentMutation.mutate({ userId: member.userId, month: status.month })}
-                                disabled={payMemberRentMutation.isPending}
-                                  className="mt-2 px-3 py-2 rounded-lg bg-transparent border border-primary text-primary font-bold text-sm"
-                              >
-                                {payMemberRentMutation.isPending ? 'Marking...' : 'Mark Paid'}
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      )
-                    })}
-                  </div>
-                </div>
+                <RentStatusCard
+                  key={status.month}
+                  status={status}
+                  members={members}
+                  isAdmin={isAdmin}
+                  onPayMemberRent={(data) => payMemberRentMutation.mutate(data)}
+                  payingMemberRent={payMemberRentMutation.isPending}
+                />
               ))}
             </div>
           </section>

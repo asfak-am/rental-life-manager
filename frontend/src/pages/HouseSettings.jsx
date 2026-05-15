@@ -9,6 +9,7 @@ import { useHouse } from '../context/HouseContext'
 import TopBar from '../components/TopBar'
 import BottomNav from '../components/BottomNav'
 import DesktopSettingsView from '../components/desktop/DesktopSettingsView'
+import InviteCodeCard from '../components/InviteCodeCard'
 import { buildInviteLink, buildInviteQrSrc } from '../utils/inviteLink'
 
 export default function HouseSettings() {
@@ -196,45 +197,17 @@ export default function HouseSettings() {
             <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full -mr-20 -mt-20 blur-3xl" />
           </div>
 
-          <div className="bg-primary-container text-on-primary-container p-8 rounded-xl flex flex-col justify-center items-start space-y-4">
-            <span className="text-[11px] font-bold uppercase tracking-widest opacity-80">House Invite Code</span>
-            <div className="flex items-center justify-between w-full bg-white/10 rounded-lg p-4 backdrop-blur-sm">
-              <code className="text-2xl font-mono font-bold tracking-widest">
-                {inviteCode || '----'}
-              </code>
-              <button onClick={copyCode} className="hover:bg-white/20 p-2 rounded-lg transition-colors active:scale-90">
-                <span className="material-symbols-outlined">{copied ? 'check' : 'content_copy'}</span>
-              </button>
-            </div>
-            <div className="w-full bg-white rounded-xl p-4 flex flex-col items-center gap-3 text-slate-900">
-              <div className="bg-white p-2 rounded-lg">
-                {inviteCode ? (
-                  <img
-                    src={inviteQrSrc}
-                    alt="Invite code QR"
-                    width={124}
-                    height={124}
-                    className="w-[124px] h-[124px]"
-                  />
-                ) : (
-                  <div className="w-[124px] h-[124px] rounded bg-slate-100" />
-                )}
-              </div>
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-600">
-                Scan to open invite link
-              </p>
-            </div>
-            <p className="text-xs opacity-70">Share this code with new roommates.</p>
-            {isAdmin && (
-              <button
-                onClick={() => refreshMutation.mutate()}
-                disabled={refreshMutation.isPending}
-                className="text-xs font-bold underline underline-offset-2 opacity-70 hover:opacity-100"
-              >
-                Refresh code
-              </button>
-            )}
-          </div>
+          <InviteCodeCard
+            code={inviteCode}
+            qrSrc={inviteQrSrc}
+            onCopy={copyCode}
+            onRefresh={() => refreshMutation.mutate()}
+            refreshing={refreshMutation.isPending}
+            showRefresh={isAdmin}
+            copyLabel={copied ? 'Copied' : 'Copy Code'}
+            refreshLabel="Refresh"
+            className="self-start"
+          />
         </section>
 
         {/* Members */}

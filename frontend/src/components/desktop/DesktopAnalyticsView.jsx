@@ -1,5 +1,6 @@
 import DesktopAppShell from './DesktopAppShell'
-import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, AreaChart, Area, CartesianGrid, Legend } from 'recharts'
+import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
+import UtilityChart from '../UtilityChart'
 
 // Palette based on provided swatches — one of them is the theme color.
 // Order: purple, theme (teal), orange, pink
@@ -8,8 +9,6 @@ const PALETTE_ORANGE = 'rgb(251,146,60)'
 const PALETTE_PINK = 'rgb(236,72,153)'
 
 const ACCENT_COLOR = PALETTE_PURPLE
-const ACCENT_RGBA = 'rgba(139,92,246,0.72)'
-
 const THEME_COLORS = [
   PALETTE_PURPLE,
   'rgb(var(--primary-rgb))',
@@ -134,58 +133,24 @@ export default function DesktopAnalyticsView({
         </section>
 
         <section className="col-span-12 bg-white rounded-3xl p-5 border border-slate-200">
-          <div className="flex justify-between items-center mb-4">
-            <h4 className="text-2xl font-black tracking-tight">Utility Bills Variation</h4>
-            <div className="inline-flex flex-wrap gap-2 rounded-2xl bg-[#f4f5f9] p-1.5 border border-slate-200">
-              {UTILITY_RANGE_OPTIONS.map((option) => {
-                const active = utilityRange === option.value
-                return (
-                  <button
-                    key={option.value}
-                    type="button"
-                    onClick={() => onUtilityRangeChange?.(option.value)}
-                    className={`min-w-[4.5rem] px-3 py-2 rounded-xl text-xs font-bold tracking-wide transition-all ${active ? 'signature-gradient text-white shadow-lg shadow-primary/15' : 'text-slate-500 hover:text-slate-900 hover:bg-white'}`}
-                    aria-pressed={active}
-                  >
-                    {option.label}
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-
-          {utilityTrendData.length > 0 ? (
-            <div className="h-[280px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={utilityTrendData}>
-                  <defs>
-                    <linearGradient id="waterFillDesktop" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="rgb(var(--primary-rgb))" stopOpacity={0.35} />
-                      <stop offset="95%" stopColor="rgb(var(--primary-rgb))" stopOpacity={0.06} />
-                    </linearGradient>
-                    <linearGradient id="electricFillDesktop" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={ACCENT_RGBA} stopOpacity={0.3} />
-                      <stop offset="95%" stopColor={ACCENT_RGBA} stopOpacity={0.05} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                  <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 12, fontWeight: 700, fill: '#787586' }} />
-                  <YAxis hide />
-                  <Tooltip
-                    formatter={(value) => [`LKR ${Number(value || 0).toLocaleString('en-LK')}`, 'Amount']}
-                    contentStyle={{ borderRadius: '12px', border: 'none', background: '#ffffff', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}
-                  />
-                  <Legend />
-                  <Area type="monotone" dataKey="water" name="Water Bill" stroke="rgb(var(--primary-rgb))" fill="url(#waterFillDesktop)" strokeWidth={3} />
-                  <Area type="monotone" dataKey="electricity" name="Electricity Bill" stroke={ACCENT_COLOR} fill="url(#electricFillDesktop)" strokeWidth={3} />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          ) : (
-            <div className="h-[280px] grid place-items-center rounded-2xl bg-[#f7f8fb] text-sm text-slate-500">
-              Add water and electricity expenses to see monthly variation.
-            </div>
-          )}
+          <UtilityChart
+            data={utilityTrendData}
+            range={utilityRange}
+            onRangeChange={onUtilityRangeChange}
+            title="Utility Bills Variation"
+            subtitle="Water vs electricity over the selected period."
+            rangeOptions={UTILITY_RANGE_OPTIONS}
+            labelClassName="hidden"
+            rangeWrapClassName="bg-[#f4f5f9] border-slate-200"
+            activeRangeButtonClassName="signature-gradient text-white shadow-lg shadow-primary/15 min-w-[4.5rem]"
+            inactiveRangeButtonClassName="text-slate-500 hover:text-slate-900 hover:bg-white min-w-[4.5rem]"
+            chartWrapClassName="h-[280px]"
+            emptyStateClassName="bg-[#f7f8fb] text-slate-500"
+            waterColor="rgb(var(--primary-rgb))"
+            electricityColor={ACCENT_COLOR}
+            electricityFillColor="rgba(139,92,246,0.72)"
+            electricityFillOpacityStart={0.3}
+          />
         </section>
       </div>
     </DesktopAppShell>

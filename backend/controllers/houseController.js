@@ -150,6 +150,16 @@ const joinHouse = async (req, res, next) => {
 		if (!alreadyMember) {
 			house.members.push({ userId: req.user._id, role: 'member' })
 			await house.save()
+
+			// Invalidate rent-related caches for this house since membership changed
+			if (redis) {
+				try {
+					await clearKeysByPattern(`rent-status:${house._id}:*`)
+					await clearKeysByPattern(`rent-history:${house._id}`)
+				} catch (err) {
+					console.warn('Redis cache invalidation failed after joinHouse', err && err.message)
+				}
+			}
 		}
 
 		currentUser.houseId = house._id

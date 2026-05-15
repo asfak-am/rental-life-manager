@@ -1,4 +1,5 @@
 import DesktopAppShell from './DesktopAppShell'
+import InviteCodeCard from '../InviteCodeCard'
 
 export default function DesktopSettingsView({
   members = [],
@@ -122,38 +123,17 @@ export default function DesktopSettingsView({
         </section>
 
         <section className="col-span-4 space-y-5">
-          <div className="bg-white rounded-3xl p-5 border border-slate-200">
-            <h4 className="text-lg font-black">Invite Code</h4>
-            <p className="text-[clamp(1.8rem,2.1vw,2.5rem)] leading-tight break-all font-black tracking-wider mt-3 text-primary">{inviteCode || '----'}</p>
-            <div className="mt-4 w-full rounded-2xl border border-slate-200 bg-surface-container-low p-3 flex flex-col items-center gap-2">
-              <div className="bg-white p-2 rounded-lg">
-                {inviteQrSrc ? (
-                  <img
-                    src={inviteQrSrc}
-                    alt="Invite link QR"
-                    width={128}
-                    height={128}
-                    className="w-32 h-32"
-                  />
-                ) : (
-                  <div className="w-32 h-32 rounded bg-slate-100" />
-                )}
-              </div>
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Scan To Open Invite Link</p>
-            </div>
-            <div className="mt-4 space-y-2">
-              <button onClick={onCopyInvite} className="w-full py-2.5 rounded-xl signature-gradient text-white font-semibold">Copy Invite Code</button>
-              {isAdmin ? (
-                <button
-                  onClick={refreshCode}
-                  disabled={refreshing}
-                  className="w-full py-2.5 rounded-xl border border-slate-300 bg-white text-slate-700 font-semibold disabled:opacity-60"
-                >
-                  {refreshing ? 'Refreshing...' : 'Refresh Code'}
-                </button>
-              ) : null}
-            </div>
-          </div>
+          <InviteCodeCard
+            code={inviteCode}
+            qrSrc={inviteQrSrc}
+            onCopy={onCopyInvite}
+            onRefresh={isAdmin ? refreshCode : undefined}
+            refreshing={refreshing}
+            showRefresh={isAdmin}
+            copyLabel="Copy Code"
+            refreshLabel="Refresh"
+            className="self-start"
+          />
 
           <div className="bg-[#fff7f7] rounded-3xl p-5 border border-red-200">
             <h4 className="text-2xl font-black tracking-tight text-red-600">Danger Zone</h4>

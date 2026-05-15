@@ -2,7 +2,6 @@
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
-import { AreaChart, Area, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { expenseService, balanceService, houseService, taskService } from '../services'
 import { useAuth } from '../context/AuthContext'
 import { useHouse } from '../context/HouseContext'
@@ -11,11 +10,13 @@ import BottomNav from '../components/BottomNav'
 import DesktopAppShell from '../components/desktop/DesktopAppShell'
 import DesktopDashboardView from '../components/desktop/DesktopDashboardView'
 import ThemeCustomizer from '../components/ThemeCustomizer'
+import InviteCodeCard from '../components/InviteCodeCard'
+import RentStatusCard from '../components/RentStatusCard'
+import UtilityChart from '../components/UtilityChart'
+import DashboardTasksSection from '../components/DashboardTasksSection'
+import DashboardExpensesSection from '../components/DashboardExpensesSection'
 import { formatCurrency } from '../utils/currency'
 import { buildInviteLink, buildInviteQrSrc } from '../utils/inviteLink'
-
-const PALETTE_PURPLE = 'rgb(64, 228, 31)'
-const ACCENT_RGBA = 'rgba(0, 106, 23, 0.72)'
 
 const UTILITY_RANGE_OPTIONS = [
   { value: '3M', label: '3M', months: 3 },
@@ -23,10 +24,6 @@ const UTILITY_RANGE_OPTIONS = [
   { value: '12M', label: '12M', months: 12 },
   { value: 'ALL', label: 'All', months: null },
 ]
-
-const MOBILE_DASH_WATER = 'rgb(20,184,166)'
-const MOBILE_DASH_ELECTRIC = 'rgb(139,92,246)'
-const MOBILE_DASH_ELECTRIC_RGBA = 'rgba(139,92,246,0.72)'
 
 function harmonyScore(balances = [], totalExpenses = 0) {
   if (totalExpenses === 0) return 100
@@ -421,346 +418,65 @@ export default function Dashboard() {
 
         <main className="relative z-10 max-w-screen-xl mx-auto px-6 pt-6 space-y-8">
           <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
             <div className="bg-white rounded-[2rem] p-8 border border-outline-variant/15 text-on-surface flex flex-col shadow-[0_20px_50px_-24px_rgba(26,28,29,0.22)] overflow-hidden min-w-0">
-              <div className="flex items-start justify-between gap-4 flex-wrap mb-4">
-                <div>
-                  <span className="text-on-surface-variant text-sm font-semibold uppercase tracking-widest">Utility Trend</span>
-                  <h2 className="text-2xl font-extrabold mt-2 tracking-tight text-on-surface">Water vs Electricity</h2>
-                  <p className="text-sm text-on-surface-variant mt-1">Tap a range to filter the chart.</p>
-                </div>
-                <div className="inline-flex flex-wrap gap-2 rounded-2xl bg-surface-container-high/80 p-1.5 border border-outline-variant/20 backdrop-blur-sm">
-                  {UTILITY_RANGE_OPTIONS.map((option) => {
-                    const active = utilityRange === option.value
-                    return (
-                      <button
-                        key={option.value}
-                        type="button"
-                        onClick={() => setUtilityRange(option.value)}
-                        className={`min-w-[3.5rem] px-3 py-2 rounded-xl text-xs font-bold tracking-wide transition-all ${active ? 'bg-primary text-on-primary shadow-md shadow-primary/20' : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container'}`}
-                        aria-pressed={active}
-                      >
-                        {option.label}
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-              <div className="h-[240px] min-w-0">
-                {filteredUtilityTrendData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={filteredUtilityTrendData}>
-                      <defs>
-                        <linearGradient id="waterFillDashboard" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor={MOBILE_DASH_WATER} stopOpacity={0.35} />
-                          <stop offset="95%" stopColor={MOBILE_DASH_WATER} stopOpacity={0.06} />
-                        </linearGradient>
-                        <linearGradient id="electricFillDashboard" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor={MOBILE_DASH_ELECTRIC_RGBA} stopOpacity={0.35} />
-                          <stop offset="95%" stopColor={MOBILE_DASH_ELECTRIC_RGBA} stopOpacity={0.05} />
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                      <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 12, fontWeight: 700, fill: '#787586' }} />
-                      <YAxis hide />
-                      <Tooltip
-                        formatter={(value) => [`LKR ${Number(value || 0).toLocaleString('en-LK')}`, 'Amount']}
-                        contentStyle={{ borderRadius: '12px', border: 'none', background: '#ffffff', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}
-                      />
-                      <Legend />
-                      <Area type="monotone" dataKey="water" name="Water Bill" stroke={MOBILE_DASH_WATER} fill="url(#waterFillDashboard)" strokeWidth={3} />
-                      <Area type="monotone" dataKey="electricity" name="Electricity Bill" stroke={MOBILE_DASH_ELECTRIC} fill="url(#electricFillDashboard)" strokeWidth={3} />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <div className="h-full grid place-items-center rounded-2xl bg-surface-container-low text-sm text-on-surface-variant">
-                    Add water and electricity expenses to see monthly variation.
-                  </div>
-                )}
-              </div>
+              <UtilityChart
+                data={filteredUtilityTrendData}
+                range={utilityRange}
+                onRangeChange={setUtilityRange}
+                currency={preferredCurrency}
+                rangeOptions={UTILITY_RANGE_OPTIONS}
+                chartWrapClassName="h-[240px] min-w-0"
+                subtitle="Water vs electricity over the selected period."
+              />
             </div>
           </section>
 
           {inviteCode ? (
-            <section className="bg-surface-container-lowest rounded-[2rem] p-6 border border-outline-variant/10 shadow-[0_18px_40px_-20px_rgba(26,28,29,0.18)]">
-              <div className="flex items-center justify-between gap-4 mb-4">
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-widest text-on-surface-variant">Invite Code</p>
-                  <h3 className="text-xl sm:text-2xl font-extrabold mt-1 tracking-tight text-on-surface">Share with a roommate</h3>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => refreshInviteMutation.mutate()}
-                  className="px-4 py-2 rounded-xl bg-primary-fixed text-primary font-bold text-sm"
-                >
-                  Refresh
-                </button>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-[1.2fr_0.8fr] gap-4 items-center">
-                <div className="space-y-4">
-                  <div className="rounded-2xl bg-surface-container p-4 border border-outline-variant/10">
-                    <p className="text-xs uppercase tracking-widest text-on-surface-variant">Code</p>
-                    <h4 className="text-[clamp(1.55rem,4vw,1.95rem)] sm:text-[clamp(1.8rem,5vw,3rem)] font-black tracking-[0.14em] text-primary break-words mt-2">
-                      {inviteCode}
-                    </h4>
-                  </div>
-
-                  <div className="flex gap-3 flex-wrap">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        navigator.clipboard.writeText(inviteCode)
-                        toast.success('Invite code copied')
-                      }}
-                      className="px-4 py-3 rounded-xl signature-gradient text-on-primary font-bold"
-                    >
-                      Copy Code
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => navigate('/settings')}
-                      className="px-4 py-3 rounded-xl bg-surface-container-high text-on-surface font-bold border border-outline-variant/15"
-                    >
-                      Open Settings
-                    </button>
-                  </div>
-                </div>
-
-                {inviteQrSrc ? (
-                  <div className="flex justify-center sm:justify-end">
-                    <div className="bg-white p-3 rounded-2xl border border-outline-variant/10 shadow-sm">
-                      <img src={inviteQrSrc} alt="Invite QR code" className="w-44 h-44 sm:w-40 sm:h-40" />
-                    </div>
-                  </div>
-                ) : null}
-              </div>
-            </section>
+            <InviteCodeCard
+              code={inviteCode}
+              qrSrc={inviteQrSrc}
+              onCopy={() => {
+                navigator.clipboard.writeText(inviteCode)
+                toast.success('Invite code copied')
+              }}
+              onRefresh={() => refreshInviteMutation.mutate()}
+              refreshing={refreshInviteMutation.isPending}
+              className="h-full flex flex-col"
+              copyLabel="Copy Code"
+              refreshLabel="Refresh"
+            />
           ) : null}
 
-          <section className="bg-surface-container-lowest rounded-[2rem] p-6 border border-outline-variant/10">
-            <div className="flex items-center justify-between gap-4 flex-wrap mb-4">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-widest text-on-surface-variant">Tasks</p>
-                <h3 className="text-xl sm:text-2xl font-extrabold mt-1 tracking-tight text-on-surface">Pending chores</h3>
-              </div>
-              <span className="text-xs font-bold uppercase tracking-widest text-on-surface-variant">
-                {tasksData?.tasks?.length || 0} total
-              </span>
-            </div>
-
-            <div className="space-y-3">
-              {(tasksData?.tasks || []).length === 0 ? (
-                <div className="rounded-2xl bg-surface-container p-6 text-center text-on-surface-variant">
-                  <span className="material-symbols-outlined text-4xl mb-2 block">task_alt</span>
-                  No open tasks right now.
-                </div>
-              ) : (
-                tasksData.tasks
-                  .filter(task => task.status !== 'completed')
-                  .slice(0, 4)
-                  .map((task) => {
-                    const isPending = !task.status || task.status === 'todo' || task.status === 'pending'
-                    return (
-                      <div key={task._id} className="flex items-center gap-3 p-4 rounded-2xl bg-surface-container border border-outline-variant/10">
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${isPending ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
-                          <span className="material-symbols-outlined text-[18px]" style={{ fontVariationSettings: "'FILL' 1" }}>
-                            {isPending ? 'radio_button_unchecked' : 'check_circle'}
-                          </span>
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="font-bold text-on-surface truncate">{task.title}</p>
-                          <p className="text-xs text-on-surface-variant mt-0.5 line-clamp-1">
-                            {task.description || 'Household task to keep things moving.'}
-                          </p>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => completeTaskMutation.mutate(task)}
-                          disabled={completeTaskMutation.isPending}
-                          className="px-3 py-2 rounded-xl text-xs font-bold bg-white border border-outline-variant/15 text-primary disabled:opacity-60"
-                        >
-                          Done
-                        </button>
-                      </div>
-                    )
-                  })
-              )}
-            </div>
-          </section>
+          <DashboardTasksSection
+            tasks={tasksData?.tasks || []}
+            onMarkTaskComplete={(task) => completeTaskMutation.mutate(task)}
+            isMarkingTaskComplete={completeTaskMutation.isPending}
+            layout="mobile"
+          />
 
           {(rentStatuses || []).filter(s => s.unpaidCount > 0).length > 0 && (
             <section className="space-y-4">
               {(rentStatuses || []).filter(s => s.unpaidCount > 0).map(status => (
-                <div key={status.month} className="bg-surface-container-lowest rounded-[2rem] p-6 border border-outline-variant/10">
-                  <div className="flex items-center justify-between gap-4 flex-wrap mb-5">
-                    <div>
-                      <p className="text-xs font-bold uppercase tracking-widest text-on-surface-variant">Monthly Rent</p>
-                      <h3 className="text-xl sm:text-2xl font-extrabold mt-1 tracking-tight text-on-surface">{status.month}</h3>
-                      <p className="text-sm text-on-surface-variant mt-1">{status.unpaidCount} unpaid of {status.memberCount} members</p>
-                    </div>
-                    {isAdmin && (
-                      <button
-                        type="button"
-                        onClick={() => payRentMutation.mutate(status.month)}
-                        disabled={payRentMutation.isPending}
-                        className="px-5 py-3 signature-gradient text-on-primary font-bold rounded-xl disabled:opacity-60"
-                      >
-                        {payRentMutation.isPending ? 'Paying...' : 'Mark Paid'}
-                      </button>
-                    )}
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {status.memberStatuses.map(member => {
-                      const paid = member.status === 'paid'
-                      const houseMember = findMemberById(members, member.userId)
-                      const memberAvatar = getMemberAvatar(houseMember)
-                      return (
-                        <div
-                          key={member.userId}
-                          className={`p-3 rounded-xl border bg-transparent ${paid ? 'border-emerald-500/50' : 'border-red-500/50'}`}
-                        >
-                          <div className="flex items-center gap-2">
-                            <div className="w-10 h-10 rounded-full overflow-hidden bg-white border border-outline-variant/10 flex-shrink-0">
-                              {memberAvatar ? (
-                                <img src={memberAvatar} alt={`${member.name} avatar`} className="w-full h-full object-cover" />
-                              ) : (
-                                <div className="w-full h-full grid place-items-center text-xs font-bold text-on-surface-variant">
-                                  {(member.name || 'U').charAt(0).toUpperCase()}
-                                </div>
-                              )}
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <p className="font-bold text-sm truncate">{member.name}</p>
-                              <p className={`text-[11px] font-semibold ${paid ? 'text-emerald-500' : 'text-red-500'}`}>
-                                {paid ? 'Paid' : 'Pending'}
-                              </p>
-                            </div>
-                            <div className={`w-7 h-7 rounded-md border-2 grid place-items-center flex-shrink-0 ${paid ? 'border-emerald-500 text-emerald-500 bg-transparent' : 'border-red-500 text-red-500 bg-transparent'}`}>
-                              <span className="material-symbols-outlined text-[14px]" style={{ fontVariationSettings: "'FILL' 1" }}>
-                                {paid ? 'check' : 'close'}
-                              </span>
-                            </div>
-                            {isAdmin && !paid && (
-                              <button
-                                type="button"
-                                onClick={() => payMemberRentMutation.mutate({ userId: member.userId, month: status.month })}
-                                disabled={payMemberRentMutation.isPending}
-                                className="px-2 py-1 text-[10px] font-bold bg-primary text-on-primary rounded-md disabled:opacity-60"
-                              >
-                                {payMemberRentMutation.isPending ? 'Marking...' : 'Mark'}
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                </div>
+                <RentStatusCard
+                  key={status.month}
+                  status={status}
+                  members={members}
+                  isAdmin={isAdmin}
+                  onPayMemberRent={(data) => payMemberRentMutation.mutate(data)}
+                  payingMemberRent={payMemberRentMutation.isPending}
+                />
               ))}
             </section>
           )}
 
-          <section className="bg-gradient-to-br from-primary to-primary-container rounded-[2rem] p-8 text-on-primary flex flex-col justify-between shadow-xl">
-            <div>
-              <span className="text-on-primary-container/80 text-xs font-bold uppercase tracking-widest">Financial Status</span>
-              <h2 className="text-2xl sm:text-3xl font-extrabold mt-2 tracking-tight">
-                {isOwed
-                  ? `Owed to you: ${formatCurrency(Math.abs(netAmount), preferredCurrency)}`
-                  : netAmount < -0.5
-                  ? `You owe: ${formatCurrency(Math.abs(netAmount), preferredCurrency)}`
-                  : 'All settled up!'}
-              </h2>
-            </div>
-            <div className="mt-8 flex gap-3">
-              <button
-                onClick={() => navigate('/balances')}
-                className="flex-1 bg-on-primary text-primary font-bold py-3 px-6 rounded-xl text-sm transition-transform active:scale-95"
-              >
-                Settle Up
-              </button>
-              <button
-                onClick={() => navigate('/expenses')}
-                className="w-12 h-12 flex items-center justify-center bg-primary-fixed/20 rounded-xl text-on-primary transition-transform active:scale-95"
-              >
-                <span className="material-symbols-outlined">receipt_long</span>
-              </button>
-            </div>
-          </section>
-
-          <section className="space-y-4">
-            <div className="flex items-center justify-between px-2">
-              <h3 className="text-xl sm:text-2xl font-extrabold tracking-tight text-on-surface">Roommates</h3>
-              <button onClick={() => navigate('/balances')} className="text-primary text-sm font-bold">View Ledger</button>
-            </div>
-            <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar -mx-6 px-6">
-              {members.map(member => {
-                const memberBal = balanceData?.balances?.find(b => b.userId === member._id)
-                const amt = memberBal?.net ?? 0
-                const memberName = getMemberName(member)
-                const memberAvatar = getMemberAvatar(member)
-                return (
-                  <div key={member._id} className="flex-shrink-0 w-36 bg-surface-container-low p-4 rounded-3xl flex flex-col items-center gap-2 border border-outline-variant/10 shadow-[0_8px_24px_-16px_rgba(26,28,29,0.22)]">
-                    <div className={`w-14 h-14 rounded-full overflow-hidden flex items-center justify-center bg-primary-fixed border-2 ${amt > 0 ? 'border-secondary' : amt < -0.5 ? 'border-error' : 'border-transparent'}`}>
-                      {memberAvatar ? (
-                        <img src={memberAvatar} alt={`${memberName} avatar`} className="w-full h-full object-cover" />
-                      ) : (
-                        <span className="text-lg font-black text-primary">
-                          {memberName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
-                        </span>
-                      )}
-                    </div>
-                    <span className="text-xs font-bold">{memberName.split(' ')[0]}</span>
-                    <span className={`text-[10px] font-bold uppercase tracking-tighter ${amt > 0.5 ? 'text-secondary' : amt < -0.5 ? 'text-error' : 'text-on-surface-variant'}`}>
-                      {amt > 0.5 ? `Owes ${formatCurrency(amt, preferredCurrency)}` : amt < -0.5 ? `Gets ${formatCurrency(Math.abs(amt), preferredCurrency)}` : 'Settled'}
-                    </span>
-                  </div>
-                )
-              })}
-            </div>
-          </section>
-
-          <section className="space-y-4">
-            <div className="flex items-center justify-between px-2">
-              <h3 className="text-xl sm:text-2xl font-extrabold tracking-tight text-on-surface">Recent Expenses</h3>
-              <button onClick={() => navigate('/expenses')} className="text-primary text-sm font-bold">View All</button>
-            </div>
-            <div className="space-y-3">
-              {expensesData?.expenses?.length === 0 && (
-                <div className="bg-surface-container-lowest p-8 rounded-3xl text-center text-on-surface-variant">
-                  <span className="material-symbols-outlined text-4xl mb-2 block">receipt_long</span>
-                  No expenses yet. Add your first one!
-                </div>
-              )}
-              {expensesData?.expenses?.map(exp => {
-                const cat = categoryIcons[exp.category] || categoryIcons.Other
-                const payer = members.find(m => m._id === exp.paidBy)
-                const payerName = getMemberName(payer)
-                return (
-                  <div
-                    key={exp._id}
-                    onClick={() => navigate(`/expenses/${exp._id}`)}
-                    className="group bg-surface-container-lowest p-4 rounded-3xl flex items-center gap-4 transition-all duration-300 hover:bg-surface-container hover:translate-x-1 active:scale-[0.98] cursor-pointer"
-                  >
-                    <div className={`w-12 h-12 ${cat.bg} ${cat.text} rounded-2xl flex items-center justify-center flex-shrink-0`}>
-                      <span className="material-symbols-outlined">{cat.icon}</span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-bold text-on-surface truncate">{exp.title}</h4>
-                      <p className="text-xs text-on-surface-variant font-medium uppercase tracking-tight">
-                        {exp.category} • {exp.billMonth || new Date(exp.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-bold text-lg text-on-surface">{formatCurrency(exp.amount, preferredCurrency)}</p>
-                      <p className="text-xs text-on-surface-variant">{payerName.split(' ')[0]} paid</p>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </section>
+          <DashboardExpensesSection
+            expenses={expensesData?.expenses || []}
+            members={members}
+            currency={preferredCurrency}
+            onViewAll={() => navigate('/expenses')}
+            onExpenseClick={(id) => navigate(`/expenses/${id}`)}
+            layout="mobile"
+          />
         </main>
 
         <BottomNav />

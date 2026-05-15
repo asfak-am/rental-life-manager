@@ -20,7 +20,18 @@ const ensureMonthlyRentRecords = async (house, month = toMonthKey()) => {
   if (!MONTH_REGEX.test(month)) throw new Error('Invalid month format')
   if (!house || !house._id) return []
 
-  const memberIds = house.members.map(member => String(member.userId))
+  // Consider only members who joined on or before the target month
+  const [yearStr, monthStr] = month.split('-')
+  const year = Number(yearStr)
+  const monthIndex = Number(monthStr) - 1 // 0-based
+  const monthStart = new Date(year, monthIndex, 1)
+  const monthEnd = new Date(year, monthIndex + 1, 0, 23, 59, 59, 999)
+
+  const activeMembers = (house.members || []).filter(member => {
+    const joined = member.joinedAt ? new Date(member.joinedAt) : new Date()
+    return joined <= monthEnd
+  })
+  const memberIds = activeMembers.map(member => String(member.userId))
   if (memberIds.length === 0) return []
 
   const totalRent = Number(house.monthlyRentAmount || 0)
@@ -46,11 +57,13 @@ const ensureMonthlyRentRecords = async (house, month = toMonthKey()) => {
     await RentPayment.insertMany(toCreate)
   }
 
+  // Remove unpaid records for users who were not active in that month
   const staleRecords = existing.filter(item => !memberIds.includes(String(item.userId)) && item.status === 'unpaid')
   if (staleRecords.length > 0) {
     await RentPayment.deleteMany({ _id: { $in: staleRecords.map(item => item._id) } })
   }
 
+  // Update amount due only for members active in that month
   await RentPayment.updateMany(
     { houseId: house._id, month, status: 'unpaid', userId: { $in: memberIds } },
     { $set: { amountDue: perPerson } },

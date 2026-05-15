@@ -1,21 +1,19 @@
 ﻿import { useQuery } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
-import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, AreaChart, Area, CartesianGrid, Legend } from 'recharts'
+import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { expenseService } from '../services'
 import { useHouse } from '../context/HouseContext'
 import { useAuth } from '../context/AuthContext'
 import TopBar from '../components/TopBar'
 import BottomNav from '../components/BottomNav'
 import DesktopAnalyticsView from '../components/desktop/DesktopAnalyticsView'
+import UtilityChart from '../components/UtilityChart'
 import { formatCurrency, normalizeCurrency } from '../utils/currency'
 import ThemeCustomizer from '../components/ThemeCustomizer'
 
 const PALETTE_PURPLE = 'rgb(139,92,246)'
 const PALETTE_ORANGE = 'rgb(251,146,60)'
 const PALETTE_PINK = 'rgb(236,72,153)'
-const MOBILE_WATER = 'rgb(20,184,166)'
-const MOBILE_ELECTRIC = 'rgb(139,92,246)'
-const MOBILE_ELECTRIC_RGBA = 'rgba(139,92,246,0.72)'
 
 const THEME_COLORS = [
   'rgb(var(--primary-rgb))',
@@ -218,58 +216,18 @@ export default function Analytics() {
           </div>
 
           <div className="lg:col-span-12 bg-surface-container-lowest rounded-2xl p-8 border border-outline-variant/15">
-            <div className="flex flex-col gap-4 mb-8 lg:flex-row lg:items-center lg:justify-between">
-              <div>
-                <h3 className="text-xl font-headline font-bold">Utility Bills Trend</h3>
-                <p className="text-sm text-on-surface-variant mt-1">Water vs electricity over the selected period.</p>
-              </div>
-              <div className="inline-flex flex-wrap gap-2 rounded-2xl bg-surface-container-high/80 p-1.5 border border-outline-variant/20 shadow-sm">
-                {UTILITY_RANGE_OPTIONS.map((option) => {
-                  const active = utilityRange === option.value
-                  return (
-                    <button
-                      key={option.value}
-                      type="button"
-                      onClick={() => setUtilityRange(option.value)}
-                      className={`min-w-[3.5rem] px-3 py-2 rounded-xl text-xs font-bold tracking-wide transition-all ${active ? 'bg-primary text-on-primary shadow-md shadow-primary/20' : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container'}`}
-                      aria-pressed={active}
-                    >
-                      {option.label}
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-            {filteredUtilityTrendData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={260}>
-                <AreaChart data={filteredUtilityTrendData}>
-                  <defs>
-                    <linearGradient id="waterFillMobile" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={MOBILE_WATER} stopOpacity={0.35} />
-                      <stop offset="95%" stopColor={MOBILE_WATER} stopOpacity={0.05} />
-                    </linearGradient>
-                    <linearGradient id="electricFillMobile" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={MOBILE_ELECTRIC_RGBA} stopOpacity={0.35} />
-                      <stop offset="95%" stopColor={MOBILE_ELECTRIC_RGBA} stopOpacity={0.05} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                  <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 12, fontWeight: 700, fill: '#787586' }} />
-                  <YAxis hide />
-                  <Tooltip
-                    formatter={(v) => [formatCurrency(Number(v || 0), currency), 'Amount']}
-                    contentStyle={{ borderRadius: '12px', border: 'none', background: '#ffffff', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}
-                  />
-                  <Legend />
-                  <Area type="monotone" dataKey="water" name="Water Bill" stroke={MOBILE_WATER} fill="url(#waterFillMobile)" strokeWidth={3} />
-                  <Area type="monotone" dataKey="electricity" name="Electricity Bill" stroke={MOBILE_ELECTRIC} fill="url(#electricFillMobile)" strokeWidth={3} />
-                </AreaChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-[220px] grid place-items-center rounded-2xl bg-surface-container text-sm text-on-surface-variant">
-                Add water and electricity expenses to see monthly variation.
-              </div>
-            )}
+            <UtilityChart
+              data={filteredUtilityTrendData}
+              range={utilityRange}
+              onRangeChange={setUtilityRange}
+              currency={currency}
+              title="Utility Bills Trend"
+              subtitle="Water vs electricity over the selected period."
+              rangeOptions={UTILITY_RANGE_OPTIONS}
+              labelClassName="hidden"
+              chartWrapClassName="h-[260px]"
+              emptyStateClassName="bg-surface-container text-on-surface-variant"
+            />
           </div>
 
           {/* Contributions leaderboard */}

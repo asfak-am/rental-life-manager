@@ -1,9 +1,12 @@
+import { useMemo } from 'react'
 import DesktopAppShell from './DesktopAppShell'
 import { formatCurrency } from '../../utils/currency'
 import { exportExpensesPdf } from '../../utils/pdfExport'
-import { useHouse } from '../../context/HouseContext'
+import { createMemberMap, getMemberById } from '../../utils/expenseMembers'
+import ExpenseDateRangeFilters from '../../components/expenses/ExpenseDateRangeFilters'
 
 export default function DesktopExpensesView({
+  members = [],
   expenses = [],
   rentHistory = [],
   summaryData,
@@ -21,12 +24,9 @@ export default function DesktopExpensesView({
   onRentFromDateChange,
   onRentToDateChange,
 }) {
-  const categoryBreakdown = summaryData?.categoryBreakdown
-    ? Object.entries(summaryData.categoryBreakdown).map(([name, value]) => ({ name, value }))
-    : []
+  const memberMap = useMemo(() => createMemberMap(members), [members])
   const totalExpenses = summaryData?.totalExpenses || 0
   const myShare = summaryData?.myShare || 0
-  const { members } = useHouse()
 
   const exportPdf = () => {
     exportExpensesPdf({
@@ -90,28 +90,17 @@ export default function DesktopExpensesView({
       <section className="bg-white rounded-3xl border border-slate-200 overflow-hidden">
         <div className="px-5 py-4 border-b border-slate-200 bg-[#f8f9fc] flex items-center justify-between gap-3 flex-wrap">
           <span className="text-xs font-bold uppercase tracking-widest text-primary">Expense History</span>
-          <div className="flex items-center gap-2 flex-wrap">
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">From</p>
-              <input
-                type="date"
-                value={expenseFromDate}
-                onChange={e => onExpenseFromDateChange?.(e.target.value)}
-                className="rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs"
-                aria-label="Filter expenses from date"
-              />
-            </div>
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">To</p>
-              <input
-                type="date"
-                value={expenseToDate}
-                onChange={e => onExpenseToDateChange?.(e.target.value)}
-                className="rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs"
-                aria-label="Filter expenses to date"
-              />
-            </div>
-          </div>
+          <ExpenseDateRangeFilters
+            fromValue={expenseFromDate}
+            toValue={expenseToDate}
+            onFromChange={onExpenseFromDateChange}
+            onToChange={onExpenseToDateChange}
+            wrapperClassName="flex items-center gap-2 flex-wrap"
+            labelClassName="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1"
+            inputClassName="rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs"
+            fromAriaLabel="Filter expenses from date"
+            toAriaLabel="Filter expenses to date"
+          />
         </div>
 
         {expenses.length === 0 ? (
@@ -137,8 +126,8 @@ export default function DesktopExpensesView({
                   <td className="px-5 py-4"><span className="px-2 py-1 rounded-full text-[10px] uppercase tracking-widest bg-[#ecebff] text-[#5f52f2]">{exp.category || 'Other'}</span></td>
                   <td className="px-5 py-4 font-black">{formatCurrency(exp.amount || 0, currency)}</td>
                   <td className="px-5 py-4 font-semibold text-on-surface">{(() => {
+                    const payer = getMemberById(memberMap, exp.paidBy)
                     const payerId = String(exp.paidBy || '')
-                    const payer = (members || []).find(m => String(m._id) === payerId)
                     return payer ? payer.name : payerId ? payerId.slice(0,6) : 'Unknown'
                   })()}</td>
                 </tr>
@@ -151,28 +140,17 @@ export default function DesktopExpensesView({
       <section className="mt-6 bg-white rounded-3xl border border-slate-200 overflow-hidden">
         <div className="px-5 py-4 border-b border-slate-200 bg-[#f8f9fc] flex items-center justify-between gap-3 flex-wrap">
           <span className="text-xs font-bold uppercase tracking-widest text-primary">Rent Paid History</span>
-          <div className="flex items-center gap-2 flex-wrap">
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">From</p>
-              <input
-                type="date"
-                value={rentFromDate}
-                onChange={e => onRentFromDateChange?.(e.target.value)}
-                className="rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs"
-                aria-label="Filter rent history from date"
-              />
-            </div>
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">To</p>
-              <input
-                type="date"
-                value={rentToDate}
-                onChange={e => onRentToDateChange?.(e.target.value)}
-                className="rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs"
-                aria-label="Filter rent history to date"
-              />
-            </div>
-          </div>
+          <ExpenseDateRangeFilters
+            fromValue={rentFromDate}
+            toValue={rentToDate}
+            onFromChange={onRentFromDateChange}
+            onToChange={onRentToDateChange}
+            wrapperClassName="flex items-center gap-2 flex-wrap"
+            labelClassName="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1"
+            inputClassName="rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs"
+            fromAriaLabel="Filter rent history from date"
+            toAriaLabel="Filter rent history to date"
+          />
         </div>
 
         {rentHistory.length === 0 ? (

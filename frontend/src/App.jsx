@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useEffect } from 'react'
 import ProtectedRoute from './components/ProtectedRoute'
+import { applyTheme, getInitialTheme, readSavedTheme } from './theme/applyTheme'
 
 // Auth & Onboarding
 import Login from './pages/Login'
@@ -29,44 +30,8 @@ import Profile from './pages/Profile'
 
 export default function App() {
   useEffect(() => {
-    // Initialize theme from localStorage
-    const savedTheme = localStorage.getItem('app-theme')
-    if (savedTheme) {
-      const theme = JSON.parse(savedTheme)
-      
-      // Apply primary color
-      document.documentElement.style.setProperty('--primary-color', theme.primaryColor)
-      const hex = theme.primaryColor.replace('#', '')
-      const r = parseInt(hex.substring(0, 2), 16)
-      const g = parseInt(hex.substring(2, 4), 16)
-      const b = parseInt(hex.substring(4, 6), 16)
-      document.documentElement.style.setProperty('--primary-rgb', `${r}, ${g}, ${b}`)
-
-      // Apply dark mode
-      const html = document.documentElement
-      if (theme.mode === 'dark') {
-        html.classList.add('dark')
-      } else if (theme.mode === 'light') {
-        html.classList.remove('dark')
-      } else if (theme.mode === 'system') {
-        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
-        if (prefersDark) {
-          html.classList.add('dark')
-        } else {
-          html.classList.remove('dark')
-        }
-      }
-
-      // Apply skin
-      if (theme.skin === 'bordered') {
-        html.classList.add('skin-bordered')
-      }
-
-      // Apply semi-dark
-      if (theme.semiDark) {
-        html.classList.add('semi-dark')
-      }
-    }
+    const savedTheme = readSavedTheme() || getInitialTheme()
+    applyTheme(savedTheme)
   }, [])
 
   return (

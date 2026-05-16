@@ -1,10 +1,9 @@
-import { useMemo } from 'react'
 import DesktopAppShell from './DesktopAppShell'
-import InviteCodeCard from '../InviteCodeCard'
-import RentStatusCard from '../RentStatusCard'
-import UtilityChart from '../UtilityChart'
-import DashboardTasksSection from '../DashboardTasksSection'
-import DashboardExpensesSection from '../DashboardExpensesSection'
+import InviteCodeCard from '../../components/InviteCodeCard'
+import RentStatusCard from '../../components/RentStatusCard'
+import UtilityChart from '../../components/UtilityChart'
+import DashboardTasksSection from '../../components/DashboardTasksSection'
+import DashboardExpensesSection from '../../components/DashboardExpensesSection'
 import { formatCurrency } from '../../utils/currency'
 
 export default function DesktopDashboardView({

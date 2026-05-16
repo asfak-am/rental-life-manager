@@ -1,4 +1,6 @@
 import { formatCurrency } from '../utils/currency'
+import { createMemberMap, getMemberById } from '../utils/expenseMembers'
+import { useMemo } from 'react'
 
 const CATEGORY_ICONS = {
   Food: { icon: 'shopping_basket', bg: 'bg-amber-100', text: 'text-amber-700' },
@@ -22,6 +24,7 @@ export default function DashboardExpensesSection({
   layout = 'mobile', // 'mobile' or 'desktop'
 }) {
   const displayExpenses = layout === 'desktop' ? expenses.slice(0, 4) : expenses
+  const memberMap = useMemo(() => createMemberMap(members), [members])
 
   if (layout === 'desktop') {
     const colors = ['bg-blue-50', 'bg-purple-50', 'bg-emerald-50', 'bg-amber-50']
@@ -83,7 +86,7 @@ export default function DashboardExpensesSection({
         )}
         {expenses.map(exp => {
           const cat = CATEGORY_ICONS[exp.category] || CATEGORY_ICONS.Other
-          const payer = members.find(m => m._id === exp.paidBy)
+          const payer = getMemberById(memberMap, exp.paidBy)
           const payerName = getMemberName(payer)
           return (
             <div

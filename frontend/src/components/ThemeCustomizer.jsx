@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { applyTheme, clearTheme, DEFAULT_THEME, getInitialTheme, persistTheme } from '../theme/applyTheme'
 
 const COLORS = [
   { name: 'purple', value: '#6a5df6' },
@@ -32,102 +33,23 @@ const CONTENTS = [
 
 export default function ThemeCustomizer() {
   const [isOpen, setIsOpen] = useState(false)
-  const [theme, setTheme] = useState({
-    primaryColor: '#6a5df6',
-    mode: 'light',
-    skin: 'default',
-    layout: 'vertical',
-    content: 'compact',
-    semiDark: false,
-  })
+  const [theme, setTheme] = useState(() => getInitialTheme())
 
   useEffect(() => {
-    const saved = localStorage.getItem('app-theme')
-    if (saved) {
-      const savedTheme = JSON.parse(saved)
-      setTheme(savedTheme)
-      applyTheme(savedTheme)
-    } else {
-      // Check system preference on first load
-      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
-      const defaultTheme = {
-        ...theme,
-        mode: prefersDark ? 'dark' : 'light'
-      }
-      setTheme(defaultTheme)
-      applyTheme(defaultTheme)
-    }
-  }, [])
-
-  const applyTheme = (newTheme) => {
-    const html = document.documentElement
-    const root = document.documentElement
-
-    // Apply primary color
-    root.style.setProperty('--primary-color', newTheme.primaryColor)
-    
-    // Parse hex color and create RGB for opacity usage
-    const hex = newTheme.primaryColor.replace('#', '')
-    const r = parseInt(hex.substring(0, 2), 16)
-    const g = parseInt(hex.substring(2, 4), 16)
-    const b = parseInt(hex.substring(4, 6), 16)
-    root.style.setProperty('--primary-rgb', `${r}, ${g}, ${b}`)
-
-    // Apply dark mode
-    if (newTheme.mode === 'dark') {
-      html.classList.add('dark')
-    } else if (newTheme.mode === 'light') {
-      html.classList.remove('dark')
-    } else if (newTheme.mode === 'system') {
-      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
-      if (prefersDark) {
-        html.classList.add('dark')
-      } else {
-        html.classList.remove('dark')
-      }
-    }
-
-    // Apply skin
-    html.classList.remove('skin-bordered', 'skin-default')
-    html.classList.add(`skin-${newTheme.skin}`)
-
-    // Apply layout
-    html.classList.remove('layout-vertical', 'layout-collapsed', 'layout-horizontal')
-    html.classList.add(`layout-${newTheme.layout}`)
-
-    // Apply content width
-    html.classList.remove('content-compact', 'content-wide')
-    html.classList.add(`content-${newTheme.content}`)
-
-    // Apply semi-dark
-    if (newTheme.semiDark) {
-      html.classList.add('semi-dark')
-    } else {
-      html.classList.remove('semi-dark')
-    }
-
-    // Save to localStorage
-    localStorage.setItem('app-theme', JSON.stringify(newTheme))
-  }
+    applyTheme(theme)
+  }, [theme])
 
   const updateTheme = (key, value) => {
     const newTheme = { ...theme, [key]: value }
     setTheme(newTheme)
-    applyTheme(newTheme)
+    persistTheme(newTheme)
   }
 
   const resetTheme = () => {
-    localStorage.removeItem('app-theme')
-    const defaultTheme = {
-      primaryColor: '#6a5df6',
-      mode: 'light',
-      skin: 'default',
-      layout: 'vertical',
-      content: 'compact',
-      semiDark: false,
-    }
+    clearTheme()
+    const defaultTheme = { ...DEFAULT_THEME }
     setTheme(defaultTheme)
-    applyTheme(defaultTheme)
+    persistTheme(defaultTheme)
     setIsOpen(false)
   }
 

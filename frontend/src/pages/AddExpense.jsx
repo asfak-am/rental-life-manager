@@ -8,7 +8,7 @@ import { useHouse } from '../context/HouseContext'
 import { useAuth } from '../context/AuthContext'
 import BottomNav from '../components/BottomNav'
 import TopBar from '../components/TopBar'
-import DesktopAppShell from '../components/desktop/DesktopAppShell'
+import DesktopAppShell from '../layouts/desktop/DesktopAppShell'
 import { formatCurrency } from '../utils/currency'
 
 const CATEGORIES = ['Food', 'Water Bill', 'Electricity Bill', 'Transport', 'Entertainment', 'Other']
@@ -41,6 +41,13 @@ export default function AddExpense() {
   const [selectedMembers, setSelectedMembers] = useState([])
   const [isDesktop, setIsDesktop] = useState(() => (typeof window !== 'undefined' ? window.innerWidth >= 1024 : false))
   const preferredCurrency = user?.currency || 'LKR'
+  const handleBack = () => {
+    if (window.history.length > 1) {
+      navigate(-1)
+      return
+    }
+    navigate('/expenses')
+  }
 
   useEffect(() => {
     const onResize = () => setIsDesktop(window.innerWidth >= 1024)
@@ -332,6 +339,16 @@ export default function AddExpense() {
           title="Add Expense"
           subtitle="Track shared costs with clear split and billing month details"
           searchPlaceholder="Search expenses..."
+          rightActions={(
+            <button
+              type="button"
+              onClick={handleBack}
+              className="inline-flex items-center gap-2 rounded-xl border border-outline-variant/20 bg-white px-4 py-2.5 text-sm font-semibold text-on-surface hover:border-primary hover:text-primary transition"
+            >
+              <span className="material-symbols-outlined text-[18px]">arrow_back</span>
+              Back
+            </button>
+          )}
         >
           <section className="max-w-4xl bg-surface-container-lowest rounded-3xl p-8 border border-outline-variant/15">
             {renderForm(true)}
@@ -350,11 +367,23 @@ export default function AddExpense() {
               {/* Handle */}
               <div className="sticky top-0 bg-surface-container-lowest/80 backdrop-blur-xl px-8 pt-6 pb-4 z-10 flex flex-col items-center">
                 <div className="w-12 h-1.5 bg-surface-container-high rounded-full mb-6" />
-                <div className="w-full flex justify-between items-center">
-                  <h2 className="text-2xl font-headline font-extrabold tracking-tight text-on-surface">Add Expense</h2>
+                <div className="w-full flex justify-between items-center gap-3">
                   <button
-                    onClick={() => navigate(-1)}
+                    type="button"
+                    onClick={handleBack}
+                    className="w-10 h-10 rounded-full bg-surface-container-low flex items-center justify-center text-on-surface-variant hover:text-primary transition"
+                    aria-label="Go back"
+                    title="Back"
+                  >
+                    <span className="material-symbols-outlined">arrow_back</span>
+                  </button>
+                  <h2 className="flex-1 text-center text-2xl font-headline font-extrabold tracking-tight text-on-surface">Add Expense</h2>
+                  <button
+                    type="button"
+                    onClick={() => navigate('/expenses')}
                     className="w-10 h-10 rounded-full bg-surface-container-low flex items-center justify-center text-on-surface-variant"
+                    aria-label="Close add expense"
+                    title="Close"
                   >
                     <span className="material-symbols-outlined">close</span>
                   </button>

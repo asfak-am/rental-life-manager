@@ -1,5 +1,5 @@
 import DesktopAppShell from './DesktopAppShell'
-import InviteCodeCard from '../InviteCodeCard'
+import InviteCodeCard from '../../components/InviteCodeCard'
 
 export default function DesktopSettingsView({
   members = [],

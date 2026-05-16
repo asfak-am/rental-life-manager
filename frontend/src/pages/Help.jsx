@@ -2,7 +2,7 @@
 import toast from 'react-hot-toast'
 import TopBar from '../components/TopBar'
 import BottomNav from '../components/BottomNav'
-import DesktopAppShell from '../components/desktop/DesktopAppShell'
+import DesktopAppShell from '../layouts/desktop/DesktopAppShell'
 import { helpService } from '../services'
 
 export default function Help() {

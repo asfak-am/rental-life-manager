@@ -2,7 +2,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import TopBar from '../components/TopBar'
 import BottomNav from '../components/BottomNav'
-import DesktopAppShell from '../components/desktop/DesktopAppShell'
+import DesktopAppShell from '../layouts/desktop/DesktopAppShell'
 import { chatService } from '../services'
 import { useAuth } from '../context/AuthContext'
 import { useHouse } from '../context/HouseContext'

@@ -2,7 +2,7 @@
 import api from '../services/api'
 import TopBar from '../components/TopBar'
 import BottomNav from '../components/BottomNav'
-import DesktopAppShell from '../components/desktop/DesktopAppShell'
+import DesktopAppShell from '../layouts/desktop/DesktopAppShell'
 
 const TYPE_STYLES = {
   expense:  { icon: 'receipt_long',        bg: 'bg-primary-fixed',       icon_color: 'text-primary'   },

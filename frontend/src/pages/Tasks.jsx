@@ -6,7 +6,7 @@ import { taskService } from '../services'
 import { useHouse } from '../context/HouseContext'
 import TopBar from '../components/TopBar'
 import BottomNav from '../components/BottomNav'
-import DesktopAppShell from '../components/desktop/DesktopAppShell'
+import DesktopAppShell from '../layouts/desktop/DesktopAppShell'
 import ThemeCustomizer from '../components/ThemeCustomizer'
 
 const PRIORITY_STYLES = {

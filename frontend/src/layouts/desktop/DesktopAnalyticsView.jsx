@@ -1,6 +1,6 @@
 import DesktopAppShell from './DesktopAppShell'
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
-import UtilityChart from '../UtilityChart'
+import UtilityChart from '../../components/UtilityChart'
 
 // Palette based on provided swatches — one of them is the theme color.
 // Order: purple, theme (teal), orange, pink

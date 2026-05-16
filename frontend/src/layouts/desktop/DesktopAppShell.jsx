@@ -2,8 +2,8 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import api from '../../services/api'
 import { useAuth } from '../../context/AuthContext'
-import ThemeCustomizer from '../ThemeCustomizer'
-import { useRef, useState, useEffect } from 'react'
+import ThemeCustomizer from '../../components/ThemeCustomizer'
+import { useRef, useState } from 'react'
 import appIcon32 from '../../assets/favicon-32x32.png'
 
 const navItems = [
@@ -32,11 +32,6 @@ export default function DesktopAppShell({
 
   const isSidebarExpanded = isHoverExpanded
 
-  const toggleSidebar = () => {
-    const newState = !isCollapsed
-    setIsCollapsed(newState)
-    localStorage.setItem('sidebar-collapsed', JSON.stringify(newState))
-  }
   const { data: notificationData } = useQuery({
     queryKey: ['notifications', 'desktop-topbar-count'],
     queryFn: () => api.get('/notifications').then(r => r.data),

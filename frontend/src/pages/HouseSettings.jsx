@@ -8,7 +8,7 @@ import { useAuth } from '../context/AuthContext'
 import { useHouse } from '../context/HouseContext'
 import TopBar from '../components/TopBar'
 import BottomNav from '../components/BottomNav'
-import DesktopSettingsView from '../components/desktop/DesktopSettingsView'
+import DesktopSettingsView from '../layouts/desktop/DesktopSettingsView'
 import InviteCodeCard from '../components/InviteCodeCard'
 import { buildInviteLink, buildInviteQrSrc } from '../utils/inviteLink'
 

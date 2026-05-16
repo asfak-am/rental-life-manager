@@ -2,6 +2,7 @@ const mongoose = require('mongoose')
 
 const expenseSchema = new mongoose.Schema({
   houseId:   { type: mongoose.Schema.Types.ObjectId, ref: 'House', required: true },
+  createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   title:     { type: String, required: true, trim: true },
   amount:    { type: Number, required: true, min: 0.01 },
   paidBy:    { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },

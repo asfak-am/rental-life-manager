@@ -11,5 +11,6 @@ const rentPaymentSchema = new mongoose.Schema({
 }, { timestamps: true })
 
 rentPaymentSchema.index({ houseId: 1, userId: 1, month: 1 }, { unique: true })
+rentPaymentSchema.index({ houseId: 1, status: 1, paidAt: -1, createdAt: -1 })
 
 module.exports = mongoose.model('RentPayment', rentPaymentSchema)

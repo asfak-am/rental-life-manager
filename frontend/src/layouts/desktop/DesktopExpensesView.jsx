@@ -23,6 +23,13 @@ export default function DesktopExpensesView({
   rentToDate = '',
   onRentFromDateChange,
   onRentToDateChange,
+  onViewDetail,
+  page = 1,
+  pages = 1,
+  onPageChange,
+  rentPage = 1,
+  rentPages = 1,
+  onRentPageChange,
 }) {
   const memberMap = useMemo(() => createMemberMap(members), [members])
   const totalExpenses = summaryData?.totalExpenses || 0
@@ -116,6 +123,7 @@ export default function DesktopExpensesView({
                 <th className="px-5 py-3">Category</th>
                 <th className="px-5 py-3">Amount</th>
                 <th className="px-5 py-3">Paid By</th>
+                <th className="px-5 py-3">Action</th>
               </tr>
             </thead>
             <tbody>
@@ -130,11 +138,20 @@ export default function DesktopExpensesView({
                     const payerId = String(exp.paidBy || '')
                     return payer ? payer.name : payerId ? payerId.slice(0,6) : 'Unknown'
                   })()}</td>
+                  <td className="px-5 py-4">
+                    <button type="button" onClick={() => onViewDetail?.(exp._id)} className="px-3 py-1 rounded-md bg-primary-fixed/10 text-primary text-xs font-semibold">View</button>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         )}
+        {/* Pagination */}
+        <div className="px-6 py-4 bg-white border-t border-slate-200 flex items-center justify-end gap-2">
+          <button type="button" onClick={() => onPageChange?.(Math.max(1, page - 1))} disabled={page <= 1} className="px-3 py-1 rounded-md bg-surface-container text-sm">Prev</button>
+          <div className="text-sm text-slate-600">Page {page} of {pages}</div>
+          <button type="button" onClick={() => onPageChange?.(Math.min(pages, page + 1))} disabled={page >= pages} className="px-3 py-1 rounded-md bg-surface-container text-sm">Next</button>
+        </div>
       </section>
 
       <section className="mt-6 bg-white rounded-3xl border border-slate-200 overflow-hidden">
@@ -183,6 +200,11 @@ export default function DesktopExpensesView({
             </tbody>
           </table>
         )}
+        <div className="px-6 py-4 bg-white border-t border-slate-200 flex items-center justify-end gap-2">
+          <button type="button" onClick={() => onRentPageChange?.(Math.max(1, rentPage - 1))} disabled={rentPage <= 1} className="px-3 py-1 rounded-md bg-surface-container text-sm">Prev</button>
+          <div className="text-sm text-slate-600">Page {rentPage} of {rentPages}</div>
+          <button type="button" onClick={() => onRentPageChange?.(Math.min(rentPages, rentPage + 1))} disabled={rentPage >= rentPages} className="px-3 py-1 rounded-md bg-surface-container text-sm">Next</button>
+        </div>
       </section>
     </DesktopAppShell>
   )

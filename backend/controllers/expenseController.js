@@ -20,9 +20,37 @@ const normalizeParticipantId = (participant) => String(participant.userId || par
 const roundMoney = (value) => Math.round((Number(value) + Number.EPSILON) * 100) / 100
 const BILL_MONTH_REGEX = /^\d{4}-(0[1-9]|1[0-2])$/
 
+const getExpenseCreatorId = (expense) => String(expense?.createdBy || expense?.auditTrail?.[0]?.by || '')
+
 const calculateEqualSplit = (amount, participants) => {
 	const share = roundMoney(amount / participants.length)
 	return participants.map(userId => ({ userId, amountOwed: share }))
+}
+
+const normalizeCustomSplit = (participantsInput, memberIds) => {
+	const participantIds = extractParticipantIds(participantsInput)
+	if (participantIds.length === 0) return { error: 'Select at least one participant' }
+	if (participantIds.some(id => !memberIds.includes(id))) {
+		return { error: 'Participants must be house members' }
+	}
+
+	const amountMap = new Map(participantsInput.map(participant => [
+		String(participant.userId || participant._id),
+		roundMoney(toNum(participant.amountOwed)),
+	]))
+
+	const participants = participantIds.map(userId => ({
+		userId,
+		amountOwed: amountMap.get(userId) || 0,
+		settled: false,
+		settledAt: null,
+	}))
+
+	if (participants.some(participant => !Number.isFinite(participant.amountOwed) || participant.amountOwed < 0)) {
+		return { error: 'Custom split amounts must be valid non-negative numbers' }
+	}
+
+	return { participants }
 }
 
 const extractParticipantIds = (participantsInput) => {
@@ -142,7 +170,7 @@ const addExpense = async (req, res, next) => {
 			}
 			const amountMap = new Map(participantsInput.map(participant => [
 				String(participant.userId || participant._id),
-				roundMoney(participant.amountOwed),
+				roundMoney(toNum(participant.amountOwed)),
 			]))
 			participants = participantIds.map(userId => ({
 				userId,
@@ -174,6 +202,7 @@ const addExpense = async (req, res, next) => {
 
 		const expense = await Expense.create({
 			houseId: house._id,
+			createdBy: req.user._id,
 			title: req.body.title,
 			amount,
 			paidBy: selectedPaidBy,
@@ -230,14 +259,21 @@ const getAllExpenses = async (req, res, next) => {
 		const house = await getHouseForUser(req.user._id)
 		if (!house) return res.json({ expenses: [] })
 
-		const { category, search, billMonth, limit } = req.query
+		const { category, search, billMonth, limit, page, from, to } = req.query
 		const query = { houseId: house._id }
 
 		if (category) query.category = category
 		if (search) query.title = { $regex: search, $options: 'i' }
 		if (billMonth && BILL_MONTH_REGEX.test(String(billMonth))) query.billMonth = String(billMonth)
+		if (from || to) {
+			query.date = {}
+			if (from) query.date.$gte = new Date(from)
+			if (to) query.date.$lte = new Date(to)
+		}
 
-		const cacheKey = `expenses:house:${house._id}:q:${JSON.stringify({ category, search, billMonth, limit })}`
+		const pageNum = Math.max(1, Number(page) || 1)
+		const pageSize = Math.max(1, Math.min(100, Number(limit) || 10))
+		const cacheKey = `expenses:house:${house._id}:q:${JSON.stringify({ category, search, billMonth, limit: pageSize, page: pageNum })}`
 		if (redis) {
 			try {
 				const cached = await redis.get(cacheKey)
@@ -245,10 +281,13 @@ const getAllExpenses = async (req, res, next) => {
 			} catch (err) { console.warn('Redis get failed for', cacheKey, err && err.message) }
 		}
 
+		const total = await Expense.countDocuments(query)
+		const skip = (pageNum - 1) * pageSize
 		const expenses = await Expense.find(query)
 			.select('title amount paidBy splitType participants category billMonth date recurring recurrenceRule createdAt updatedAt')
 			.sort({ date: -1, createdAt: -1 })
-			.limit(limit ? Number(limit) : 0)
+			.skip(skip)
+			.limit(pageSize)
 			.lean()
 
 		// cache result briefly
@@ -258,7 +297,8 @@ const getAllExpenses = async (req, res, next) => {
 			} catch (err) { console.warn('Redis set failed for', cacheKey, err && err.message) }
 		}
 
-		return res.json({ expenses })
+		const pages = Math.max(1, Math.ceil(total / pageSize))
+		return res.json({ expenses, total, page: pageNum, pages, pageSize })
 	} catch (error) {
 		next(error)
 	}
@@ -343,6 +383,9 @@ const getExpenseById = async (req, res, next) => {
 		}
 		const expense = await Expense.findOne({ _id: req.params.id, houseId: house._id })
 		if (!expense) return res.status(404).json({ message: 'Expense not found' })
+		if (getExpenseCreatorId(expense) !== String(req.user._id)) {
+			return res.status(403).json({ message: 'Only the creator can edit this expense' })
+		}
 
 		if (redis) {
 			try { await redis.set(cacheKey, JSON.stringify({ expense, auditTrail: expense.auditTrail }), 'EX', parseInt(process.env.EXPENSES_CACHE_TTL || '60', 10)) } catch (err) { console.warn('Redis set failed for', cacheKey, err && err.message) }
@@ -361,6 +404,15 @@ const updateExpense = async (req, res, next) => {
 
 		const expense = await Expense.findOne({ _id: req.params.id, houseId: house._id })
 		if (!expense) return res.status(404).json({ message: 'Expense not found' })
+		if (getExpenseCreatorId(expense) !== String(req.user._id)) {
+			return res.status(403).json({ message: 'Only the creator can edit this expense' })
+		}
+
+		const memberIds = house.members.map(member => String(member.userId))
+		const nextAmount = req.body.amount !== undefined ? toNum(req.body.amount) : expense.amount
+		if (req.body.amount !== undefined && nextAmount <= 0) {
+			return res.status(400).json({ message: 'Amount must be greater than 0' })
+		}
 
 		if (req.body.billMonth !== undefined) {
 			const nextBillMonth = String(req.body.billMonth || '').trim()
@@ -370,17 +422,42 @@ const updateExpense = async (req, res, next) => {
 			expense.billMonth = nextBillMonth || undefined
 		}
 
-		;['title', 'amount', 'paidBy', 'splitType', 'participants', 'category', 'date', 'recurring', 'recurrenceRule'].forEach(key => {
+		;['title', 'paidBy', 'splitType', 'category', 'date', 'recurring', 'recurrenceRule'].forEach(key => {
 			if (req.body[key] !== undefined) expense[key] = req.body[key]
 		})
+		if (req.body.amount !== undefined) expense.amount = nextAmount
+
+		if (Array.isArray(req.body.participants)) {
+			if ((req.body.splitType || expense.splitType) === 'custom') {
+				const normalized = normalizeCustomSplit(req.body.participants, memberIds)
+				if (normalized.error) {
+					return res.status(400).json({ message: normalized.error })
+				}
+				expense.participants = normalized.participants
+			} else {
+				const participantIds = extractParticipantIds(req.body.participants)
+				if (participantIds.length === 0) {
+					return res.status(400).json({ message: 'Select at least one participant' })
+				}
+				if (participantIds.some(id => !memberIds.includes(id))) {
+					return res.status(400).json({ message: 'Participants must be house members' })
+				}
+				expense.participants = calculateEqualSplit(nextAmount, participantIds)
+			}
+		}
 
 		if (Array.isArray(expense.participants)) {
 			expense.participants = expense.participants.map(participant => ({
 				userId: participant.userId,
-				amountOwed: roundMoney(participant.amountOwed),
+				amountOwed: roundMoney(toNum(participant.amountOwed)),
 				settled: Boolean(participant.settled),
 				settledAt: participant.settledAt || null,
 			}))
+		}
+
+		const participantTotal = roundMoney(expense.participants.reduce((sum, participant) => sum + toNum(participant.amountOwed), 0))
+		if (Math.abs(participantTotal - nextAmount) > 0.05) {
+			return res.status(400).json({ message: 'Split amounts must equal the expense amount' })
 		}
 
 		expense.auditTrail.push({ action: 'Expense updated', by: req.user._id })
@@ -417,6 +494,40 @@ const deleteExpense = async (req, res, next) => {
 		}
 
 		return res.json({ message: 'Expense deleted' })
+	} catch (error) {
+		next(error)
+	}
+}
+
+const settleExpenseShare = async (req, res, next) => {
+	try {
+		const house = await getHouseForUser(req.user._id)
+		if (!house) return res.status(404).json({ message: 'House not found' })
+
+		const expense = await Expense.findOne({ _id: req.params.id, houseId: house._id })
+		if (!expense) return res.status(404).json({ message: 'Expense not found' })
+
+		const participant = expense.participants.find(item => String(item.userId) === String(req.user._id))
+		if (!participant) {
+			return res.status(403).json({ message: 'You are not a participant on this expense' })
+		}
+
+		if (participant.settled) {
+			return res.json({ message: 'Expense already settled', expense })
+		}
+
+		participant.settled = true
+		participant.settledAt = new Date()
+		expense.auditTrail.push({ action: 'Expense share settled', by: req.user._id })
+		await expense.save()
+
+		if (redis) {
+			clearKeysByPattern(`expenses:house:${house._id}:*`)
+			clearKeysByPattern(`expense:${house._id}:${expense._id}`)
+			clearKeysByPattern(`expense-summary:${house._id}:*`)
+		}
+
+		return res.json({ message: 'Expense settled successfully', expense })
 	} catch (error) {
 		next(error)
 	}
@@ -477,6 +588,7 @@ module.exports = {
 	getExpenseById,
 	updateExpense,
 	deleteExpense,
+	settleExpenseShare,
 	getSummary,
 	getUtilityTrend,
 }

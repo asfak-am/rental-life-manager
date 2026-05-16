@@ -1,10 +1,8 @@
-import { formatCurrency } from '../utils/currency'
-
 export default function DashboardTasksSection({
   tasks = [],
   onMarkTaskComplete,
   isMarkingTaskComplete = false,
-  layout = 'mobile', // 'mobile' or 'desktop'
+  layout = 'mobile',
 }) {
   const upcomingTasks = tasks.filter(task => task.status !== 'completed')
 
@@ -58,7 +56,6 @@ export default function DashboardTasksSection({
     )
   }
 
-  // Mobile layout
   return (
     <section className="bg-surface-container-lowest rounded-[2rem] p-6 border border-outline-variant/10">
       <div className="flex items-center justify-between gap-4 flex-wrap mb-4">

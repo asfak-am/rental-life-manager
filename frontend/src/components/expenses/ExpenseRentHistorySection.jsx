@@ -9,6 +9,9 @@ export default function ExpenseRentHistorySection({
   rentToDate = '',
   onRentFromDateChange,
   onRentToDateChange,
+  page = 1,
+  pages = 1,
+  onPageChange,
 }) {
   return (
     <div className="space-y-3 mt-10">
@@ -32,7 +35,7 @@ export default function ExpenseRentHistorySection({
         <ExpenseEmptyState icon="payments" title="No rent payments recorded yet." />
       )}
 
-      {rentHistory.slice(0, 10).map(item => (
+      {rentHistory.map(item => (
         <div key={item.id} className="bg-surface-container-lowest p-4 rounded-3xl flex items-center justify-between gap-3 border border-outline-variant/10">
           <div className="min-w-0">
             <p className="font-bold text-on-surface truncate">{item.name}</p>
@@ -44,6 +47,18 @@ export default function ExpenseRentHistorySection({
           </div>
         </div>
       ))}
+
+      {pages > 1 && (
+        <div className="flex items-center justify-center gap-3 pt-2">
+          <button type="button" onClick={() => onPageChange?.(Math.max(1, page - 1))} disabled={page <= 1} className="px-3 py-1 rounded-md bg-surface-container text-sm">
+            Prev
+          </button>
+          <div className="text-sm text-on-surface-variant">Page {page} of {pages}</div>
+          <button type="button" onClick={() => onPageChange?.(Math.min(pages, page + 1))} disabled={page >= pages} className="px-3 py-1 rounded-md bg-surface-container text-sm">
+            Next
+          </button>
+        </div>
+      )}
     </div>
   )
 }

@@ -1,11 +1,11 @@
 import { NavLink } from 'react-router-dom'
 
 const tabs = [
-  { to: '/',          icon: 'dashboard',       label: 'Home'     },
-  { to: '/expenses',  icon: 'receipt_long',    label: 'Expenses' },
-  { to: '/tasks',     icon: 'task_alt',        label: 'Tasks'    },
-  { to: '/analytics', icon: 'bar_chart',       label: 'Analytics'},
-  { to: '/ledger',    icon: 'account_balance', label: 'Ledger'   },
+  { to: '/', icon: 'dashboard', label: 'Home' },
+  { to: '/expenses', icon: 'receipt_long', label: 'Expenses' },
+  { to: '/tasks', icon: 'task_alt', label: 'Tasks' },
+  { to: '/analytics', icon: 'bar_chart', label: 'Analytics' },
+  { to: '/ledger', icon: 'account_balance', label: 'Ledger' },
 ]
 
 export default function BottomNav() {

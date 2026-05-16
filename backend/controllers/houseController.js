@@ -417,16 +417,33 @@ const getRentHistory = async (req, res, next) => {
 		const house = await requireHouse(req.user._id)
 		if (!house) return res.status(404).json({ message: 'No house found' })
 
-		const cacheKey = `rent-history:${house._id}`
+		const pageNum = Math.max(1, Number(req.query.page) || 1)
+		const pageSize = Math.max(1, Math.min(100, Number(req.query.limit) || 10))
+		const from = req.query.from ? new Date(req.query.from) : null
+		const to = req.query.to ? new Date(req.query.to) : null
+		const cacheKey = `rent-history:${house._id}:${JSON.stringify({ page: pageNum, limit: pageSize, from: req.query.from || null, to: req.query.to || null })}`
 		if (redis) {
 			try {
 				const cached = await redis.get(cacheKey)
-				if (cached) return res.json({ history: JSON.parse(cached) })
+				if (cached) return res.json(JSON.parse(cached))
 			} catch (err) { console.warn('Redis get failed for', cacheKey, err && err.message) }
 		}
 
-		const payments = await RentPayment.find({ houseId: house._id, status: 'paid' })
+		const query = { houseId: house._id, status: 'paid' }
+		if (from || to) {
+			query.paidAt = {}
+			if (from && !Number.isNaN(from.getTime())) query.paidAt.$gte = from
+			if (to && !Number.isNaN(to.getTime())) query.paidAt.$lte = to
+		}
+
+		const total = await RentPayment.countDocuments(query)
+		const pages = Math.max(1, Math.ceil(total / pageSize))
+		const skip = (pageNum - 1) * pageSize
+
+		const payments = await RentPayment.find(query)
 			.sort({ paidAt: -1, createdAt: -1 })
+			.skip(skip)
+			.limit(pageSize)
 			.populate('userId', 'name displayName')
 
 		const history = payments.map(payment => ({
@@ -438,11 +455,13 @@ const getRentHistory = async (req, res, next) => {
 			name: payment.userId?.displayName || payment.userId?.name || 'Member',
 		}))
 
+		const response = { history, total, page: pageNum, pages, pageSize }
+
 		if (redis) {
-			try { await redis.set(cacheKey, JSON.stringify(history), 'EX', parseInt(process.env.RENT_HISTORY_CACHE_TTL || '300', 10)) } catch (err) { console.warn('Redis set failed for', cacheKey, err && err.message) }
+			try { await redis.set(cacheKey, JSON.stringify(response), 'EX', parseInt(process.env.RENT_HISTORY_CACHE_TTL || '300', 10)) } catch (err) { console.warn('Redis set failed for', cacheKey, err && err.message) }
 		}
 
-		return res.json({ history })
+		return res.json(response)
 	} catch (error) {
 		next(error)
 	}

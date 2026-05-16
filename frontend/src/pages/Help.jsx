@@ -1,7 +1,7 @@
 ﻿import { useForm } from 'react-hook-form'
 import toast from 'react-hot-toast'
-import TopBar from '../components/TopBar'
-import BottomNav from '../components/BottomNav'
+import TopBar from '../components/navigation/TopBar'
+import BottomNav from '../components/navigation/BottomNav'
 import DesktopAppShell from '../layouts/desktop/DesktopAppShell'
 import { helpService } from '../services'
 

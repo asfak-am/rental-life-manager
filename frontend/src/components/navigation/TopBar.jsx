@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import api from '../services/api'
-import { useAuth } from '../context/AuthContext'
+import api from '../../services/api'
+import { useAuth } from '../../context/AuthContext'
 import { useRef } from 'react'
 
 export default function TopBar() {
@@ -66,12 +66,12 @@ export default function TopBar() {
           </button>
           <button
             type="button"
-            onClick={() => navigate('/messages')}
+            onClick={() => navigate('/settings')}
             className="w-10 h-10 flex items-center justify-center rounded-full bg-transparent border border-primary/35 text-primary hover:border-primary hover:bg-transparent transition-all duration-200 active:scale-95"
-            aria-label="Open messages"
-            title="Messages"
+            aria-label="Open settings"
+            title="Settings"
           >
-            <span className="material-symbols-outlined">chat</span>
+            <span className="material-symbols-outlined">settings</span>
           </button>
           <button
             type="button"

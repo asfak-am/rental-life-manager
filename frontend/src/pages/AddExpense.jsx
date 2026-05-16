@@ -1,13 +1,13 @@
 ﻿import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import { expenseService } from '../services'
 import { useHouse } from '../context/HouseContext'
 import { useAuth } from '../context/AuthContext'
-import BottomNav from '../components/BottomNav'
-import TopBar from '../components/TopBar'
+import BottomNav from '../components/navigation/BottomNav'
+import TopBar from '../components/navigation/TopBar'
 import DesktopAppShell from '../layouts/desktop/DesktopAppShell'
 import { formatCurrency } from '../utils/currency'
 
@@ -30,9 +30,11 @@ const getCurrentBillMonth = () => {
 
 export default function AddExpense() {
   const navigate  = useNavigate()
+  const { id } = useParams()
   const { members } = useHouse()
   const { user }  = useAuth()
   const qc        = useQueryClient()
+  const isEditMode = Boolean(id)
 
   const [splitType, setSplitType]   = useState('equal')
   const [category, setCategory]     = useState('Food')
@@ -46,8 +48,14 @@ export default function AddExpense() {
       navigate(-1)
       return
     }
-    navigate('/expenses')
+    navigate(isEditMode ? `/expenses/${id}` : '/expenses')
   }
+
+  const { data: expenseData, isLoading: isLoadingExpense } = useQuery({
+    queryKey: ['expense', id],
+    queryFn: () => expenseService.getById(id).then(r => r.data),
+    enabled: isEditMode,
+  })
 
   useEffect(() => {
     const onResize = () => setIsDesktop(window.innerWidth >= 1024)
@@ -55,7 +63,7 @@ export default function AddExpense() {
     return () => window.removeEventListener('resize', onResize)
   }, [])
 
-  const { register, handleSubmit, watch, formState: { errors } } = useForm({
+  const { register, handleSubmit, watch, reset, formState: { errors } } = useForm({
     defaultValues: {
       paidBy: user?._id,
       date: new Date().toISOString().split('T')[0],
@@ -67,16 +75,39 @@ export default function AddExpense() {
   const showBillMonth = BILL_MONTH_CATEGORIES.has(category)
   const showTitleField = category === 'Other'
 
+  useEffect(() => {
+    if (!isEditMode || !expenseData?.expense) return
+
+    const exp = expenseData.expense
+    const participantIds = (exp.participants || []).map(participant => String(participant.userId))
+    const nextCustomSplits = Object.fromEntries((exp.participants || []).map(participant => [String(participant.userId), participant.amountOwed]))
+
+    setCategory(exp.category || 'Food')
+    setSplitType(exp.splitType || 'equal')
+    setParticipantScope(participantIds.length === members.length ? 'all' : 'selected')
+    setSelectedMembers(participantIds)
+    setCustom(exp.splitType === 'custom' ? nextCustomSplits : {})
+
+    reset({
+      paidBy: exp.paidBy,
+      date: exp.date ? new Date(exp.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+      billMonth: exp.billMonth || getCurrentBillMonth(),
+      title: exp.category === 'Other' ? exp.title : '',
+      amount: exp.amount,
+    })
+  }, [expenseData, isEditMode, members.length, reset])
+
   const mutation = useMutation({
-    mutationFn: (data) => expenseService.add(data),
+    mutationFn: (data) => (isEditMode ? expenseService.update(id, data) : expenseService.add(data)),
     onSuccess: () => {
-      toast.success('Expense added!')
+      toast.success(isEditMode ? 'Expense updated!' : 'Expense added!')
       qc.invalidateQueries({ queryKey: ['expenses'] })
       qc.invalidateQueries({ queryKey: ['expense-summary'] })
       qc.invalidateQueries({ queryKey: ['balance-raw'] })
-      navigate('/expenses')
+      qc.invalidateQueries({ queryKey: ['expense', id] })
+      navigate(isEditMode ? `/expenses/${id}` : '/expenses')
     },
-    onError: (err) => toast.error(err.response?.data?.message || 'Failed to add expense'),
+    onError: (err) => toast.error(err.response?.data?.message || (isEditMode ? 'Failed to update expense' : 'Failed to add expense')),
   })
 
   const onSubmit = (data) => {
@@ -97,7 +128,26 @@ export default function AddExpense() {
 
     const participants = splitType === 'equal'
       ? selectedIds.map(userId => ({ userId }))
-      : selectedIds.map(userId => ({ userId, amountOwed: +(customSplits[userId] || 0) }))
+      : (() => {
+          const invalidMember = selectedIds.find(userId => {
+            const rawAmount = customSplits[userId]
+            if (rawAmount === '' || rawAmount === null || rawAmount === undefined) return false
+            const parsedAmount = Number(rawAmount)
+            return !Number.isFinite(parsedAmount) || parsedAmount < 0
+          })
+
+          if (invalidMember) {
+            toast.error('Custom split amounts must be valid non-negative numbers')
+            return null
+          }
+
+          return selectedIds.map(userId => ({
+            userId,
+            amountOwed: Number(customSplits[userId] || 0),
+          }))
+        })()
+
+    if (!participants) return
 
     mutation.mutate({
       title: normalizedTitle,
@@ -114,6 +164,14 @@ export default function AddExpense() {
   const equalShare = members.length > 0 ? amount / members.length : 0
   const selectedCount = participantScope === 'all' ? members.length : selectedMembers.length
   const equalSelectedShare = selectedCount > 0 ? amount / selectedCount : 0
+
+  if (isEditMode && isLoadingExpense) {
+    return (
+      <div className="min-h-screen bg-surface flex items-center justify-center">
+        <div className="w-8 h-8 rounded-full border-4 border-primary border-t-transparent animate-spin" />
+      </div>
+    )
+  }
 
   const toggleMemberSelection = (memberId) => {
     setSelectedMembers(prev => (
@@ -327,7 +385,7 @@ export default function AddExpense() {
         disabled={mutation.isPending}
         className="w-full py-5 signature-gradient text-on-primary font-headline font-bold text-lg rounded-2xl shadow-xl shadow-primary/20 hover:scale-[1.01] active:scale-[0.98] transition-all disabled:opacity-60"
       >
-        {mutation.isPending ? 'Adding...' : '+ Add Expense'}
+        {mutation.isPending ? (isEditMode ? 'Updating...' : 'Adding...') : (isEditMode ? 'Update Expense' : '+ Add Expense')}
       </button>
     </form>
   )
@@ -336,7 +394,7 @@ export default function AddExpense() {
     <>
       {isDesktop ? (
         <DesktopAppShell
-          title="Add Expense"
+          title={isEditMode ? 'Edit Expense' : 'Add Expense'}
           subtitle="Track shared costs with clear split and billing month details"
           searchPlaceholder="Search expenses..."
           rightActions={(
@@ -377,7 +435,7 @@ export default function AddExpense() {
                   >
                     <span className="material-symbols-outlined">arrow_back</span>
                   </button>
-                  <h2 className="flex-1 text-center text-2xl font-headline font-extrabold tracking-tight text-on-surface">Add Expense</h2>
+                  <h2 className="flex-1 text-center text-2xl font-headline font-extrabold tracking-tight text-on-surface">{isEditMode ? 'Edit Expense' : 'Add Expense'}</h2>
                   <button
                     type="button"
                     onClick={() => navigate('/expenses')}

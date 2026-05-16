@@ -5,8 +5,8 @@ import toast from 'react-hot-toast'
 import { expenseService } from '../services'
 import { useHouse } from '../context/HouseContext'
 import { useAuth } from '../context/AuthContext'
-import DesktopAppShell from '../layouts/desktop/DesktopAppShell'
-import BottomNav from '../components/BottomNav'
+import DesktopExpenseDetailsView from '../layouts/desktop/DesktopExpenseDetailsView'
+import BottomNav from '../components/navigation/BottomNav'
 import { createMemberMap, getMemberById } from '../utils/expenseMembers'
 import ExpenseDetailCard from '../components/expenses/ExpenseDetailCard'
 import ExpenseErrorState from '../components/expenses/ExpenseErrorState'
@@ -36,6 +36,18 @@ export default function ExpenseDetails() {
     onError: (mutationError) => toast.error(getErrorMessage(mutationError)),
   })
 
+  const settleMutation = useMutation({
+    mutationFn: () => expenseService.settleExpenseShare(id),
+    onSuccess: () => {
+      toast.success('Expense settled')
+      qc.invalidateQueries(['expense', id])
+      qc.invalidateQueries(['expenses'])
+      qc.invalidateQueries(['expense-summary'])
+      navigate('/balances')
+    },
+    onError: (mutationError) => toast.error(getErrorMessage(mutationError)),
+  })
+
   if (error) {
     return (
       <ExpenseErrorState
@@ -59,8 +71,11 @@ export default function ExpenseDetails() {
 
   const payer = getMemberById(memberMap, exp.paidBy)
   const isPaidByMe = String(exp.paidBy) === String(user?._id)
+  const creatorId = String(exp.createdBy || exp.auditTrail?.[0]?.by || data?.auditTrail?.[0]?.by || '')
+  const canEdit = creatorId && creatorId === String(user?._id)
+  const handleEdit = () => navigate(`/expenses/${id}/edit`)
 
-  const detailBody = (
+  const mobileDetailBody = (
     <ExpenseDetailCard
       expense={exp}
       payer={payer}
@@ -68,24 +83,54 @@ export default function ExpenseDetails() {
       memberMap={memberMap}
       preferredCurrency={preferredCurrency}
       userId={user?._id}
+      canEdit={canEdit}
       auditTrail={data?.auditTrail || []}
       isPaidByMe={isPaidByMe}
-      onSettle={() => navigate('/balances')}
+      onSettle={() => settleMutation.mutate()}
+      onEdit={handleEdit}
       onDelete={() => {
         if (window.confirm('Delete this expense?')) deleteMutation.mutate()
       }}
       onClose={() => navigate('/expenses')}
+      settling={settleMutation.isPending}
     />
+  )
+
+  const backButton = (
+    <button
+      type="button"
+      onClick={() => {
+        if (window.history.length > 1) navigate(-1)
+        else navigate('/expenses')
+      }}
+      className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-outline-variant/20 text-on-surface font-semibold shadow-sm hover:bg-surface-container transition"
+    >
+      <span className="material-symbols-outlined text-[18px]">arrow_back</span>
+      Back
+    </button>
   )
 
   return (
     <>
-      <div className="hidden lg:block bg-surface app-light-gradient font-body text-on-surface min-h-screen pb-32">
-        <DesktopAppShell title="Expense Details" subtitle="See split status, audit history, and actions for this expense." searchPlaceholder="Search expense details...">
-          <div className="max-w-4xl">
-            {detailBody}
-          </div>
-        </DesktopAppShell>
+      <div className="hidden lg:block">
+        <DesktopExpenseDetailsView
+          expense={exp}
+          payer={payer}
+          participants={exp.participants || []}
+          memberMap={memberMap}
+          preferredCurrency={preferredCurrency}
+          userId={user?._id}
+          canEdit={canEdit}
+          auditTrail={data?.auditTrail || []}
+          isPaidByMe={isPaidByMe}
+          onSettle={() => settleMutation.mutate()}
+          onEdit={handleEdit}
+          onDelete={() => {
+            if (window.confirm('Delete this expense?')) deleteMutation.mutate()
+          }}
+          onClose={() => navigate('/expenses')}
+          settling={settleMutation.isPending}
+        />
       </div>
 
       <div className="lg:hidden bg-surface app-light-gradient font-body text-on-surface min-h-screen pb-32">
@@ -97,7 +142,11 @@ export default function ExpenseDetails() {
             <div className="w-12 h-1.5 bg-surface-container-highest rounded-full" />
           </div>
 
-            {detailBody}
+            <div className="px-4 pb-3">
+              {backButton}
+            </div>
+
+            {mobileDetailBody}
           </div>
         </div>
       <BottomNav />

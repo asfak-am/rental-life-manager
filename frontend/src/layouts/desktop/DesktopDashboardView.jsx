@@ -1,9 +1,9 @@
 import DesktopAppShell from './DesktopAppShell'
-import InviteCodeCard from '../../components/InviteCodeCard'
-import RentStatusCard from '../../components/RentStatusCard'
-import UtilityChart from '../../components/UtilityChart'
-import DashboardTasksSection from '../../components/DashboardTasksSection'
-import DashboardExpensesSection from '../../components/DashboardExpensesSection'
+import InviteCodeCard from '../../components/common/InviteCodeCard'
+import RentStatusCard from '../../components/common/RentStatusCard'
+import UtilityChart from '../../components/common/UtilityChart'
+import DashboardTasksSection from '../../components/dashboard/DashboardTasksSection'
+import DashboardExpensesSection from '../../components/dashboard/DashboardExpensesSection'
 import { formatCurrency } from '../../utils/currency'
 
 export default function DesktopDashboardView({
@@ -36,6 +36,7 @@ export default function DesktopDashboardView({
   onPayMemberRent,
   payingMemberRent = false,
   isAdmin = false,
+  onExpenseClick,
 }) {
   const displayName = user?.displayName || user?.name || 'Manager'
   const shortName = displayName.split(' ')[0]
@@ -100,7 +101,9 @@ export default function DesktopDashboardView({
           members={members}
           currency={currency}
           onViewAll={onViewExpenses}
+          onExpenseClick={onExpenseClick}
           layout="desktop"
+          compact
         />
 
         <DashboardTasksSection

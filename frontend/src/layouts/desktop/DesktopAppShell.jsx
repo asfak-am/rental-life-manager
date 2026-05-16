@@ -2,7 +2,7 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import api from '../../services/api'
 import { useAuth } from '../../context/AuthContext'
-import ThemeCustomizer from '../../components/ThemeCustomizer'
+import ThemeCustomizer from '../../components/common/ThemeCustomizer'
 import { useRef, useState } from 'react'
 import appIcon32 from '../../assets/favicon-32x32.png'
 
@@ -152,15 +152,15 @@ export default function DesktopAppShell({
                 <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-error border border-surface" />
               )}
             </button>
-            <button
-              type="button"
-              onClick={() => navigate('/messages')}
-              className="w-8 h-8 rounded-full bg-transparent border border-primary/35 grid place-items-center hover:bg-transparent hover:border-primary transition"
-              aria-label="Open messages"
-              title="Messages"
-            >
-              <span className="material-symbols-outlined text-[18px]">chat</span>
-            </button>
+              <button
+                type="button"
+                onClick={() => navigate('/settings')}
+                className="w-8 h-8 rounded-full bg-transparent border border-primary/35 grid place-items-center hover:bg-transparent hover:border-primary transition"
+                aria-label="Open settings"
+                title="Settings"
+              >
+                <span className="material-symbols-outlined text-[18px]">settings</span>
+              </button>
             <button
               type="button"
               onClick={() => navigate('/help')}

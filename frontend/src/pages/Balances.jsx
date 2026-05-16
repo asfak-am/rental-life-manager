@@ -4,12 +4,12 @@ import toast from 'react-hot-toast'
 import { balanceService, expenseService, houseService } from '../services'
 import { useHouse } from '../context/HouseContext'
 import { useAuth } from '../context/AuthContext'
-import TopBar from '../components/TopBar'
-import BottomNav from '../components/BottomNav'
+import TopBar from '../components/navigation/TopBar'
+import BottomNav from '../components/navigation/BottomNav'
 import DesktopAppShell from '../layouts/desktop/DesktopAppShell'
-import ThemeCustomizer from '../components/ThemeCustomizer'
+import ThemeCustomizer from '../components/common/ThemeCustomizer'
 import { formatCurrency } from '../utils/currency'
-import RentStatusCard from '../components/RentStatusCard'
+import RentStatusCard from '../components/common/RentStatusCard'
 
 export default function Balances() {
   const { house, members } = useHouse()

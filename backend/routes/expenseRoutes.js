@@ -6,6 +6,7 @@ const {
 	getExpenseById,
 	updateExpense,
 	deleteExpense,
+	settleExpenseShare,
 	getSummary,
 	getUtilityTrend,
 } = require('../controllers/expenseController')
@@ -17,6 +18,7 @@ router.get('/all', getAllExpenses)
 router.get('/summary', getSummary)
 router.get('/utility-trend', getUtilityTrend)
 router.post('/add', addExpense)
+router.post('/:id/settle', settleExpenseShare)
 router.get('/:id', getExpenseById)
 router.put('/:id', updateExpense)
 router.delete('/:id', deleteExpense)

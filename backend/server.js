@@ -44,7 +44,6 @@ app.use('/api/expense',      require('./routes/expenseRoutes'))
 app.use('/api/balance',      require('./routes/balanceRoutes'))
 app.use('/api/task',         require('./routes/taskRoutes'))
 app.use('/api/notifications',require('./routes/notificationRoutes'))
-app.use('/api/chat',         require('./routes/chatRoutes'))
 app.use('/api/help',         require('./routes/helpRoutes'))
 
 app.get('/', (_, res) => res.json({ message: 'Rental Life API running' }))

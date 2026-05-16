@@ -1,4 +1,4 @@
-import { formatCurrency } from '../utils/currency'
+import { formatCurrency } from '../../utils/currency'
 
 function findMemberById(members = [], userId) {
   const key = String(userId || '')

@@ -6,7 +6,7 @@ import toast from 'react-hot-toast'
 import { useAuth } from '../context/AuthContext'
 import { useHouse } from '../context/HouseContext'
 import { houseService } from '../services'
-import ThemeCustomizer from '../components/ThemeCustomizer'
+import ThemeCustomizer from '../components/common/ThemeCustomizer'
 import appIcon192 from '../assets/android-chrome-192x192.png'
 
 function LoginForm({ variant, onSubmit, handleGoogleLogin, loading, googleLoading, defaultEmail }) {

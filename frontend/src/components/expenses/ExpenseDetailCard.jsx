@@ -39,19 +39,32 @@ export default function ExpenseDetailCard({
   userId,
   auditTrail = [],
   isPaidByMe = false,
+  canEdit = false,
   onSettle,
+  onEdit,
   onDelete,
   onClose,
+  settling = false,
+  compact = false,
 }) {
+  const containerClass = compact
+    ? 'bg-surface-container-lowest rounded-[2rem] border border-outline-variant/10 shadow-[0_14px_36px_-28px_rgba(26,28,29,0.2)] overflow-hidden'
+    : 'bg-surface-container-lowest rounded-3xl border border-outline-variant/10 shadow-[0_16px_40px_-24px_rgba(26,28,29,0.22)] overflow-hidden'
+
+  const headerPadding = compact ? 'px-6 pt-5 pb-6' : 'px-8 pt-6 pb-8'
+  const bodyPadding = compact ? 'px-6 py-6 space-y-6' : 'px-8 py-8 space-y-8'
+  const titleClass = compact ? 'text-xl font-extrabold tracking-tight text-on-surface break-words' : 'text-2xl font-extrabold tracking-tight text-on-surface break-words'
+  const amountClass = compact ? 'text-2xl font-black text-on-surface tracking-tighter' : 'text-3xl font-black text-on-surface tracking-tighter'
+
   return (
-    <div className="bg-surface-container-lowest rounded-3xl border border-outline-variant/10 shadow-[0_16px_40px_-24px_rgba(26,28,29,0.22)] overflow-hidden">
-      <div className="px-8 pt-6 pb-8 border-b border-outline-variant/10">
+    <div className={containerClass}>
+      <div className={`${headerPadding} border-b border-outline-variant/10`}>
         <div className="flex justify-between items-start gap-4 mb-6">
           <div className="space-y-1 flex-1 min-w-0">
             <span className="inline-flex items-center px-3 py-1 rounded-full bg-primary-fixed text-primary text-xs font-bold uppercase tracking-wider">
               {expense.category}
             </span>
-            <h2 className="text-2xl font-extrabold tracking-tight text-on-surface break-words">{expense.title}</h2>
+            <h2 className={titleClass}>{expense.title}</h2>
             <div className="flex items-center gap-3 text-outline mt-2">
               <span className="material-symbols-outlined text-sm">calendar_today</span>
               <span className="text-sm font-medium">
@@ -61,7 +74,7 @@ export default function ExpenseDetailCard({
           </div>
           <div className="text-right flex-shrink-0">
             <p className="text-xs uppercase tracking-widest text-outline mb-1">Total Amount</p>
-            <p className="text-3xl font-black text-on-surface tracking-tighter">{formatCurrency(expense.amount, preferredCurrency)}</p>
+            <p className={amountClass}>{formatCurrency(expense.amount, preferredCurrency)}</p>
           </div>
         </div>
 
@@ -83,9 +96,9 @@ export default function ExpenseDetailCard({
         </div>
       </div>
 
-      <div className="px-8 py-8 space-y-8">
+      <div className={bodyPadding}>
         <div>
-          <h3 className="text-xl font-bold tracking-tight mb-6">Split Breakdown</h3>
+          <h3 className={`${compact ? 'text-lg' : 'text-xl'} font-bold tracking-tight mb-6`}>Split Breakdown</h3>
           <div className="space-y-3">
             {participants.map(participant => {
               const member = memberMap[String(participant.userId || '')]
@@ -105,7 +118,7 @@ export default function ExpenseDetailCard({
 
         {auditTrail?.length > 0 && (
           <div>
-            <h3 className="text-xl font-bold tracking-tight mb-6">Activity Log</h3>
+            <h3 className={`${compact ? 'text-lg' : 'text-xl'} font-bold tracking-tight mb-6`}>Activity Log</h3>
             <div className="space-y-3">
               {auditTrail.map((entry, i) => (
                 <div key={i} className="flex items-start gap-3">
@@ -125,14 +138,26 @@ export default function ExpenseDetailCard({
         <div className="flex gap-3 pt-4">
           {!isPaidByMe && (
             <button
+              type="button"
               onClick={onSettle}
-              className="flex-1 py-4 signature-gradient text-on-primary font-bold rounded-2xl shadow-lg shadow-primary/20 active:scale-95 transition-all"
+              disabled={settling}
+              className="flex-1 py-4 signature-gradient text-on-primary font-bold rounded-2xl shadow-lg shadow-primary/20 active:scale-95 transition-all disabled:opacity-70 disabled:cursor-not-allowed"
             >
-              Settle Up
+              {settling ? 'Settling...' : 'Settle Up'}
+            </button>
+          )}
+          {canEdit && (
+            <button
+              type="button"
+              onClick={onEdit}
+              className="px-5 py-4 bg-primary-fixed text-primary font-bold rounded-2xl active:scale-95 transition-all"
+            >
+              <span className="material-symbols-outlined">edit</span>
             </button>
           )}
           {String(expense.paidBy) === String(userId) && (
             <button
+              type="button"
               onClick={onDelete}
               className="px-5 py-4 bg-error-container text-on-error-container font-bold rounded-2xl active:scale-95 transition-all"
             >
@@ -140,6 +165,7 @@ export default function ExpenseDetailCard({
             </button>
           )}
           <button
+            type="button"
             onClick={onClose}
             className="px-5 py-4 bg-surface-container-high text-on-surface font-bold rounded-2xl active:scale-95 transition-all"
           >

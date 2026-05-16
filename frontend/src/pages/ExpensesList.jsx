@@ -1,15 +1,14 @@
-﻿import { useMemo, useState } from 'react'
+﻿import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { expenseService, houseService } from '../services'
 import { useHouse } from '../context/HouseContext'
 import { useAuth } from '../context/AuthContext'
-import TopBar from '../components/TopBar'
-import BottomNav from '../components/BottomNav'
+import TopBar from '../components/navigation/TopBar'
+import BottomNav from '../components/navigation/BottomNav'
 import DesktopExpensesView from '../layouts/desktop/DesktopExpensesView'
 import { exportExpensesPdf } from '../utils/pdfExport'
 import { createMemberMap, getMemberById } from '../utils/expenseMembers'
-import { filterExpensesByDateRange, filterRentHistoryByDateRange } from '../utils/filters/expenseFilters'
 import { EXPENSE_CATEGORIES } from '../constants/categories'
 import ExpenseFilterBar from '../components/expenses/ExpenseFilterBar'
 import ExpenseSummaryCards from '../components/expenses/ExpenseSummaryCards'
@@ -20,7 +19,7 @@ import ExpenseLoadingList from '../components/expenses/ExpenseLoadingList'
 import ExpenseEmptyState from '../components/expenses/ExpenseEmptyState'
 import ExpenseRentHistorySection from '../components/expenses/ExpenseRentHistorySection'
 import ExpenseErrorState from '../components/expenses/ExpenseErrorState'
-import ThemeCustomizer from '../components/ThemeCustomizer'
+import ThemeCustomizer from '../components/common/ThemeCustomizer'
 import { getErrorMessage } from '../utils/apiError'
 
 export default function ExpensesList() {
@@ -29,18 +28,35 @@ export default function ExpensesList() {
   const { user } = useAuth()
   const [activeTab, setActiveTab] = useState('All')
   const [search, setSearch]       = useState('')
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
   const [expenseFromDate, setExpenseFromDate] = useState('')
   const [expenseToDate, setExpenseToDate] = useState('')
   const [rentFromDate, setRentFromDate] = useState('')
   const [rentToDate, setRentToDate] = useState('')
+  const [rentPage, setRentPage] = useState(1)
+  const [rentPageSize, setRentPageSize] = useState(10)
   const preferredCurrency = user?.currency || 'LKR'
 
+  useEffect(() => {
+    setPage(1)
+  }, [activeTab, search, expenseFromDate, expenseToDate])
+
+  useEffect(() => {
+    setRentPage(1)
+  }, [rentFromDate, rentToDate])
+
   const { data, isLoading, error, refetch: refetchExpenses } = useQuery({
-    queryKey: ['expenses', activeTab, search],
+    queryKey: ['expenses', activeTab, search, page, pageSize],
     queryFn: () => expenseService.getAll({
       category: activeTab === 'All' ? undefined : activeTab,
       search:   search || undefined,
+      page,
+      limit: pageSize,
+      from: expenseFromDate || undefined,
+      to: expenseToDate || undefined,
     }).then(r => r.data),
+    placeholderData: (previousData) => previousData,
   })
 
   const { data: summaryData, error: summaryError, refetch: refetchSummary } = useQuery({
@@ -49,19 +65,19 @@ export default function ExpensesList() {
   })
 
   const { data: rentHistoryData, error: rentHistoryError, refetch: refetchRentHistory } = useQuery({
-    queryKey: ['rent-history'],
-    queryFn: () => houseService.getRentHistory().then(r => r.data),
+    queryKey: ['rent-history', rentPage, rentPageSize, rentFromDate, rentToDate],
+    queryFn: () => houseService.getRentHistory({
+      page: rentPage,
+      limit: rentPageSize,
+      from: rentFromDate || undefined,
+      to: rentToDate || undefined,
+    }).then(r => r.data),
+    placeholderData: (previousData) => previousData,
   })
 
   const memberMap = useMemo(() => createMemberMap(members), [members])
-  const filteredExpenses = useMemo(
-    () => filterExpensesByDateRange(data?.expenses, expenseFromDate, expenseToDate),
-    [data?.expenses, expenseFromDate, expenseToDate],
-  )
-  const filteredRentHistory = useMemo(
-    () => filterRentHistoryByDateRange(rentHistoryData?.history, rentFromDate, rentToDate),
-    [rentHistoryData?.history, rentFromDate, rentToDate],
-  )
+  const filteredExpenses = useMemo(() => data?.expenses || [], [data?.expenses])
+  const filteredRentHistory = useMemo(() => rentHistoryData?.history || [], [rentHistoryData?.history])
   const pageError = error || summaryError || rentHistoryError
 
   const exportPdf = () => {
@@ -92,7 +108,7 @@ export default function ExpensesList() {
       <div className="hidden lg:block">
         <DesktopExpensesView
           members={members}
-          expenses={filteredExpenses}
+          expenses={data?.expenses || []}
           rentHistory={filteredRentHistory}
           summaryData={summaryData}
           currency={preferredCurrency}
@@ -108,6 +124,13 @@ export default function ExpensesList() {
           rentToDate={rentToDate}
           onRentFromDateChange={setRentFromDate}
           onRentToDateChange={setRentToDate}
+          onViewDetail={(id) => navigate(`/expenses/${id}`)}
+          page={data?.page || page}
+          pages={data?.pages || 1}
+          onPageChange={(p) => setPage(p)}
+          rentPage={rentHistoryData?.page || rentPage}
+          rentPages={rentHistoryData?.pages || 1}
+          onRentPageChange={(p) => setRentPage(p)}
         />
       </div>
 
@@ -180,6 +203,14 @@ export default function ExpensesList() {
               />
             )
           })}
+          {/* Mobile pagination */}
+          {data?.pages > 1 && (
+            <div className="flex items-center justify-center gap-3 mt-4">
+              <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page <= 1} className="px-3 py-1 rounded-md bg-surface-container text-sm">Prev</button>
+              <div className="text-sm text-slate-600">Page {data?.page} of {data?.pages}</div>
+              <button onClick={() => setPage(p => Math.min(data?.pages || 1, p + 1))} disabled={page >= data?.pages} className="px-3 py-1 rounded-md bg-surface-container text-sm">Next</button>
+            </div>
+          )}
         </div>
 
         <ExpenseRentHistorySection
@@ -189,6 +220,9 @@ export default function ExpensesList() {
           rentToDate={rentToDate}
           onRentFromDateChange={setRentFromDate}
           onRentToDateChange={setRentToDate}
+          page={rentPage}
+          pages={rentHistoryData?.pages || 1}
+          onPageChange={setRentPage}
         />
       </main>
 

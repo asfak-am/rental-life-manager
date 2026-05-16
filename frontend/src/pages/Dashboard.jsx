@@ -5,16 +5,16 @@ import toast from 'react-hot-toast'
 import { expenseService, balanceService, houseService, taskService } from '../services'
 import { useAuth } from '../context/AuthContext'
 import { useHouse } from '../context/HouseContext'
-import TopBar from '../components/TopBar'
-import BottomNav from '../components/BottomNav'
+import TopBar from '../components/navigation/TopBar'
+import BottomNav from '../components/navigation/BottomNav'
 import DesktopAppShell from '../layouts/desktop/DesktopAppShell'
 import DesktopDashboardView from '../layouts/desktop/DesktopDashboardView'
-import ThemeCustomizer from '../components/ThemeCustomizer'
-import InviteCodeCard from '../components/InviteCodeCard'
-import RentStatusCard from '../components/RentStatusCard'
-import UtilityChart from '../components/UtilityChart'
-import DashboardTasksSection from '../components/DashboardTasksSection'
-import DashboardExpensesSection from '../components/DashboardExpensesSection'
+import ThemeCustomizer from '../components/common/ThemeCustomizer'
+import InviteCodeCard from '../components/common/InviteCodeCard'
+import RentStatusCard from '../components/common/RentStatusCard'
+import UtilityChart from '../components/common/UtilityChart'
+import DashboardTasksSection from '../components/dashboard/DashboardTasksSection'
+import DashboardExpensesSection from '../components/dashboard/DashboardExpensesSection'
 import { formatCurrency } from '../utils/currency'
 import { buildInviteLink, buildInviteQrSrc } from '../utils/inviteLink'
 
@@ -394,6 +394,7 @@ export default function Dashboard() {
           isMarkingTaskComplete={completeTaskMutation.isPending}
           onViewLedger={() => navigate('/balances')}
           onViewExpenses={() => navigate('/expenses')}
+          onExpenseClick={(id) => navigate(`/expenses/${id}`)}
           onTransferFunds={() => navigate('/expenses/add')}
           onOpenInvite={() => refreshInviteMutation.mutate()}
           onCopyInvite={() => {

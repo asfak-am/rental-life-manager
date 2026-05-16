@@ -6,10 +6,10 @@ import { houseService } from '../services'
 import { authService } from '../services'
 import { useAuth } from '../context/AuthContext'
 import { useHouse } from '../context/HouseContext'
-import TopBar from '../components/TopBar'
-import BottomNav from '../components/BottomNav'
+import TopBar from '../components/navigation/TopBar'
+import BottomNav from '../components/navigation/BottomNav'
 import DesktopSettingsView from '../layouts/desktop/DesktopSettingsView'
-import InviteCodeCard from '../components/InviteCodeCard'
+import InviteCodeCard from '../components/common/InviteCodeCard'
 import { buildInviteLink, buildInviteQrSrc } from '../utils/inviteLink'
 
 export default function HouseSettings() {

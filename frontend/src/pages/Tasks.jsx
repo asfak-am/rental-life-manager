@@ -4,10 +4,10 @@ import { useForm } from 'react-hook-form'
 import toast from 'react-hot-toast'
 import { taskService } from '../services'
 import { useHouse } from '../context/HouseContext'
-import TopBar from '../components/TopBar'
-import BottomNav from '../components/BottomNav'
+import TopBar from '../components/navigation/TopBar'
+import BottomNav from '../components/navigation/BottomNav'
 import DesktopAppShell from '../layouts/desktop/DesktopAppShell'
-import ThemeCustomizer from '../components/ThemeCustomizer'
+import ThemeCustomizer from '../components/common/ThemeCustomizer'
 
 const PRIORITY_STYLES = {
   high:   { bg: 'bg-error-container',     text: 'text-on-error-container',   label: 'High Priority'   },

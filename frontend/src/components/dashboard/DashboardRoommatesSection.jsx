@@ -1,4 +1,4 @@
-import { formatCurrency } from '../utils/currency'
+import { formatCurrency } from '../../utils/currency'
 
 function getMemberName(member) {
   return member?.displayName?.trim() || member?.name?.trim() || 'Unknown'

@@ -26,7 +26,13 @@ api.interceptors.request.use(config => {
 api.interceptors.response.use(
   res => res,
   err => {
-    if (err.response?.status === 401) {
+    const status = err.response?.status
+    const token = localStorage.getItem('rl_token')
+    const requestUrl = err.config?.url || ''
+    const isLoginRequest = /\/auth\/login\/?$/i.test(requestUrl)
+
+    // Keep login-page credential errors local so UI can show the backend message.
+    if (status === 401 && token && !isLoginRequest) {
       localStorage.removeItem('rl_token')
       window.location.href = '/login'
     }

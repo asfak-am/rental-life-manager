@@ -54,7 +54,7 @@ function LoginForm({ variant, onSubmit, handleGoogleLogin, loading, googleLoadin
           <input
             id={`password-${variant}`}
             type={showPass ? 'text' : 'password'}
-            placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
+            placeholder="Enter your password"
             autoComplete="current-password"
             className={desktop
               ? 'w-full h-14 px-4 bg-surface-container-high border-0 rounded-lg focus:ring-0 focus:outline-none border-b-2 border-transparent focus:border-primary transition-all duration-200 placeholder:text-outline/60 text-on-surface font-medium'

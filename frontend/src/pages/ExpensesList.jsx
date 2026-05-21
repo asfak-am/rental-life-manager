@@ -7,6 +7,7 @@ import { useAuth } from '../context/AuthContext'
 import TopBar from '../components/navigation/TopBar'
 import BottomNav from '../components/navigation/BottomNav'
 import DesktopExpensesView from '../layouts/desktop/DesktopExpensesView'
+import NoHouseState from '../components/common/NoHouseState'
 import { exportExpensesPdf } from '../utils/pdfExport'
 import { createMemberMap, getMemberById } from '../utils/expenseMembers'
 import { EXPENSE_CATEGORIES } from '../constants/categories'
@@ -25,7 +26,7 @@ import { getErrorMessage } from '../utils/apiError'
 export default function ExpensesList() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const { members } = useHouse()
+  const { house, members, loading: houseLoading, error: houseError } = useHouse()
   const { user } = useAuth()
   const [activeTab, setActiveTab] = useState('All')
   const [search, setSearch]       = useState('')
@@ -39,6 +40,8 @@ export default function ExpensesList() {
   const [rentPage, setRentPage] = useState(1)
   const [rentPageSize, setRentPageSize] = useState(10)
   const preferredCurrency = user?.currency || 'LKR'
+  const isHouseBootstrapping = !!user && !house && !houseError && houseLoading
+  const isNoHouse = !!user && !house && (!houseError || houseError.response?.status === 404)
 
   const getVisiblePages = (current, total, maxButtons = 3) => {
     const safeTotal = Math.max(1, total || 1)
@@ -71,6 +74,7 @@ export default function ExpensesList() {
       from: expenseFromDate || undefined,
       to: expenseToDate || undefined,
     }).then(r => r.data),
+    enabled: !!house,
     placeholderData: (previousData) => previousData,
     staleTime: 30 * 1000,
   })
@@ -78,6 +82,7 @@ export default function ExpensesList() {
   const { data: summaryData, error: summaryError, refetch: refetchSummary } = useQuery({
     queryKey: ['expense-summary'],
     queryFn: () => expenseService.summary().then(r => r.data),
+    enabled: !!house,
   })
 
   const { data: rentHistoryData, error: rentHistoryError, refetch: refetchRentHistory } = useQuery({
@@ -88,6 +93,7 @@ export default function ExpensesList() {
       from: rentFromDate || undefined,
       to: rentToDate || undefined,
     }).then(r => r.data),
+    enabled: !!house,
     placeholderData: (previousData) => previousData,
     staleTime: 30 * 1000,
   })
@@ -132,6 +138,28 @@ export default function ExpensesList() {
   const filteredExpenses = useMemo(() => data?.expenses || [], [data?.expenses])
   const filteredRentHistory = useMemo(() => rentHistoryData?.history || [], [rentHistoryData?.history])
   const pageError = error || summaryError || rentHistoryError
+
+  const noHouseView = (
+    <NoHouseState
+      desktopPageTitle="Expenses"
+      desktopSubtitle="You are not connected to a home yet"
+    />
+  )
+
+  if (isHouseBootstrapping) {
+    return (
+      <div className="min-h-screen grid place-items-center bg-surface app-light-gradient font-body text-on-surface px-6">
+        <div className="flex items-center gap-3 text-on-surface-variant">
+          <span className="material-symbols-outlined animate-spin">progress_activity</span>
+          <span className="font-medium">Loading your home...</span>
+        </div>
+      </div>
+    )
+  }
+
+  if (isNoHouse) {
+    return noHouseView
+  }
 
   const exportPdf = () => {
     exportExpensesPdf({

@@ -9,6 +9,7 @@ export default function ResetPassword() {
   const emailFromUrl = useMemo(() => params.get('email') || '', [params])
   const navigate = useNavigate()
   const [loading, setLoading] = useState(false)
+  const [showNewPassword, setShowNewPassword] = useState(false)
 
   const { register, handleSubmit, watch, formState: { errors } } = useForm({
     defaultValues: { email: emailFromUrl, otp: '', newPassword: '' },
@@ -66,11 +67,21 @@ export default function ResetPassword() {
 
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider mb-1">New Password</label>
-            <input
-              type="password"
-              className="w-full bg-surface-container-high rounded-lg px-4 py-3"
-              {...register('newPassword', { required: 'New password is required', minLength: { value: 6, message: 'Min 6 characters' } })}
-            />
+            <div className="relative">
+              <input
+                type={showNewPassword ? 'text' : 'password'}
+                className="w-full bg-surface-container-high rounded-lg px-4 py-3 pr-12"
+                {...register('newPassword', { required: 'New password is required', minLength: { value: 6, message: 'Min 6 characters' } })}
+              />
+              <button
+                type="button"
+                onClick={() => setShowNewPassword((prev) => !prev)}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-on-surface-variant"
+                aria-label={showNewPassword ? 'Hide password' : 'Show password'}
+              >
+                <span className="material-symbols-outlined text-xl">{showNewPassword ? 'visibility_off' : 'visibility'}</span>
+              </button>
+            </div>
             {errors.newPassword && <p className="text-error text-xs mt-1">{errors.newPassword.message}</p>}
           </div>
 

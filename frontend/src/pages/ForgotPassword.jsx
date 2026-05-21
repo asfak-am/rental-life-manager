@@ -10,6 +10,8 @@ export default function ForgotPassword() {
   const [resetting, setResetting] = useState(false)
   const [emailChecked, setEmailChecked] = useState(false)
   const [emailExists, setEmailExists] = useState(false)
+  const [showNewPassword, setShowNewPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
   const {
     register,
@@ -141,24 +143,44 @@ export default function ForgotPassword() {
 
               <div>
                 <label className="block text-xs font-semibold uppercase tracking-wider mb-1">New Password</label>
-                <input
-                  type="password"
-                  className="w-full bg-surface-container-high rounded-lg px-4 py-3"
-                  {...register('newPassword', { required: 'New password is required', minLength: { value: 6, message: 'Min 6 characters' } })}
-                />
+                <div className="relative">
+                  <input
+                    type={showNewPassword ? 'text' : 'password'}
+                    className="w-full bg-surface-container-high rounded-lg px-4 py-3 pr-12"
+                    {...register('newPassword', { required: 'New password is required', minLength: { value: 6, message: 'Min 6 characters' } })}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPassword((prev) => !prev)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-on-surface-variant"
+                    aria-label={showNewPassword ? 'Hide password' : 'Show password'}
+                  >
+                    <span className="material-symbols-outlined text-xl">{showNewPassword ? 'visibility_off' : 'visibility'}</span>
+                  </button>
+                </div>
                 {errors.newPassword && <p className="text-error text-xs mt-1">{errors.newPassword.message}</p>}
               </div>
 
               <div>
                 <label className="block text-xs font-semibold uppercase tracking-wider mb-1">Confirm Password</label>
-                <input
-                  type="password"
-                  className="w-full bg-surface-container-high rounded-lg px-4 py-3"
-                  {...register('confirmPassword', {
-                    required: 'Confirm password is required',
-                    validate: (value) => value === newPassword || 'Passwords do not match',
-                  })}
-                />
+                <div className="relative">
+                  <input
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    className="w-full bg-surface-container-high rounded-lg px-4 py-3 pr-12"
+                    {...register('confirmPassword', {
+                      required: 'Confirm password is required',
+                      validate: (value) => value === newPassword || 'Passwords do not match',
+                    })}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword((prev) => !prev)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-on-surface-variant"
+                    aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+                  >
+                    <span className="material-symbols-outlined text-xl">{showConfirmPassword ? 'visibility_off' : 'visibility'}</span>
+                  </button>
+                </div>
                 {errors.confirmPassword && <p className="text-error text-xs mt-1">{errors.confirmPassword.message}</p>}
               </div>
 

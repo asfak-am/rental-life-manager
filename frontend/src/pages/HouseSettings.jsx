@@ -225,7 +225,7 @@ export default function HouseSettings() {
                       onClick={() => {
                         if (mIsAdmin) return
                         if (!window.confirm(`Remove ${member.name || 'this member'} from the house?`)) return
-                        removeMemberMutation.mutate(member._id)
+                        removeMemberMutation.mutate({ userId: member._id })
                       }}
                       disabled={mIsAdmin}
                       className={`mt-2 px-3 py-1 rounded-lg text-sm font-semibold ${mIsAdmin ? 'bg-surface text-slate-500 cursor-not-allowed' : 'bg-error text-on-error'}`}

@@ -8,6 +8,7 @@ import TopBar from '../components/navigation/TopBar'
 import BottomNav from '../components/navigation/BottomNav'
 import DesktopAnalyticsView from '../layouts/desktop/DesktopAnalyticsView'
 import UtilityChart from '../components/common/UtilityChart'
+import NoHouseState from '../components/common/NoHouseState'
 import { formatCurrency, normalizeCurrency } from '../utils/currency'
 import ThemeCustomizer from '../components/common/ThemeCustomizer'
 
@@ -38,7 +39,7 @@ const UTILITY_RANGE_OPTIONS = [
 ]
 
 export default function Analytics() {
-  const { members } = useHouse()
+  const { house, members } = useHouse()
   const { user } = useAuth()
   const [utilityRange, setUtilityRange] = useState('6M')
   const [activeCategoryIndex, setActiveCategoryIndex] = useState(null)
@@ -46,11 +47,13 @@ export default function Analytics() {
   const { data: summaryData } = useQuery({
     queryKey: ['analytics-summary'],
     queryFn: () => expenseService.summary().then(r => r.data),
+    enabled: !!house,
   })
 
   const { data: utilityTrendResponse } = useQuery({
     queryKey: ['analytics-utility-trend', utilityRange],
     queryFn: () => expenseService.utilityTrend(utilityRange).then(r => r.data),
+    enabled: !!house,
   })
 
   const categoryData = summaryData?.categoryBreakdown
@@ -80,6 +83,15 @@ export default function Analytics() {
 
   const total  = summaryData?.totalExpenses || 0
   const currency = normalizeCurrency(user?.currency)
+
+  if (!house) {
+    return (
+      <NoHouseState
+        desktopPageTitle="Analytics"
+        desktopSubtitle="You are not connected to a home yet"
+      />
+    )
+  }
 
   return (
     <>

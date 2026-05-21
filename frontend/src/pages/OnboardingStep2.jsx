@@ -142,7 +142,7 @@ export default function OnboardingStep2() {
             disabled={loading}
             className="w-full py-5 signature-gradient text-on-primary font-headline font-bold text-lg rounded-2xl shadow-xl shadow-primary/20 hover:scale-[1.01] active:scale-[0.98] transition-all disabled:opacity-60"
           >
-            {loading ? 'Saving...' : 'Save & Continue â†’'}
+            {loading ? 'Saving...' : 'Save & Continue →'}
           </button>
         </form>
       </main>

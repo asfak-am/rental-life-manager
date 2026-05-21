@@ -7,6 +7,7 @@ import { useHouse } from '../context/HouseContext'
 import TopBar from '../components/navigation/TopBar'
 import BottomNav from '../components/navigation/BottomNav'
 import DesktopAppShell from '../layouts/desktop/DesktopAppShell'
+import NoHouseState from '../components/common/NoHouseState'
 import ThemeCustomizer from '../components/common/ThemeCustomizer'
 
 const PRIORITY_STYLES = {
@@ -69,13 +70,14 @@ function TaskCard({ task, members, onToggle, onDelete }) {
 }
 
 export default function Tasks() {
-  const { members } = useHouse()
+  const { house, members } = useHouse()
   const qc = useQueryClient()
   const [showAdd, setShowAdd] = useState(false)
 
   const { data, isLoading } = useQuery({
     queryKey: ['tasks'],
     queryFn: () => taskService.getAll().then(r => r.data),
+    enabled: !!house,
   })
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm()
@@ -104,6 +106,15 @@ export default function Tasks() {
 
   // Rotation: who's up this week
   const weekAssignee = members[new Date().getWeekNumber?.() % members.length] || members[0]
+
+  if (!house) {
+    return (
+      <NoHouseState
+        desktopPageTitle="Tasks"
+        desktopSubtitle="You are not connected to a home yet"
+      />
+    )
+  }
 
   const boardContent = (
     <>

@@ -64,7 +64,7 @@ function RegisterForm({ variant, defaultEmail, defaultInviteCode, onSubmit, load
             <input
               id="password"
               type="password"
-              placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
+              placeholder="Create a password"
               autoComplete="new-password"
               className="w-full bg-[#ebedf2] border-none rounded-xl px-4 py-3.5 text-slate-900 placeholder:text-slate-500"
               {...register('password', { required: 'Password is required', minLength: { value: 6, message: 'Min 6 characters' } })}
@@ -113,7 +113,7 @@ function RegisterForm({ variant, defaultEmail, defaultInviteCode, onSubmit, load
           <div className="space-y-1.5">
             <label className="block text-xs font-semibold uppercase tracking-wider text-on-surface-variant ml-1" htmlFor="password">Password</label>
             <input
-              id="password" type="password" placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
+              id="password" type="password" placeholder="Create a password"
               autoComplete="new-password"
               className="w-full bg-surface-container-high border-none rounded-lg px-4 py-3 text-on-surface placeholder:text-outline/60 focus:ring-2 focus:ring-primary/20 transition-all duration-200"
               {...register('password', { required: 'Password is required', minLength: { value: 6, message: 'Min 6 characters' } })}

@@ -10,6 +10,7 @@ import DesktopAppShell from '../layouts/desktop/DesktopAppShell'
 import ThemeCustomizer from '../components/common/ThemeCustomizer'
 import { formatCurrency } from '../utils/currency'
 import RentStatusCard from '../components/common/RentStatusCard'
+import NoHouseState from '../components/common/NoHouseState'
 
 export default function Balances() {
   const { house, members } = useHouse()
@@ -23,6 +24,7 @@ export default function Balances() {
     queryKey: ['balance-raw'],
     queryFn: () => balanceService.getRaw().then(r => r.data),
     refetchOnMount: 'always',
+    enabled: !!house,
   })
 
   const currentBillMonth = (() => {
@@ -34,16 +36,19 @@ export default function Balances() {
   const { data: rentData } = useQuery({
     queryKey: ['rent-expenses', currentBillMonth],
     queryFn: () => expenseService.getAll({ category: 'Rent' }).then(r => r.data),
+    enabled: !!house,
   })
 
   const { data: rentHistory } = useQuery({
     queryKey: ['rent-history'],
     queryFn: () => houseService.getRentHistory().then(r => r.data),
+    enabled: !!house,
   })
 
   const { data: rentStatus } = useQuery({
     queryKey: ['rent-status', currentBillMonth],
     queryFn: () => houseService.getRentStatus(currentBillMonth).then(r => r.data),
+    enabled: !!house,
   })
 
   // Fetch rent status for multiple months: from rent history + current month
@@ -62,7 +67,7 @@ export default function Balances() {
   const { data: rentStatuses } = useQuery({
     queryKey: ['rent-statuses', rentMonths.join(',')],
     queryFn: () => houseService.getRentStatuses(rentMonths.length ? rentMonths : [currentBillMonth]).then(r => r.data?.statuses || []),
-    enabled: true,
+    enabled: !!house,
     staleTime: 30 * 1000,
   })
 
@@ -208,6 +213,15 @@ export default function Balances() {
 
   const displayDebts = rawData?.debts || []
   const settlementCounterpartyId = settling ? (String(settling.from) === String(user?._id) ? settling.to : settling.from) : null
+
+  if (!house) {
+    return (
+      <NoHouseState
+        desktopPageTitle="Ledger"
+        desktopSubtitle="You are not connected to a home yet"
+      />
+    )
+  }
 
   const ledgerContent = (
     <>

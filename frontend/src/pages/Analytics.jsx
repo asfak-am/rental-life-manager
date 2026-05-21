@@ -41,15 +41,16 @@ export default function Analytics() {
   const { members } = useHouse()
   const { user } = useAuth()
   const [utilityRange, setUtilityRange] = useState('6M')
+  const [activeCategoryIndex, setActiveCategoryIndex] = useState(null)
 
   const { data: summaryData } = useQuery({
     queryKey: ['analytics-summary'],
     queryFn: () => expenseService.summary().then(r => r.data),
   })
 
-  const { data: expensesData } = useQuery({
-    queryKey: ['analytics-expenses-all'],
-    queryFn: () => expenseService.getAll().then(r => r.data),
+  const { data: utilityTrendResponse } = useQuery({
+    queryKey: ['analytics-utility-trend', utilityRange],
+    queryFn: () => expenseService.utilityTrend(utilityRange).then(r => r.data),
   })
 
   const categoryData = summaryData?.categoryBreakdown
@@ -59,43 +60,21 @@ export default function Analytics() {
   const monthlyData = summaryData?.monthlyTrends || []
 
   const utilityTrendData = useMemo(() => {
-    const expenses = expensesData?.expenses || []
-    const monthMap = new Map()
+    const trend = utilityTrendResponse?.trend || []
 
-    expenses.forEach(expense => {
-      if (expense.category !== 'Water Bill' && expense.category !== 'Electricity Bill') return
+    return trend.map(item => {
+      const [year, month] = String(item.month || '').split('-')
+      const date = new Date(Number(year), Number(month) - 1, 1)
 
-      const key = expense.billMonth
-        ? expense.billMonth
-        : new Date(expense.date).toISOString().slice(0, 7)
-
-      if (!monthMap.has(key)) {
-        monthMap.set(key, { key, water: 0, electricity: 0 })
+      return {
+        month: Number.isNaN(date.getTime())
+          ? item.month
+          : date.toLocaleDateString('en-US', { month: 'short' }),
+        water: Number(item.water || 0),
+        electricity: Number(item.electricity || 0),
       }
-
-      const item = monthMap.get(key)
-      if (expense.category === 'Water Bill') item.water += Number(expense.amount || 0)
-      if (expense.category === 'Electricity Bill') item.electricity += Number(expense.amount || 0)
     })
-
-    return [...monthMap.values()]
-      .sort((a, b) => a.key.localeCompare(b.key))
-      .map(item => {
-        const [year, month] = item.key.split('-')
-        const date = new Date(Number(year), Number(month) - 1, 1)
-        return {
-          month: date.toLocaleDateString('en-US', { month: 'short' }),
-          water: item.water,
-          electricity: item.electricity,
-        }
-      })
-  }, [expensesData?.expenses])
-
-  const filteredUtilityTrendData = useMemo(() => {
-    const selected = UTILITY_RANGE_OPTIONS.find(option => option.value === utilityRange)
-    if (!selected || selected.months == null) return utilityTrendData
-    return utilityTrendData.slice(-selected.months)
-  }, [utilityTrendData, utilityRange])
+  }, [utilityTrendResponse?.trend])
 
   const contributions = summaryData?.contributions || []
 
@@ -109,7 +88,7 @@ export default function Analytics() {
           summaryData={summaryData}
           categoryData={categoryData}
           monthlyData={monthlyData}
-          utilityTrendData={filteredUtilityTrendData}
+          utilityTrendData={utilityTrendData}
           utilityRange={utilityRange}
           onUtilityRangeChange={setUtilityRange}
         />
@@ -146,9 +125,37 @@ export default function Analytics() {
                       outerRadius={110}
                       paddingAngle={3}
                       dataKey="value"
+                      activeIndex={activeCategoryIndex ?? undefined}
+                      activeShape={(props) => {
+                        const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill } = props
+
+                        return (
+                          <g>
+                            <path
+                              d={`M ${cx} ${cy}
+                                L ${cx + Math.cos((-startAngle * Math.PI) / 180) * outerRadius} ${cy + Math.sin((-startAngle * Math.PI) / 180) * outerRadius}
+                                A ${outerRadius} ${outerRadius} 0 ${endAngle - startAngle > 180 ? 1 : 0} 0 ${cx + Math.cos((-endAngle * Math.PI) / 180) * outerRadius} ${cy + Math.sin((-endAngle * Math.PI) / 180) * outerRadius}
+                                L ${cx + Math.cos((-endAngle * Math.PI) / 180) * innerRadius} ${cy + Math.sin((-endAngle * Math.PI) / 180) * innerRadius}
+                                A ${innerRadius} ${innerRadius} 0 ${endAngle - startAngle > 180 ? 1 : 0} 1 ${cx + Math.cos((-startAngle * Math.PI) / 180) * innerRadius} ${cy + Math.sin((-startAngle * Math.PI) / 180) * innerRadius}
+                                Z`}
+                              fill={fill}
+                              stroke="white"
+                              strokeWidth={3}
+                              style={{ filter: 'drop-shadow(0 8px 16px rgba(0,0,0,0.12))' }}
+                            />
+                          </g>
+                        )
+                      }}
                     >
                       {categoryData.map((item, i) => (
-                        <Cell key={i} fill={getCategoryColor(item.name, i)} />
+                        <Cell
+                          key={i}
+                          fill={getCategoryColor(item.name, i)}
+                          onClick={() => setActiveCategoryIndex(i)}
+                          onMouseEnter={() => setActiveCategoryIndex(i)}
+                          onMouseLeave={() => setActiveCategoryIndex(null)}
+                          onTouchStart={() => setActiveCategoryIndex(i)}
+                        />
                       ))}
                     </Pie>
                     <Tooltip
@@ -170,17 +177,29 @@ export default function Analytics() {
             <div className="space-y-3 mt-4">
               {categoryData.length === 0 ? (
                 <p className="text-sm text-on-surface-variant">Add expenses to see category breakdowns.</p>
-              ) : categoryData.map((cat, i) => (
-                <div key={cat.name} className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-3 h-3 rounded-full" style={{ background: getCategoryColor(cat.name, i) }} />
-                    <span className="text-sm font-medium text-on-surface">{cat.name}</span>
+              ) : categoryData.map((cat, i) => {
+                const isActive = activeCategoryIndex === i
+                const totalCategoryValue = categoryData.reduce((a, b) => a + b.value, 0)
+
+                return (
+                  <div
+                    key={cat.name}
+                    className={`flex items-center justify-between rounded-xl px-3 py-2 transition-colors ${isActive ? 'bg-surface-container-high' : ''}`}
+                    onClick={() => setActiveCategoryIndex(i)}
+                    onMouseEnter={() => setActiveCategoryIndex(i)}
+                    onMouseLeave={() => setActiveCategoryIndex(null)}
+                    onTouchStart={() => setActiveCategoryIndex(i)}
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-3 h-3 rounded-full shrink-0" style={{ background: getCategoryColor(cat.name, i) }} />
+                      <span className={`text-sm font-medium truncate ${isActive ? 'text-primary' : 'text-on-surface'}`}>{cat.name}</span>
+                    </div>
+                    <span className={`font-bold ${isActive ? 'text-primary' : 'text-on-surface'}`}>
+                      {totalCategoryValue > 0 ? Math.round((cat.value / totalCategoryValue) * 100) : cat.value}%
+                    </span>
                   </div>
-                  <span className="font-bold text-on-surface">
-                    {total > 0 ? Math.round((cat.value / categoryData.reduce((a, b) => a + b.value, 0)) * 100) : cat.value}%
-                  </span>
-                </div>
-              ))}
+                )
+              })}
             </div>
           </div>
 
@@ -217,7 +236,7 @@ export default function Analytics() {
 
           <div className="lg:col-span-12 bg-surface-container-lowest rounded-2xl p-8 border border-outline-variant/15">
             <UtilityChart
-              data={filteredUtilityTrendData}
+              data={utilityTrendData}
               range={utilityRange}
               onRangeChange={setUtilityRange}
               currency={currency}
@@ -230,40 +249,7 @@ export default function Analytics() {
             />
           </div>
 
-          {/* Contributions leaderboard */}
-          <div className="lg:col-span-12 bg-surface-container-lowest rounded-2xl p-8 border border-outline-variant/15">
-            <h3 className="text-xl font-headline font-bold mb-6">Individual Contributions</h3>
-            <div className="space-y-4">
-              {contributions.length === 0 ? (
-                <p className="text-sm text-on-surface-variant">No contribution history yet.</p>
-              ) : contributions
-                .sort((a, b) => b.amount - a.amount)
-                .map((c, i) => {
-                  const pct = total > 0 ? ((c.amount / total) * 100).toFixed(0) : 0
-                  return (
-                    <div key={c.userId || i} className="flex items-center gap-4">
-                      <span className="text-xs font-bold text-outline w-4">{i + 1}</span>
-                      <div className="w-9 h-9 rounded-full bg-primary-fixed flex items-center justify-center text-xs font-bold text-primary flex-shrink-0">
-                        {c.name?.slice(0, 2).toUpperCase()}
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex justify-between mb-1">
-                          <span className="font-semibold text-sm text-on-surface">{c.name}</span>
-                          <span className="font-bold text-sm text-primary">{formatCurrency(c.amount, currency)}</span>
-                        </div>
-                        <div className="w-full h-2 bg-surface-container rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-primary rounded-full transition-all duration-700"
-                            style={{ width: `${pct}%` }}
-                          />
-                        </div>
-                      </div>
-                      <span className="text-xs text-outline font-bold">{pct}%</span>
-                    </div>
-                  )
-                })}
-            </div>
-          </div>
+          {/* Contributions leaderboard removed */}
 
         </div>
       </main>

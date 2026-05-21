@@ -5,8 +5,10 @@ const Expense = require('../models/Expense')
 const Task = require('../models/Task')
 const { generateInviteCode } = require('../utils/inviteCode')
 const RentPayment = require('../models/RentPayment')
-const { getRentStatusForUser, runRentRemindersForMonth, toMonthKey } = require('../services/rentService')
+const { ensureMonthlyRentRecords, getRentStatusForUser, runRentRemindersForMonth, toMonthKey } = require('../services/rentService')
 const redis = require('../utils/redisClient')
+
+const MONTH_KEY_REGEX = /^\d{4}-(0[1-9]|1[0-2])$/
 
 // helper: delete keys by pattern using SCAN
 async function clearKeysByPattern(pattern) {
@@ -264,6 +266,92 @@ const getRentStatus = async (req, res, next) => {
 	}
 }
 
+const getRentStatuses = async (req, res, next) => {
+	try {
+		const house = await requireHouse(req.user._id)
+		if (!house) return res.status(404).json({ message: 'No house found' })
+
+		const requestedMonths = String(req.query.months || '')
+			.split(',')
+			.map(item => item.trim())
+			.filter(Boolean)
+
+		const months = [...new Set(requestedMonths)]
+			.filter(month => MONTH_KEY_REGEX.test(month))
+			.slice(0, 8)
+
+		if (months.length === 0) months.push(toMonthKey())
+
+		const cacheKey = `rent-statuses:${house._id}:${req.user._id}:${months.join('|')}`
+		if (redis) {
+			try {
+				const cached = await redis.get(cacheKey)
+				if (cached) return res.json(JSON.parse(cached))
+			} catch (err) {
+				console.warn('Redis get failed for', cacheKey, err)
+			}
+		}
+
+		const now = new Date()
+		const memberUsers = await User.find({ _id: { $in: house.members.map(member => member.userId) } }).select('name displayName')
+		const userMap = new Map(memberUsers.map(member => [String(member._id), member]))
+
+		const statuses = await Promise.all(months.map(async (month) => {
+			const records = await ensureMonthlyRentRecords(house, month)
+			const recordMap = new Map(records.map(record => [String(record.userId), record]))
+			const myRecord = recordMap.get(String(req.user._id))
+			const paidCount = records.filter(record => record.status === 'paid').length
+
+			const memberStatuses = house.members.map(member => {
+				const memberId = String(member.userId)
+				const memberUser = userMap.get(memberId)
+				const memberRecord = recordMap.get(memberId)
+				return {
+					userId: memberId,
+					name: memberUser?.displayName || memberUser?.name || 'Member',
+					status: memberRecord?.status || 'unpaid',
+					amountDue: Number(memberRecord?.amountDue || 0),
+					paidAt: memberRecord?.paidAt || null,
+				}
+			})
+
+			return {
+				month,
+				totalRentAmount: Number(house.monthlyRentAmount || 0),
+				memberCount: house.members.length,
+				perPersonRent: Math.round((Number(house.monthlyRentAmount || 0) / Math.max(house.members.length, 1)) * 100) / 100,
+				myRent: myRecord
+					? {
+						status: myRecord.status,
+						amountDue: Number(myRecord.amountDue || 0),
+						paidAt: myRecord.paidAt || null,
+					}
+					: { status: 'unpaid', amountDue: 0, paidAt: null },
+				paidCount,
+				unpaidCount: Math.max(records.length - paidCount, 0),
+				memberStatuses,
+				payButtonVisible: now.getDate() >= 20,
+				earlyPayAllowed: true,
+				warningVisible: now.getDate() >= 25 && myRecord?.status !== 'paid',
+			}
+		}))
+
+		const response = { statuses }
+		if (redis) {
+			try {
+				const ttl = parseInt(process.env.RENT_STATUS_CACHE_TTL || '60', 10)
+				await redis.set(cacheKey, JSON.stringify(response), 'EX', ttl)
+			} catch (err) {
+				console.warn('Redis set failed for', cacheKey, err)
+			}
+		}
+
+		return res.json(response)
+	} catch (error) {
+		next(error)
+	}
+}
+
 const payMonthlyRent = async (req, res, next) => {
 	try {
 		const house = await requireHouse(req.user._id)
@@ -286,6 +374,7 @@ const payMonthlyRent = async (req, res, next) => {
 		if (redis) {
 			try {
 				await clearKeysByPattern(`rent-status:${house._id}:*:${month}`)
+				await clearKeysByPattern(`rent-statuses:${house._id}:*`)
 				await clearKeysByPattern(`rent-history:${house._id}`)
 				await clearKeysByPattern(`expense-summary:${house._id}:*`)
 			} catch (err) {
@@ -342,6 +431,7 @@ const payMonthlyRentForMember = async (req, res, next) => {
 		if (!memberId) return res.status(400).json({ message: 'userId is required' })
 
 		const month = req.body.month ? String(req.body.month) : toMonthKey()
+		await ensureMonthlyRentRecords(house, month)
 
 		const mongoose = require('mongoose')
 		let rentRecord = await RentPayment.findOne({ houseId: house._id, userId: memberId, month })
@@ -355,13 +445,11 @@ const payMonthlyRentForMember = async (req, res, next) => {
 			}
 		}
 		if (!rentRecord) return res.status(404).json({ message: 'Rent record not found for member' })
-		console.debug(`payMonthlyRentForMember: found rentRecord ${rentRecord._id} for user ${memberId} month ${month} status=${rentRecord.status}`)
 		if (rentRecord.status === 'paid') return res.json({ message: 'Rent already paid', rentStatus: await getRentStatusForUser({ house, userId: memberId, month, now: new Date() }) })
 
 		rentRecord.status = 'paid'
 		rentRecord.paidAt = new Date()
 		await rentRecord.save()
-		console.debug(`payMonthlyRentForMember: saved rentRecord ${rentRecord._id} status=${rentRecord.status}`)
 
 		// Invalidate cache for this member and the house/month
 		if (redis) {
@@ -371,6 +459,7 @@ const payMonthlyRentForMember = async (req, res, next) => {
 				await redis.del(memberKey)
 				// delete any other cached keys for this house/month
 				await clearKeysByPattern(`rent-status:${house._id}:*:${month}`)
+				await clearKeysByPattern(`rent-statuses:${house._id}:*`)
 				await clearKeysByPattern(`rent-history:${house._id}`)
 				await clearKeysByPattern(`expense-summary:${house._id}:*`)
 			} catch (err) {
@@ -378,21 +467,25 @@ const payMonthlyRentForMember = async (req, res, next) => {
 			}
 		}
 
-	// Also mark corresponding rent expenses as settled for this member
-	const Expense = require('../models/Expense')
-	const rentExpenses = await Expense.find({ houseId: house._id, category: 'Rent', billMonth: month })
-	console.debug(`payMonthlyRentForMember: found ${rentExpenses.length} rent expenses for month ${month}`)
-	
-	for (const expense of rentExpenses) {
-		const participant = expense.participants.find(p => String(p.userId) === memberId)
-		if (participant && !participant.settled) {
-			participant.settled = true
-			participant.settledAt = new Date()
-			expense.auditTrail.push({ action: 'Marked settled via rent payment', by: req.user._id })
-			await expense.save()
-			console.debug(`payMonthlyRentForMember: marked expense ${expense._id} participant settled`)
-		}
-	}
+		// Also mark corresponding rent expenses as settled for this member
+		await Expense.updateMany(
+			{ houseId: house._id, category: 'Rent', billMonth: month, 'participants.userId': rentRecord.userId },
+			{
+				$set: {
+					'participants.$[participant].settled': true,
+					'participants.$[participant].settledAt': new Date(),
+				},
+				$push: {
+					auditTrail: {
+						action: 'Marked settled via rent payment',
+						by: req.user._id,
+					},
+				},
+			},
+			{
+				arrayFilters: [{ 'participant.userId': rentRecord.userId, 'participant.settled': { $ne: true } }],
+			}
+		)
 		const notifications = house.members.map(member => ({
 			userId: member.userId,
 			houseId: house._id,
@@ -711,6 +804,7 @@ module.exports = {
 	leaveHouse,
 	updateMonthlyRent,
 	getRentStatus,
+	getRentStatuses,
 	payMonthlyRent,
  payMonthlyRentForMember,
 	getRentHistory,

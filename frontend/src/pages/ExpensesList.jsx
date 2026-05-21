@@ -1,6 +1,6 @@
 ﻿import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { expenseService, houseService } from '../services'
 import { useHouse } from '../context/HouseContext'
 import { useAuth } from '../context/AuthContext'
@@ -24,10 +24,12 @@ import { getErrorMessage } from '../utils/apiError'
 
 export default function ExpensesList() {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const { members } = useHouse()
   const { user } = useAuth()
   const [activeTab, setActiveTab] = useState('All')
   const [search, setSearch]       = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
   const [expenseFromDate, setExpenseFromDate] = useState('')
@@ -38,25 +40,39 @@ export default function ExpensesList() {
   const [rentPageSize, setRentPageSize] = useState(10)
   const preferredCurrency = user?.currency || 'LKR'
 
+  const getVisiblePages = (current, total, maxButtons = 3) => {
+    const safeTotal = Math.max(1, total || 1)
+    const safeCurrent = Math.min(Math.max(1, current || 1), safeTotal)
+    const buttonCount = Math.min(maxButtons, safeTotal)
+    const start = Math.max(1, Math.min(safeCurrent - Math.floor(buttonCount / 2), safeTotal - buttonCount + 1))
+    return Array.from({ length: buttonCount }, (_, index) => start + index)
+  }
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(search.trim()), 250)
+    return () => clearTimeout(timer)
+  }, [search])
+
   useEffect(() => {
     setPage(1)
-  }, [activeTab, search, expenseFromDate, expenseToDate])
+  }, [activeTab, debouncedSearch, expenseFromDate, expenseToDate])
 
   useEffect(() => {
     setRentPage(1)
   }, [rentFromDate, rentToDate])
 
   const { data, isLoading, error, refetch: refetchExpenses } = useQuery({
-    queryKey: ['expenses', activeTab, search, page, pageSize],
+    queryKey: ['expenses', activeTab, debouncedSearch, page, pageSize, expenseFromDate, expenseToDate],
     queryFn: () => expenseService.getAll({
       category: activeTab === 'All' ? undefined : activeTab,
-      search:   search || undefined,
+      search:   debouncedSearch || undefined,
       page,
       limit: pageSize,
       from: expenseFromDate || undefined,
       to: expenseToDate || undefined,
     }).then(r => r.data),
     placeholderData: (previousData) => previousData,
+    staleTime: 30 * 1000,
   })
 
   const { data: summaryData, error: summaryError, refetch: refetchSummary } = useQuery({
@@ -73,7 +89,44 @@ export default function ExpensesList() {
       to: rentToDate || undefined,
     }).then(r => r.data),
     placeholderData: (previousData) => previousData,
+    staleTime: 30 * 1000,
   })
+
+  useEffect(() => {
+    const totalPages = Number(data?.pages || 1)
+    const nextPage = page + 1
+    if (nextPage > totalPages) return
+
+    queryClient.prefetchQuery({
+      queryKey: ['expenses', activeTab, debouncedSearch, nextPage, pageSize, expenseFromDate, expenseToDate],
+      queryFn: () => expenseService.getAll({
+        category: activeTab === 'All' ? undefined : activeTab,
+        search: debouncedSearch || undefined,
+        page: nextPage,
+        limit: pageSize,
+        from: expenseFromDate || undefined,
+        to: expenseToDate || undefined,
+      }).then(r => r.data),
+      staleTime: 30 * 1000,
+    })
+  }, [queryClient, data?.pages, page, activeTab, debouncedSearch, pageSize, expenseFromDate, expenseToDate])
+
+  useEffect(() => {
+    const totalPages = Number(rentHistoryData?.pages || 1)
+    const nextPage = rentPage + 1
+    if (nextPage > totalPages) return
+
+    queryClient.prefetchQuery({
+      queryKey: ['rent-history', nextPage, rentPageSize, rentFromDate, rentToDate],
+      queryFn: () => houseService.getRentHistory({
+        page: nextPage,
+        limit: rentPageSize,
+        from: rentFromDate || undefined,
+        to: rentToDate || undefined,
+      }).then(r => r.data),
+      staleTime: 30 * 1000,
+    })
+  }, [queryClient, rentHistoryData?.pages, rentPage, rentPageSize, rentFromDate, rentToDate])
 
   const memberMap = useMemo(() => createMemberMap(members), [members])
   const filteredExpenses = useMemo(() => data?.expenses || [], [data?.expenses])
@@ -205,10 +258,36 @@ export default function ExpensesList() {
           })}
           {/* Mobile pagination */}
           {data?.pages > 1 && (
-            <div className="flex items-center justify-center gap-3 mt-4">
-              <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page <= 1} className="px-3 py-1 rounded-md bg-surface-container text-sm">Prev</button>
-              <div className="text-sm text-slate-600">Page {data?.page} of {data?.pages}</div>
-              <button onClick={() => setPage(p => Math.min(data?.pages || 1, p + 1))} disabled={page >= data?.pages} className="px-3 py-1 rounded-md bg-surface-container text-sm">Next</button>
+            <div className="flex items-center justify-center gap-2 mt-4 flex-wrap">
+              <button
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={page <= 1}
+                className="px-3 py-1.5 rounded-xl bg-surface-container text-sm font-semibold border border-outline-variant/30 disabled:opacity-45 disabled:cursor-not-allowed hover:bg-surface-container-high transition"
+              >
+                Prev
+              </button>
+              {getVisiblePages(data?.page || page, data?.pages || 1, 3).map(pageNumber => (
+                <button
+                  key={pageNumber}
+                  type="button"
+                  onClick={() => setPage(pageNumber)}
+                  className={`min-w-9 px-3 py-1.5 rounded-xl text-sm font-semibold border transition ${
+                    (data?.page || page) === pageNumber
+                      ? 'bg-primary text-on-primary border-primary shadow-md shadow-primary/20'
+                      : 'bg-surface-container text-on-surface border-outline-variant/30 hover:bg-surface-container-high'
+                  }`}
+                >
+                  {pageNumber}
+                </button>
+              ))}
+              <button
+                onClick={() => setPage(p => Math.min(data?.pages || 1, p + 1))}
+                disabled={page >= data?.pages}
+                className="px-3 py-1.5 rounded-xl bg-surface-container text-sm font-semibold border border-outline-variant/30 disabled:opacity-45 disabled:cursor-not-allowed hover:bg-surface-container-high transition"
+              >
+                Next
+              </button>
+              <div className="text-sm text-slate-600 w-full text-center mt-1">Page {data?.page} of {data?.pages}</div>
             </div>
           )}
         </div>

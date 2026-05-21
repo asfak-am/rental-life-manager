@@ -46,6 +46,10 @@ const buildCroppedAvatar = async (imageSrc, imageState, cropState) => {
 export default function Profile() {
   const { user, updateUser } = useAuth()
   const [saving, setSaving] = useState(false)
+  const [isDesktop, setIsDesktop] = useState(() => {
+    if (typeof window === 'undefined') return false
+    return window.matchMedia('(min-width: 1024px)').matches
+  })
   const [avatarPreview, setAvatarPreview] = useState(user?.avatar || '')
   const [cropOpen, setCropOpen] = useState(false)
   const [cropSourceUrl, setCropSourceUrl] = useState('')
@@ -68,7 +72,7 @@ export default function Profile() {
       .slice(0, 2)
   }, [defaultDisplayName, defaultName])
 
-  const { register, handleSubmit, formState: { errors } } = useForm({
+  const { register, handleSubmit, reset, formState: { errors } } = useForm({
     defaultValues: {
       name: defaultName,
       displayName: defaultDisplayName,
@@ -80,6 +84,31 @@ export default function Profile() {
   useEffect(() => () => {
     if (cropSourceUrl) URL.revokeObjectURL(cropSourceUrl)
   }, [cropSourceUrl])
+
+  useEffect(() => {
+    reset({
+      name: user?.name || '',
+      displayName: user?.displayName || user?.name || '',
+      bio: user?.bio || '',
+      currency: user?.currency || 'LKR',
+    })
+    setAvatarPreview(user?.avatar || '')
+  }, [reset, user])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined
+    const media = window.matchMedia('(min-width: 1024px)')
+    const onChange = (event) => setIsDesktop(event.matches)
+    setIsDesktop(media.matches)
+
+    if (media.addEventListener) {
+      media.addEventListener('change', onChange)
+      return () => media.removeEventListener('change', onChange)
+    }
+
+    media.addListener(onChange)
+    return () => media.removeListener(onChange)
+  }, [])
 
   const getDisplayMetrics = (zoomValue = cropZoom, size = cropImageSize) => {
     if (!size.width || !size.height) {
@@ -406,7 +435,7 @@ export default function Profile() {
 
   return (
     <>
-      <div className="hidden lg:block">
+      {isDesktop ? (
         <DesktopAppShell
           title="Profile"
           subtitle="Manage your personal details and profile picture."
@@ -450,9 +479,8 @@ export default function Profile() {
             </div>
           </section>
         </DesktopAppShell>
-      </div>
-
-      <div className="lg:hidden bg-surface app-light-gradient font-body text-on-surface min-h-screen pb-32">
+      ) : (
+      <div className="bg-surface app-light-gradient font-body text-on-surface min-h-screen pb-32">
         <TopBar />
         <main className="max-w-screen-xl mx-auto px-6 pt-6 pb-32 space-y-5">
           <div>
@@ -500,6 +528,7 @@ export default function Profile() {
         </main>
         <BottomNav />
       </div>
+      )}
     </>
   )
 }

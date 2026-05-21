@@ -35,6 +35,7 @@ export default function DesktopDashboardView({
   rentStatuses = [],
   onPayMemberRent,
   payingMemberRent = false,
+  markingMemberKey = '',
   isAdmin = false,
   onExpenseClick,
 }) {
@@ -124,6 +125,7 @@ export default function DesktopDashboardView({
                 isAdmin={isAdmin}
                 onPayMemberRent={onPayMemberRent}
                 payingMemberRent={payingMemberRent}
+                markingMemberKey={markingMemberKey}
               />
             ))}
           </section>

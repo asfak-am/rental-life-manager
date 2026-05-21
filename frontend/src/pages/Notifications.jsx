@@ -3,6 +3,8 @@ import api from '../services/api'
 import TopBar from '../components/navigation/TopBar'
 import BottomNav from '../components/navigation/BottomNav'
 import DesktopAppShell from '../layouts/desktop/DesktopAppShell'
+import { useAuth } from '../context/AuthContext'
+import { formatCurrency, normalizeCurrency } from '../utils/currency'
 
 const TYPE_STYLES = {
   expense:  { icon: 'receipt_long',        bg: 'bg-primary-fixed',       icon_color: 'text-primary'   },
@@ -13,7 +15,9 @@ const TYPE_STYLES = {
 }
 
 export default function Notifications() {
+  const { user } = useAuth()
   const qc = useQueryClient()
+  const preferredCurrency = normalizeCurrency(user?.currency)
 
   const { data, isLoading } = useQuery({
     queryKey: ['notifications'],
@@ -68,7 +72,7 @@ export default function Notifications() {
               {timeAgo(n.createdAt)}
             </span>
             {n.amount && (
-              <span className="text-xs font-bold text-primary">â‚¹{n.amount.toLocaleString()}</span>
+              <span className="text-xs font-bold text-primary">{formatCurrency(n.amount, preferredCurrency)}</span>
             )}
           </div>
         </div>
@@ -99,7 +103,7 @@ export default function Notifications() {
             <section className="col-span-8 bg-white rounded-3xl p-6 border border-slate-200 space-y-3">
               <div className="flex items-center justify-between mb-2 px-2">
                 <span className="text-xs font-bold uppercase tracking-widest text-slate-400">
-                  Recent Activity {unread.length > 0 && `Â· ${unread.length} unread`}
+                  Recent Activity {unread.length > 0 && `- ${unread.length} unread`}
                 </span>
               </div>
 
@@ -171,7 +175,7 @@ export default function Notifications() {
             <div className="lg:col-span-2 space-y-3">
               <div className="flex items-center justify-between mb-4 px-2">
                 <span className="text-xs font-bold uppercase tracking-widest text-outline">
-                  Recent Activity {unread.length > 0 && `Â· ${unread.length} unread`}
+                  Recent Activity {unread.length > 0 && `- ${unread.length} unread`}
                 </span>
                 {unread.length > 0 && (
                   <button

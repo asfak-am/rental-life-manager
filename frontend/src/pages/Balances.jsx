@@ -56,21 +56,57 @@ export default function Balances() {
         return `${d.getFullYear()}-${`${d.getMonth() + 1}`.padStart(2, '0')}`
       })()),
     ])
-    return Array.from(months).sort((a, b) => b.localeCompare(a))
+    return Array.from(months).sort((a, b) => b.localeCompare(a)).slice(0, 6)
   })()
 
   const { data: rentStatuses } = useQuery({
-    queryKey: ['rent-statuses', rentMonths],
-    queryFn: async () => {
-      const months = rentMonths.length ? rentMonths : [currentBillMonth]
-      const results = await Promise.all(months.map(m => houseService.getRentStatus(m).then(r => r.data).catch(() => null)))
-      return results.filter(Boolean)
-    },
-    enabled: Boolean(rentMonths.length),
+    queryKey: ['rent-statuses', rentMonths.join(',')],
+    queryFn: () => houseService.getRentStatuses(rentMonths.length ? rentMonths : [currentBillMonth]).then(r => r.data?.statuses || []),
+    enabled: true,
+    staleTime: 30 * 1000,
   })
 
   const payMemberRentMutation = useMutation({
     mutationFn: ({ userId, month }) => houseService.payRentForMember(userId, month),
+    onMutate: ({ userId, month }) => {
+      const targetMonth = month || currentBillMonth
+      const uid = String(userId)
+
+      qc.setQueryData(['rent-status', targetMonth], (previous) => {
+        if (!previous || !Array.isArray(previous.memberStatuses)) return previous
+        const memberStatuses = previous.memberStatuses.map(member => (
+          String(member.userId) === uid
+            ? { ...member, status: 'paid', paidAt: member.paidAt || new Date().toISOString() }
+            : member
+        ))
+        const paidCount = memberStatuses.filter(member => member.status === 'paid').length
+        return {
+          ...previous,
+          memberStatuses,
+          paidCount,
+          unpaidCount: Math.max(memberStatuses.length - paidCount, 0),
+        }
+      })
+
+      qc.setQueriesData({ queryKey: ['rent-statuses'] }, (previous) => {
+        if (!Array.isArray(previous)) return previous
+        return previous.map(status => {
+          if (String(status?.month) !== String(targetMonth) || !Array.isArray(status.memberStatuses)) return status
+          const memberStatuses = status.memberStatuses.map(member => (
+            String(member.userId) === uid
+              ? { ...member, status: 'paid', paidAt: member.paidAt || new Date().toISOString() }
+              : member
+          ))
+          const paidCount = memberStatuses.filter(member => member.status === 'paid').length
+          return {
+            ...status,
+            memberStatuses,
+            paidCount,
+            unpaidCount: Math.max(memberStatuses.length - paidCount, 0),
+          }
+        })
+      })
+    },
     onSuccess: (res, vars) => {
       const month = vars?.month || currentBillMonth
       try {
@@ -93,8 +129,12 @@ export default function Balances() {
       }
       toast.success('Member rent marked as paid')
     },
-    onError: () => toast.error('Failed to mark member rent as paid'),
+    onError: (err) => toast.error(err.response?.data?.message || 'Failed to mark member rent as paid'),
   })
+
+  const markingMemberKey = payMemberRentMutation.isPending && payMemberRentMutation.variables
+    ? `${String(payMemberRentMutation.variables.userId)}:${String(payMemberRentMutation.variables.month || currentBillMonth)}`
+    : ''
 
   const settleMutation = useMutation({
     mutationFn: (data) => balanceService.settle(data),
@@ -204,6 +244,7 @@ export default function Balances() {
                   isAdmin={isAdmin}
                   onPayMemberRent={(data) => payMemberRentMutation.mutate(data)}
                   payingMemberRent={payMemberRentMutation.isPending}
+                  markingMemberKey={markingMemberKey}
                 />
               ))}
             </div>

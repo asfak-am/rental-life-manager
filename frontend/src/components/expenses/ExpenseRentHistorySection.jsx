@@ -13,6 +13,14 @@ export default function ExpenseRentHistorySection({
   pages = 1,
   onPageChange,
 }) {
+  const getVisiblePages = (current, total, maxButtons = 3) => {
+    const safeTotal = Math.max(1, total || 1)
+    const safeCurrent = Math.min(Math.max(1, current || 1), safeTotal)
+    const buttonCount = Math.min(maxButtons, safeTotal)
+    const start = Math.max(1, Math.min(safeCurrent - Math.floor(buttonCount / 2), safeTotal - buttonCount + 1))
+    return Array.from({ length: buttonCount }, (_, index) => start + index)
+  }
+
   return (
     <div className="space-y-3 mt-10">
       <h3 className="text-xs font-bold uppercase tracking-widest text-on-surface-variant mb-4 px-1">Rent Paid History</h3>
@@ -49,12 +57,36 @@ export default function ExpenseRentHistorySection({
       ))}
 
       {pages > 1 && (
-        <div className="flex items-center justify-center gap-3 pt-2">
-          <button type="button" onClick={() => onPageChange?.(Math.max(1, page - 1))} disabled={page <= 1} className="px-3 py-1 rounded-md bg-surface-container text-sm">
+        <div className="flex items-center justify-center gap-2 pt-2 flex-wrap">
+          <button
+            type="button"
+            onClick={() => onPageChange?.(Math.max(1, page - 1))}
+            disabled={page <= 1}
+            className="px-3 py-1.5 rounded-xl bg-surface-container text-sm font-semibold border border-outline-variant/30 disabled:opacity-45 disabled:cursor-not-allowed hover:bg-surface-container-high transition"
+          >
             Prev
           </button>
+          {getVisiblePages(page, pages, 3).map(pageNumber => (
+            <button
+              key={pageNumber}
+              type="button"
+              onClick={() => onPageChange?.(pageNumber)}
+              className={`min-w-9 px-3 py-1.5 rounded-xl text-sm font-semibold border transition ${
+                page === pageNumber
+                  ? 'bg-primary text-on-primary border-primary shadow-md shadow-primary/20'
+                  : 'bg-surface-container text-on-surface border-outline-variant/30 hover:bg-surface-container-high'
+              }`}
+            >
+              {pageNumber}
+            </button>
+          ))}
           <div className="text-sm text-on-surface-variant">Page {page} of {pages}</div>
-          <button type="button" onClick={() => onPageChange?.(Math.min(pages, page + 1))} disabled={page >= pages} className="px-3 py-1 rounded-md bg-surface-container text-sm">
+          <button
+            type="button"
+            onClick={() => onPageChange?.(Math.min(pages, page + 1))}
+            disabled={page >= pages}
+            className="px-3 py-1.5 rounded-xl bg-surface-container text-sm font-semibold border border-outline-variant/30 disabled:opacity-45 disabled:cursor-not-allowed hover:bg-surface-container-high transition"
+          >
             Next
           </button>
         </div>

@@ -55,6 +55,7 @@ export default function ExpenseDetailCard({
   const bodyPadding = compact ? 'px-6 py-6 space-y-6' : 'px-8 py-8 space-y-8'
   const titleClass = compact ? 'text-xl font-extrabold tracking-tight text-on-surface break-words' : 'text-2xl font-extrabold tracking-tight text-on-surface break-words'
   const amountClass = compact ? 'text-2xl font-black text-on-surface tracking-tighter' : 'text-3xl font-black text-on-surface tracking-tighter'
+  const canDelete = String(expense.paidBy) === String(userId)
 
   return (
     <div className={containerClass}>
@@ -97,6 +98,12 @@ export default function ExpenseDetailCard({
       </div>
 
       <div className={bodyPadding}>
+        {!canEdit && (
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-900">
+            Read-only view: only the creator can edit this expense.
+          </div>
+        )}
+
         <div>
           <h3 className={`${compact ? 'text-lg' : 'text-xl'} font-bold tracking-tight mb-6`}>Split Breakdown</h3>
           <div className="space-y-3">
@@ -146,16 +153,16 @@ export default function ExpenseDetailCard({
               {settling ? 'Settling...' : 'Settle Up'}
             </button>
           )}
-          {canEdit && (
-            <button
-              type="button"
-              onClick={onEdit}
-              className="px-5 py-4 bg-primary-fixed text-primary font-bold rounded-2xl active:scale-95 transition-all"
-            >
-              <span className="material-symbols-outlined">edit</span>
-            </button>
-          )}
-          {String(expense.paidBy) === String(userId) && (
+          <button
+            type="button"
+            onClick={canEdit ? onEdit : undefined}
+            disabled={!canEdit}
+            title={!canEdit ? 'Only the creator can edit this expense' : 'Edit expense'}
+            className="px-5 py-4 bg-primary-fixed text-primary font-bold rounded-2xl active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <span className="material-symbols-outlined">edit</span>
+          </button>
+          {canDelete && (
             <button
               type="button"
               onClick={onDelete}

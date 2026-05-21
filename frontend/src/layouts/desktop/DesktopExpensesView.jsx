@@ -35,6 +35,14 @@ export default function DesktopExpensesView({
   const totalExpenses = summaryData?.totalExpenses || 0
   const myShare = summaryData?.myShare || 0
 
+  const getVisiblePages = (current, total, maxButtons = 3) => {
+    const safeTotal = Math.max(1, total || 1)
+    const safeCurrent = Math.min(Math.max(1, current || 1), safeTotal)
+    const buttonCount = Math.min(maxButtons, safeTotal)
+    const start = Math.max(1, Math.min(safeCurrent - Math.floor(buttonCount / 2), safeTotal - buttonCount + 1))
+    return Array.from({ length: buttonCount }, (_, index) => start + index)
+  }
+
   const exportPdf = () => {
     exportExpensesPdf({
       summaryData,
@@ -147,10 +155,38 @@ export default function DesktopExpensesView({
           </table>
         )}
         {/* Pagination */}
-        <div className="px-6 py-4 bg-white border-t border-slate-200 flex items-center justify-end gap-2">
-          <button type="button" onClick={() => onPageChange?.(Math.max(1, page - 1))} disabled={page <= 1} className="px-3 py-1 rounded-md bg-surface-container text-sm">Prev</button>
+        <div className="px-6 py-4 bg-white border-t border-slate-200 flex items-center justify-end gap-2 flex-wrap">
+          <button
+            type="button"
+            onClick={() => onPageChange?.(Math.max(1, page - 1))}
+            disabled={page <= 1}
+            className="px-3 py-1.5 rounded-xl bg-surface-container text-sm font-semibold border border-outline-variant/30 disabled:opacity-45 disabled:cursor-not-allowed hover:bg-surface-container-high transition"
+          >
+            Prev
+          </button>
+          {getVisiblePages(page, pages, 3).map(pageNumber => (
+            <button
+              key={pageNumber}
+              type="button"
+              onClick={() => onPageChange?.(pageNumber)}
+              className={`min-w-9 px-3 py-1.5 rounded-xl text-sm font-semibold border transition ${
+                page === pageNumber
+                  ? 'bg-primary text-on-primary border-primary shadow-md shadow-primary/20'
+                  : 'bg-surface-container text-on-surface border-outline-variant/30 hover:bg-surface-container-high'
+              }`}
+            >
+              {pageNumber}
+            </button>
+          ))}
+          <button
+            type="button"
+            onClick={() => onPageChange?.(Math.min(pages, page + 1))}
+            disabled={page >= pages}
+            className="px-3 py-1.5 rounded-xl bg-surface-container text-sm font-semibold border border-outline-variant/30 disabled:opacity-45 disabled:cursor-not-allowed hover:bg-surface-container-high transition"
+          >
+            Next
+          </button>
           <div className="text-sm text-slate-600">Page {page} of {pages}</div>
-          <button type="button" onClick={() => onPageChange?.(Math.min(pages, page + 1))} disabled={page >= pages} className="px-3 py-1 rounded-md bg-surface-container text-sm">Next</button>
         </div>
       </section>
 
@@ -200,10 +236,38 @@ export default function DesktopExpensesView({
             </tbody>
           </table>
         )}
-        <div className="px-6 py-4 bg-white border-t border-slate-200 flex items-center justify-end gap-2">
-          <button type="button" onClick={() => onRentPageChange?.(Math.max(1, rentPage - 1))} disabled={rentPage <= 1} className="px-3 py-1 rounded-md bg-surface-container text-sm">Prev</button>
+        <div className="px-6 py-4 bg-white border-t border-slate-200 flex items-center justify-end gap-2 flex-wrap">
+          <button
+            type="button"
+            onClick={() => onRentPageChange?.(Math.max(1, rentPage - 1))}
+            disabled={rentPage <= 1}
+            className="px-3 py-1.5 rounded-xl bg-surface-container text-sm font-semibold border border-outline-variant/30 disabled:opacity-45 disabled:cursor-not-allowed hover:bg-surface-container-high transition"
+          >
+            Prev
+          </button>
+          {getVisiblePages(rentPage, rentPages, 3).map(pageNumber => (
+            <button
+              key={pageNumber}
+              type="button"
+              onClick={() => onRentPageChange?.(pageNumber)}
+              className={`min-w-9 px-3 py-1.5 rounded-xl text-sm font-semibold border transition ${
+                rentPage === pageNumber
+                  ? 'bg-primary text-on-primary border-primary shadow-md shadow-primary/20'
+                  : 'bg-surface-container text-on-surface border-outline-variant/30 hover:bg-surface-container-high'
+              }`}
+            >
+              {pageNumber}
+            </button>
+          ))}
+          <button
+            type="button"
+            onClick={() => onRentPageChange?.(Math.min(rentPages, rentPage + 1))}
+            disabled={rentPage >= rentPages}
+            className="px-3 py-1.5 rounded-xl bg-surface-container text-sm font-semibold border border-outline-variant/30 disabled:opacity-45 disabled:cursor-not-allowed hover:bg-surface-container-high transition"
+          >
+            Next
+          </button>
           <div className="text-sm text-slate-600">Page {rentPage} of {rentPages}</div>
-          <button type="button" onClick={() => onRentPageChange?.(Math.min(rentPages, rentPage + 1))} disabled={rentPage >= rentPages} className="px-3 py-1 rounded-md bg-surface-container text-sm">Next</button>
         </div>
       </section>
     </DesktopAppShell>

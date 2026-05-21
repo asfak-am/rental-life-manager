@@ -273,11 +273,16 @@ const getAllExpenses = async (req, res, next) => {
 
 		const pageNum = Math.max(1, Number(page) || 1)
 		const pageSize = Math.max(1, Math.min(100, Number(limit) || 10))
-		const cacheKey = `expenses:house:${house._id}:q:${JSON.stringify({ category, search, billMonth, limit: pageSize, page: pageNum })}`
+		const cacheKey = `expenses:house:${house._id}:q:${JSON.stringify({ category, search, billMonth, from: from || null, to: to || null, limit: pageSize, page: pageNum })}`
 		if (redis) {
 			try {
 				const cached = await redis.get(cacheKey)
-				if (cached) return res.json(JSON.parse(cached))
+				if (cached) {
+					const parsed = JSON.parse(cached)
+					if (parsed && Array.isArray(parsed.expenses) && Number.isFinite(parsed.pages) && Number.isFinite(parsed.page)) {
+						return res.json(parsed)
+					}
+				}
 			} catch (err) { console.warn('Redis get failed for', cacheKey, err && err.message) }
 		}
 
@@ -290,15 +295,17 @@ const getAllExpenses = async (req, res, next) => {
 			.limit(pageSize)
 			.lean()
 
+		const pages = Math.max(1, Math.ceil(total / pageSize))
+		const response = { expenses, total, page: pageNum, pages, pageSize }
+
 		// cache result briefly
 		if (redis) {
 			try {
-				await redis.set(cacheKey, JSON.stringify({ expenses }), 'EX', parseInt(process.env.EXPENSES_CACHE_TTL || '60', 10))
+				await redis.set(cacheKey, JSON.stringify(response), 'EX', parseInt(process.env.EXPENSES_CACHE_TTL || '60', 10))
 			} catch (err) { console.warn('Redis set failed for', cacheKey, err && err.message) }
 		}
 
-		const pages = Math.max(1, Math.ceil(total / pageSize))
-		return res.json({ expenses, total, page: pageNum, pages, pageSize })
+		return res.json(response)
 	} catch (error) {
 		next(error)
 	}
@@ -383,9 +390,6 @@ const getExpenseById = async (req, res, next) => {
 		}
 		const expense = await Expense.findOne({ _id: req.params.id, houseId: house._id })
 		if (!expense) return res.status(404).json({ message: 'Expense not found' })
-		if (getExpenseCreatorId(expense) !== String(req.user._id)) {
-			return res.status(403).json({ message: 'Only the creator can edit this expense' })
-		}
 
 		if (redis) {
 			try { await redis.set(cacheKey, JSON.stringify({ expense, auditTrail: expense.auditTrail }), 'EX', parseInt(process.env.EXPENSES_CACHE_TTL || '60', 10)) } catch (err) { console.warn('Redis set failed for', cacheKey, err && err.message) }

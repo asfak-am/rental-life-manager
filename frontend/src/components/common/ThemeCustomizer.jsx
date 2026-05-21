@@ -1,5 +1,9 @@
 import { useState, useEffect } from 'react'
+import toast from 'react-hot-toast'
+import { useAuth } from '../../context/AuthContext'
+import { authService } from '../../services'
 import { applyTheme, clearTheme, DEFAULT_THEME, getInitialTheme, persistTheme } from '../../theme/applyTheme'
+import { CURRENCY_OPTIONS, normalizeCurrency } from '../../utils/currency'
 
 const COLORS = [
 	{ name: 'purple', value: '#6a5df6' },
@@ -16,12 +20,19 @@ const MODES = [
 ]
 
 export default function ThemeCustomizer() {
+	const { user, updateUser } = useAuth()
 	const [isOpen, setIsOpen] = useState(false)
 	const [theme, setTheme] = useState(() => getInitialTheme())
+	const [currency, setCurrency] = useState(() => normalizeCurrency(user?.currency))
+	const [savingCurrency, setSavingCurrency] = useState(false)
 
 	useEffect(() => {
 		applyTheme(theme)
 	}, [theme])
+
+	useEffect(() => {
+		setCurrency(normalizeCurrency(user?.currency))
+	}, [user?.currency])
 
 	const updateTheme = (key, value) => {
 		const newTheme = { ...theme, [key]: value }
@@ -35,6 +46,24 @@ export default function ThemeCustomizer() {
 		setTheme(defaultTheme)
 		persistTheme(defaultTheme)
 		setIsOpen(false)
+	}
+
+	const updateCurrency = async (nextCurrency) => {
+		const normalizedCurrency = normalizeCurrency(nextCurrency)
+		setCurrency(normalizedCurrency)
+		if (!user || normalizeCurrency(user.currency) === normalizedCurrency) return
+
+		setSavingCurrency(true)
+		try {
+			const res = await authService.updateProfile({ currency: normalizedCurrency })
+			updateUser(res.data.user)
+			toast.success('Preferred currency updated')
+		} catch (err) {
+			setCurrency(normalizeCurrency(user?.currency))
+			toast.error(err.response?.data?.message || 'Failed to update currency')
+		} finally {
+			setSavingCurrency(false)
+		}
 	}
 
 	return (
@@ -131,6 +160,25 @@ export default function ThemeCustomizer() {
 										</button>
 									))}
 								</div>
+							</div>
+
+							<div>
+								<h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4">Currency</h3>
+								<div className="flex items-center gap-3">
+									<select
+										value={currency}
+										onChange={(event) => updateCurrency(event.target.value)}
+										disabled={savingCurrency}
+										className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3 text-slate-900 dark:text-white outline-none focus:border-blue-500 disabled:opacity-60"
+									>
+										{CURRENCY_OPTIONS.map(option => (
+											<option key={option} value={option}>{option}</option>
+										))}
+									</select>
+								</div>
+								<p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
+									Applies to amounts shown across dashboard, expenses, balances, and analytics.
+								</p>
 							</div>
 						</div>
 					</div>

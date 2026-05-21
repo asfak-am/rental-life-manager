@@ -184,32 +184,6 @@ export default function HouseSettings() {
         <TopBar />
 
       <main className="max-w-screen-xl mx-auto px-6 pt-8 space-y-10">
-        {/* House identity */}
-        <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="md:col-span-2 bg-surface-container-lowest p-8 rounded-xl flex flex-col justify-between relative overflow-hidden">
-            <div className="relative z-10">
-              <span className="text-[11px] uppercase tracking-[0.2em] text-outline font-semibold">Active Residence</span>
-              <h1 className="text-4xl font-extrabold text-on-surface mt-2 tracking-tight">{house?.name || 'Your House'}</h1>
-              <p className="text-on-surface-variant mt-2 max-w-md">
-                {members.length} members Â· Managed with Rental Life
-              </p>
-            </div>
-            <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full -mr-20 -mt-20 blur-3xl" />
-          </div>
-
-          <InviteCodeCard
-            code={inviteCode}
-            qrSrc={inviteQrSrc}
-            onCopy={copyCode}
-            onRefresh={() => refreshMutation.mutate()}
-            refreshing={refreshMutation.isPending}
-            showRefresh={isAdmin}
-            copyLabel={copied ? 'Copied' : 'Copy Code'}
-            refreshLabel="Refresh"
-            className="self-start"
-          />
-        </section>
-
         {/* Members */}
         <section className="space-y-6">
           <div className="flex items-end justify-between">
@@ -263,6 +237,20 @@ export default function HouseSettings() {
               )
             })}
           </div>
+        </section>
+
+        <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <InviteCodeCard
+            code={inviteCode}
+            qrSrc={inviteQrSrc}
+            onCopy={copyCode}
+            onRefresh={() => refreshMutation.mutate()}
+            refreshing={refreshMutation.isPending}
+            showRefresh={isAdmin}
+            copyLabel={copied ? 'Copied' : 'Copy Code'}
+            refreshLabel="Refresh"
+            className="self-start"
+          />
         </section>
 
         {/* Notifications */}

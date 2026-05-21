@@ -188,9 +188,9 @@ export default function Dashboard() {
     enabled: !!house,
   })
 
-  const { data: utilityExpensesData } = useQuery({
-    queryKey: ['dashboard-utility-expenses'],
-    queryFn: () => expenseService.getAll().then(r => r.data),
+  const { data: utilityTrendResponse } = useQuery({
+    queryKey: ['dashboard-utility-trend', utilityRange],
+    queryFn: () => expenseService.utilityTrend(utilityRange).then(r => r.data),
     enabled: !!house,
   })
 
@@ -228,18 +228,15 @@ export default function Dashboard() {
 
   const rentMonths = (() => {
     const months = new Set([currentBillMonth, ...(rentHistory?.history || []).map(h => h.month)])
-    return Array.from(months).sort((a, b) => b.localeCompare(a))
+    return Array.from(months).sort((a, b) => b.localeCompare(a)).slice(0, 6)
   })()
 
   const { data: rentStatuses } = useQuery({
-    queryKey: ['rent-statuses', rentMonths],
-    queryFn: async () => {
-      const months = rentMonths.length ? rentMonths : [currentBillMonth]
-      const results = await Promise.all(months.map(m => houseService.getRentStatus(m).then(r => r.data).catch(() => null)))
-      return results.filter(Boolean)
-    },
-    enabled: Boolean(rentMonths.length && user),
-    placeholderData: () => qc.getQueryData(['rent-statuses', rentMonths]),
+    queryKey: ['rent-statuses', rentMonths.join(',')],
+    queryFn: () => houseService.getRentStatuses(rentMonths.length ? rentMonths : [currentBillMonth]).then(r => r.data?.statuses || []),
+    enabled: Boolean(user),
+    staleTime: 30 * 1000,
+    placeholderData: () => qc.getQueryData(['rent-statuses', rentMonths.join(',')]),
   })
 
   const isAdmin = house?.members?.find(m => String(m.userId) === String(user?._id))?.role === 'admin'
@@ -258,15 +255,62 @@ export default function Dashboard() {
 
   const payMemberRentMutation = useMutation({
     mutationFn: ({ userId, month }) => houseService.payRentForMember(userId, month),
+    onMutate: ({ userId, month }) => {
+      const targetMonth = month || currentBillMonth
+      const uid = String(userId)
+
+      qc.setQueryData(['rent-status', targetMonth], (previous) => {
+        if (!previous || !Array.isArray(previous.memberStatuses)) return previous
+        const memberStatuses = previous.memberStatuses.map(member => (
+          String(member.userId) === uid
+            ? { ...member, status: 'paid', paidAt: member.paidAt || new Date().toISOString() }
+            : member
+        ))
+        const paidCount = memberStatuses.filter(member => member.status === 'paid').length
+        return {
+          ...previous,
+          memberStatuses,
+          paidCount,
+          unpaidCount: Math.max(memberStatuses.length - paidCount, 0),
+        }
+      })
+
+      qc.setQueriesData({ queryKey: ['rent-statuses'] }, (previous) => {
+        if (!Array.isArray(previous)) return previous
+        return previous.map(status => {
+          if (String(status?.month) !== String(targetMonth) || !Array.isArray(status.memberStatuses)) return status
+          const memberStatuses = status.memberStatuses.map(member => (
+            String(member.userId) === uid
+              ? { ...member, status: 'paid', paidAt: member.paidAt || new Date().toISOString() }
+              : member
+          ))
+          const paidCount = memberStatuses.filter(member => member.status === 'paid').length
+          return {
+            ...status,
+            memberStatuses,
+            paidCount,
+            unpaidCount: Math.max(memberStatuses.length - paidCount, 0),
+          }
+        })
+      })
+    },
     onSuccess: (res, vars) => {
       const month = vars?.month || currentBillMonth
+      const payload = res?.data || res
+      if (payload?.rentStatus) {
+        qc.setQueryData(['rent-status', month], payload.rentStatus)
+      }
       toast.success('Member rent marked as paid')
       qc.invalidateQueries(['rent-status', month])
       qc.invalidateQueries(['rent-statuses'])
       qc.invalidateQueries(['balance-raw'])
     },
-    onError: () => toast.error('Failed to mark member rent as paid'),
+    onError: (err) => toast.error(err.response?.data?.message || 'Failed to mark member rent as paid'),
   })
+
+  const markingMemberKey = payMemberRentMutation.isPending && payMemberRentMutation.variables
+    ? `${String(payMemberRentMutation.variables.userId)}:${String(payMemberRentMutation.variables.month || currentBillMonth)}`
+    : ''
 
   const completeTaskMutation = useMutation({
     mutationFn: (task) => taskService.update(task._id, { status: 'completed' }),
@@ -305,43 +349,21 @@ export default function Dashboard() {
   const rentPaid = rentStatus?.myRent?.status === 'paid'
 
   const utilityTrendData = useMemo(() => {
-    const expenses = utilityExpensesData?.expenses || []
-    const monthMap = new Map()
+    const trend = utilityTrendResponse?.trend || []
 
-    expenses.forEach(expense => {
-      if (expense.category !== 'Water Bill' && expense.category !== 'Electricity Bill') return
+    return trend.map(item => {
+      const [year, month] = String(item.month || '').split('-')
+      const date = new Date(Number(year), Number(month) - 1, 1)
 
-      const key = expense.billMonth
-        ? expense.billMonth
-        : new Date(expense.date).toISOString().slice(0, 7)
-
-      if (!monthMap.has(key)) {
-        monthMap.set(key, { key, water: 0, electricity: 0 })
+      return {
+        month: Number.isNaN(date.getTime())
+          ? item.month
+          : date.toLocaleDateString('en-US', { month: 'short' }),
+        water: Number(item.water || 0),
+        electricity: Number(item.electricity || 0),
       }
-
-      const item = monthMap.get(key)
-      if (expense.category === 'Water Bill') item.water += Number(expense.amount || 0)
-      if (expense.category === 'Electricity Bill') item.electricity += Number(expense.amount || 0)
     })
-
-    return [...monthMap.values()]
-      .sort((a, b) => a.key.localeCompare(b.key))
-      .map(item => {
-        const [year, month] = item.key.split('-')
-        const date = new Date(Number(year), Number(month) - 1, 1)
-        return {
-          month: date.toLocaleDateString('en-US', { month: 'short' }),
-          water: item.water,
-          electricity: item.electricity,
-        }
-      })
-  }, [utilityExpensesData?.expenses])
-
-  const filteredUtilityTrendData = useMemo(() => {
-    const selected = UTILITY_RANGE_OPTIONS.find(option => option.value === utilityRange)
-    if (!selected || selected.months == null) return utilityTrendData
-    return utilityTrendData.slice(-selected.months)
-  }, [utilityRange, utilityTrendData])
+  }, [utilityTrendResponse?.trend])
 
   const categoryIcons = {
     Food: { icon: 'shopping_basket', bg: 'bg-amber-100', text: 'text-amber-700' },
@@ -387,7 +409,7 @@ export default function Dashboard() {
           currency={preferredCurrency}
           inviteCode={inviteCode}
           inviteQrSrc={inviteQrSrc}
-          utilityTrendData={filteredUtilityTrendData}
+          utilityTrendData={utilityTrendData}
           utilityRange={utilityRange}
           onUtilityRangeChange={setUtilityRange}
           onMarkTaskComplete={(task) => completeTaskMutation.mutate(task)}
@@ -407,6 +429,7 @@ export default function Dashboard() {
           rentStatuses={rentStatuses || []}
           onPayMemberRent={(data) => payMemberRentMutation.mutate(data)}
           payingMemberRent={payMemberRentMutation.isPending}
+          markingMemberKey={markingMemberKey}
           isAdmin={isAdmin}
         />
       </div>
@@ -421,7 +444,7 @@ export default function Dashboard() {
           <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="bg-white rounded-[2rem] p-8 border border-outline-variant/15 text-on-surface flex flex-col shadow-[0_20px_50px_-24px_rgba(26,28,29,0.22)] overflow-hidden min-w-0">
               <UtilityChart
-                data={filteredUtilityTrendData}
+                data={utilityTrendData}
                 range={utilityRange}
                 onRangeChange={setUtilityRange}
                 currency={preferredCurrency}
@@ -465,6 +488,7 @@ export default function Dashboard() {
                   isAdmin={isAdmin}
                   onPayMemberRent={(data) => payMemberRentMutation.mutate(data)}
                   payingMemberRent={payMemberRentMutation.isPending}
+                  markingMemberKey={markingMemberKey}
                 />
               ))}
             </section>

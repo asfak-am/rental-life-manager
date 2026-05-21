@@ -52,6 +52,8 @@ export default function DesktopExpenseDetailsView({
   onClose,
   settling,
 }) {
+  const canDelete = String(expense.paidBy) === String(userId)
+
   const backButton = (
     <button
       type="button"
@@ -75,16 +77,16 @@ export default function DesktopExpenseDetailsView({
           {settling ? 'Settling...' : 'Settle Up'}
         </button>
       )}
-      {canEdit && (
-        <button
-          type="button"
-          onClick={onEdit}
-          className="px-5 py-4 bg-primary-fixed text-primary font-bold rounded-2xl active:scale-95 transition-all"
-        >
-          <span className="material-symbols-outlined">edit</span>
-        </button>
-      )}
-      {String(expense.paidBy) === String(userId) && (
+      <button
+        type="button"
+        onClick={canEdit ? onEdit : undefined}
+        disabled={!canEdit}
+        title={!canEdit ? 'Only the creator can edit this expense' : 'Edit expense'}
+        className="px-5 py-4 bg-primary-fixed text-primary font-bold rounded-2xl active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        <span className="material-symbols-outlined">edit</span>
+      </button>
+      {canDelete && (
         <button
           type="button"
           onClick={onDelete}
@@ -113,6 +115,12 @@ export default function DesktopExpenseDetailsView({
       <div className="max-w-6xl mx-auto w-full px-1 lg:px-0 space-y-4">
         <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
           <section className="xl:col-span-6 bg-surface-container-lowest rounded-3xl border border-outline-variant/15 p-6 shadow-[0_16px_40px_-32px_rgba(26,28,29,0.12)]">
+            {!canEdit && (
+              <div className="mb-5 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-900">
+                Read-only view: only the creator can edit this expense.
+              </div>
+            )}
+
             <div className="flex items-start justify-between gap-4 mb-6">
               <div className="space-y-1 flex-1 min-w-0">
                 <span className="inline-flex items-center px-3 py-1 rounded-full bg-primary-fixed text-primary text-xs font-bold uppercase tracking-wider">

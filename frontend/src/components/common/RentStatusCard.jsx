@@ -9,7 +9,7 @@ function getMemberAvatar(member) {
   return member?.avatar || member?.profileImage || member?.image || ''
 }
 
-export default function RentStatusCard({ status = {}, members = [], isAdmin = false, onPayMemberRent, payingMemberRent = false, className = '' }) {
+export default function RentStatusCard({ status = {}, members = [], isAdmin = false, onPayMemberRent, payingMemberRent = false, markingMemberKey = '', className = '' }) {
   const month = status.month
   const unpaidCount = status.unpaidCount || 0
   const memberStatuses = status.memberStatuses || []
@@ -29,6 +29,8 @@ export default function RentStatusCard({ status = {}, members = [], isAdmin = fa
           const paid = member.status === 'paid'
           const houseMember = findMemberById(members, member.userId)
           const memberAvatar = getMemberAvatar(houseMember)
+          const currentMemberKey = `${String(member.userId)}:${String(month || '')}`
+          const isMarkingThisMember = Boolean(payingMemberRent && markingMemberKey === currentMemberKey)
           return (
             <div
               key={member.userId}
@@ -63,10 +65,10 @@ export default function RentStatusCard({ status = {}, members = [], isAdmin = fa
                     <button
                       type="button"
                       onClick={() => onPayMemberRent?.({ userId: member.userId, month })}
-                      disabled={payingMemberRent}
+                      disabled={isMarkingThisMember}
                       className="w-full sm:w-auto px-2 py-1 text-[10px] font-bold bg-primary text-on-primary rounded-md disabled:opacity-60"
                     >
-                      {payingMemberRent ? 'Marking...' : 'Mark'}
+                      {isMarkingThisMember ? 'Marking...' : 'Mark'}
                     </button>
                   )}
                 </div>

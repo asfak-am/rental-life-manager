@@ -10,6 +10,7 @@ const {
 	leaveHouse,
 	updateMonthlyRent,
 	getRentStatus,
+	getRentStatuses,
 	payMonthlyRent,
 	payMonthlyRentForMember,
 	getRentHistory,
@@ -27,6 +28,7 @@ router.get('/invite-code', getInviteCode)
 router.post('/refresh-code', refreshInviteCode)
 router.put('/rent-config', updateMonthlyRent)
 router.get('/rent-status', getRentStatus)
+router.get('/rent-statuses', getRentStatuses)
 router.get('/rent-history', getRentHistory)
 router.post('/pay-rent', payMonthlyRent)
 router.post('/pay-rent/member', payMonthlyRentForMember)

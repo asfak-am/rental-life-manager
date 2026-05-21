@@ -1,4 +1,5 @@
 import DesktopAppShell from './DesktopAppShell'
+import { useState } from 'react'
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import UtilityChart from '../../components/common/UtilityChart'
 
@@ -43,6 +44,9 @@ export default function DesktopAnalyticsView({
   const totalSpent = summaryData?.totalExpenses || 0
   const hasCategoryData = categoryData.length > 0
   const hasMonthlyData = monthlyData.length > 0
+  const [hoveredCategoryIndex, setHoveredCategoryIndex] = useState(null)
+
+  const categoryTotal = categoryData.reduce((sum, item) => sum + Number(item.value || 0), 0)
 
   return (
     <DesktopAppShell
@@ -95,9 +99,34 @@ export default function DesktopAnalyticsView({
                       outerRadius={80}
                       paddingAngle={2}
                       dataKey="value"
+                      activeIndex={hoveredCategoryIndex ?? undefined}
+                      activeShape={(props) => {
+                        const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill } = props
+                        return (
+                          <g>
+                            <path
+                              d={`M ${cx} ${cy}
+                                L ${cx + Math.cos((-startAngle * Math.PI) / 180) * outerRadius} ${cy + Math.sin((-startAngle * Math.PI) / 180) * outerRadius}
+                                A ${outerRadius} ${outerRadius} 0 ${endAngle - startAngle > 180 ? 1 : 0} 0 ${cx + Math.cos((-endAngle * Math.PI) / 180) * outerRadius} ${cy + Math.sin((-endAngle * Math.PI) / 180) * outerRadius}
+                                L ${cx + Math.cos((-endAngle * Math.PI) / 180) * innerRadius} ${cy + Math.sin((-endAngle * Math.PI) / 180) * innerRadius}
+                                A ${innerRadius} ${innerRadius} 0 ${endAngle - startAngle > 180 ? 1 : 0} 1 ${cx + Math.cos((-startAngle * Math.PI) / 180) * innerRadius} ${cy + Math.sin((-startAngle * Math.PI) / 180) * innerRadius}
+                                Z`}
+                              fill={fill}
+                              stroke="white"
+                              strokeWidth={3}
+                              style={{ filter: 'drop-shadow(0 8px 16px rgba(0,0,0,0.12))' }}
+                            />
+                          </g>
+                        )
+                      }}
                     >
                       {categoryData.map((item, idx) => (
-                        <Cell key={`${item.name}-${idx}`} fill={getCategoryColor(item.name, idx)} />
+                        <Cell
+                          key={`${item.name}-${idx}`}
+                          fill={getCategoryColor(item.name, idx)}
+                          onMouseEnter={() => setHoveredCategoryIndex(idx)}
+                          onMouseLeave={() => setHoveredCategoryIndex(null)}
+                        />
                       ))}
                     </Pie>
                     <Tooltip
@@ -116,16 +145,28 @@ export default function DesktopAnalyticsView({
             <p className="text-[10px] uppercase tracking-widest text-slate-400">Total Spent</p>
           </div>
           {hasCategoryData ? (
-                    <ul className="mt-5 space-y-2">
-              {categoryData.slice(0, 3).map((item, idx) => (
-                <li key={item.name} className="flex items-center justify-between text-sm">
-                  <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full" style={{ background: getCategoryColor(item.name, idx) }} />
-                    <span>{item.name}</span>
-                  </div>
-                  <span className="font-semibold">{item.percent || `${Math.round((item.value / Math.max(1, categoryData.reduce((s, c) => s + c.value, 0))) * 100)}%`}</span>
-                </li>
-              ))}
+            <ul className="mt-5 space-y-2 max-h-44 overflow-y-auto pr-1">
+              {categoryData.map((item, idx) => {
+                const isActive = hoveredCategoryIndex === idx
+                const percent = categoryTotal > 0 ? Math.round((Number(item.value || 0) / categoryTotal) * 100) : 0
+
+                return (
+                  <li
+                    key={item.name}
+                    onMouseEnter={() => setHoveredCategoryIndex(idx)}
+                    onMouseLeave={() => setHoveredCategoryIndex(null)}
+                    className={`flex items-center justify-between text-sm rounded-xl px-2 py-1 transition-colors ${isActive ? 'bg-slate-100' : ''}`}
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: getCategoryColor(item.name, idx) }} />
+                      <span className="truncate text-on-surface">{item.name}</span>
+                    </div>
+                    <span className={`font-semibold ${isActive ? 'text-primary' : 'text-on-surface'}`}>
+                      {item.percent || `${percent}%`}
+                    </span>
+                  </li>
+                )
+              })}
             </ul>
           ) : (
             <p className="mt-5 text-sm text-slate-500">No category breakdown available yet.</p>

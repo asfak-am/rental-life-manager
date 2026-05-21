@@ -41,15 +41,25 @@ export default function DesktopSettingsView({
             </div>
             <div className="grid grid-cols-2 gap-3">
               {members.map(member => {
-                const mIsAdmin = houseMembers?.find(hm => String(hm.userId) === String(member._id))?.role === 'admin'
+                const membership = houseMembers?.find(hm => String(hm.userId) === String(member._id))
+                const mIsAdmin = membership?.role === 'admin'
+                const joinedDate = membership?.joinedAt || member?.createdAt
+                const joinedLabel = joinedDate
+                  ? `Joined ${new Date(joinedDate).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })}`
+                  : 'Joined recently'
                 return (
                   <div key={member._id} className="bg-surface-container-low rounded-2xl p-3 flex items-center gap-3">
                     <div className="w-12 h-12 rounded-xl bg-primary-fixed/25 grid place-items-center text-primary font-black">
                       {(member.displayName || member.name || 'R').slice(0, 1).toUpperCase()}
                     </div>
                     <div className="min-w-0">
-                      <p className="font-semibold truncate">{member.displayName || member.name}</p>
-                      <p className="text-xs text-slate-500">Resident</p>
+                      <div className="flex items-center gap-2 min-w-0">
+                        <p className="font-semibold truncate">{member.displayName || member.name}{member._id === currentUserId ? ' (You)' : ''}</p>
+                        {mIsAdmin && (
+                          <span className="text-[10px] leading-none px-2 py-1 rounded-full bg-secondary text-on-secondary font-bold uppercase tracking-wider">Admin</span>
+                        )}
+                      </div>
+                      <p className="text-xs text-slate-500">{joinedLabel}</p>
                     </div>
                     {isAdmin && member._id !== currentUserId && (
                       <div className="ml-auto">

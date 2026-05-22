@@ -1,18 +1,10 @@
-╔════════════════════════════════════════════════════╗
-║          DEMO ACCOUNT CREDENTIALS                  ║
-╠════════════════════════════════════════════════════╣
-║ Email:    alex@demo.com                            ║
-║ Password: password123                              ║
-║                                                    ║
-║ House Code: DEMO123ABC                             ║
-║ House Name: Downtown Apartment                     ║
-║ Monthly Rent: $1500 ($375 per person)              ║
-║ Members: 4 (Alex, Sarah, Mike, Emily)              ║
-║                                                    ║
-║ Data Span: ~12 months of expenses & payments      ║
-╚════════════════════════════════════════════════════╝
-
 # Rental Life Manager
+
+DEMO ACCOUNT CREDENTIALS
+
+Email:    alex@demo.com 
+Password: password123 
+House Code: DEMO123ABC
 
 A simple housemate expense, rent and task manager (backend + frontend).
 

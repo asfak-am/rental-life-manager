@@ -5,7 +5,7 @@ const Expense = require('../models/Expense')
 const Task = require('../models/Task')
 const { generateInviteCode } = require('../utils/inviteCode')
 const RentPayment = require('../models/RentPayment')
-const { ensureMonthlyRentRecords, getRentStatusForUser, runRentRemindersForMonth, toMonthKey } = require('../services/rentService')
+const { ensureMonthlyRentRecords, getRentStatusForUser, runRentRemindersForMonth, toMonthKey, getActiveMembersForMonth } = require('../services/rentService')
 const redis = require('../utils/redisClient')
 
 const MONTH_KEY_REGEX = /^\d{4}-(0[1-9]|1[0-2])$/
@@ -211,15 +211,31 @@ const updateMonthlyRent = async (req, res, next) => {
 			return res.status(403).json({ message: 'Only house admins can set monthly rent' })
 		}
 
-		const monthlyRentAmount = Number(req.body.monthlyRentAmount)
-		if (!Number.isFinite(monthlyRentAmount) || monthlyRentAmount < 0) {
-			return res.status(400).json({ message: 'monthlyRentAmount must be a valid non-negative number' })
+		if (req.body.monthlyRentAmount !== undefined) {
+			const monthlyRentAmount = Number(req.body.monthlyRentAmount)
+			if (!Number.isFinite(monthlyRentAmount) || monthlyRentAmount < 0) {
+				return res.status(400).json({ message: 'monthlyRentAmount must be a valid non-negative number' })
+			}
+
+			house.monthlyRentAmount = monthlyRentAmount
 		}
 
-		house.monthlyRentAmount = monthlyRentAmount
+		if (req.body.rentReminderWindowDays !== undefined) {
+			const reminderWindowDays = Number(req.body.rentReminderWindowDays)
+			if (!Number.isInteger(reminderWindowDays) || reminderWindowDays < 1 || reminderWindowDays > 31) {
+				return res.status(400).json({ message: 'rentReminderWindowDays must be an integer between 1 and 31' })
+			}
+
+			house.rentReminderWindowDays = reminderWindowDays
+		}
+
 		await house.save()
 
-		return res.json({ monthlyRentAmount: house.monthlyRentAmount, house })
+		return res.json({
+			monthlyRentAmount: house.monthlyRentAmount,
+			rentReminderWindowDays: house.rentReminderWindowDays,
+			house,
+		})
 	} catch (error) {
 		next(error)
 	}
@@ -298,11 +314,14 @@ const getRentStatuses = async (req, res, next) => {
 
 		const statuses = await Promise.all(months.map(async (month) => {
 			const records = await ensureMonthlyRentRecords(house, month)
-			const recordMap = new Map(records.map(record => [String(record.userId), record]))
+			const activeMembers = await getActiveMembersForMonth(house, month)
+			const activeMemberIds = new Set(activeMembers.map(member => String(member.userId)))
+			const activeRecords = records.filter(record => activeMemberIds.has(String(record.userId)))
+			const recordMap = new Map(activeRecords.map(record => [String(record.userId), record]))
 			const myRecord = recordMap.get(String(req.user._id))
-			const paidCount = records.filter(record => record.status === 'paid').length
+			const paidCount = activeRecords.filter(record => record.status === 'paid').length
 
-			const memberStatuses = house.members.map(member => {
+			const memberStatuses = activeMembers.map(member => {
 				const memberId = String(member.userId)
 				const memberUser = userMap.get(memberId)
 				const memberRecord = recordMap.get(memberId)
@@ -318,8 +337,8 @@ const getRentStatuses = async (req, res, next) => {
 			return {
 				month,
 				totalRentAmount: Number(house.monthlyRentAmount || 0),
-				memberCount: house.members.length,
-				perPersonRent: Math.round((Number(house.monthlyRentAmount || 0) / Math.max(house.members.length, 1)) * 100) / 100,
+				memberCount: activeMembers.length,
+				perPersonRent: Math.round((Number(house.monthlyRentAmount || 0) / Math.max(activeMembers.length, 1)) * 100) / 100,
 				myRent: myRecord
 					? {
 						status: myRecord.status,
@@ -328,7 +347,7 @@ const getRentStatuses = async (req, res, next) => {
 					}
 					: { status: 'unpaid', amountDue: 0, paidAt: null },
 				paidCount,
-				unpaidCount: Math.max(records.length - paidCount, 0),
+				unpaidCount: Math.max(activeRecords.length - paidCount, 0),
 				memberStatuses,
 				payButtonVisible: now.getDate() >= 20,
 				earlyPayAllowed: true,
@@ -360,8 +379,23 @@ const payMonthlyRent = async (req, res, next) => {
 		const month = req.body.month ? String(req.body.month) : toMonthKey()
 		const status = await getRentStatusForUser({ house, userId: req.user._id, month, now: new Date() })
 
-		const rentRecord = await RentPayment.findOne({ houseId: house._id, userId: req.user._id, month })
-		if (!rentRecord) return res.status(404).json({ message: 'Rent record not found' })
+		const activeMembers = await getActiveMembersForMonth(house, month)
+		const isActiveMember = activeMembers.some(member => String(member.userId) === String(req.user._id))
+		if (!isActiveMember) {
+			return res.status(400).json({ message: 'You were not a member of this house for that month' })
+		}
+
+		let rentRecord = await RentPayment.findOne({ houseId: house._id, userId: req.user._id, month })
+		if (!rentRecord) {
+			const perPersonRent = Math.round((Number(house.monthlyRentAmount || 0) / Math.max(activeMembers.length, 1)) * 100) / 100
+			rentRecord = await RentPayment.create({
+				houseId: house._id,
+				userId: req.user._id,
+				month,
+				amountDue: perPersonRent,
+				status: 'unpaid',
+			})
+		}
 		if (rentRecord.status === 'paid') {
 			return res.json({ message: 'Rent already paid', rentStatus: status })
 		}
@@ -431,20 +465,35 @@ const payMonthlyRentForMember = async (req, res, next) => {
 		if (!memberId) return res.status(400).json({ message: 'userId is required' })
 
 		const month = req.body.month ? String(req.body.month) : toMonthKey()
-		await ensureMonthlyRentRecords(house, month)
+		const activeMembers = await getActiveMembersForMonth(house, month)
+		const isActiveMember = activeMembers.some(member => String(member.userId) === memberId)
+		if (!isActiveMember) {
+			return res.status(400).json({ message: 'This member was not part of the house for that month' })
+		}
+
+		const records = await ensureMonthlyRentRecords(house, month)
 
 		const mongoose = require('mongoose')
-		let rentRecord = await RentPayment.findOne({ houseId: house._id, userId: memberId, month })
+		let rentRecord = records.find(record => String(record.userId) === memberId)
 		// try casting to ObjectId if initial lookup fails
 		if (!rentRecord) {
 			try {
 				const objId = mongoose.Types.ObjectId(memberId)
-				rentRecord = await RentPayment.findOne({ houseId: house._id, userId: objId, month })
+				rentRecord = records.find(record => String(record.userId) === String(objId))
 			} catch (err) {
 				// ignore cast error
 			}
 		}
-		if (!rentRecord) return res.status(404).json({ message: 'Rent record not found for member' })
+		if (!rentRecord) {
+			const perPersonRent = Math.round((Number(house.monthlyRentAmount || 0) / Math.max(activeMembers.length, 1)) * 100) / 100
+			rentRecord = await RentPayment.create({
+				houseId: house._id,
+				userId: memberId,
+				month,
+				amountDue: perPersonRent,
+				status: 'unpaid',
+			})
+		}
 		if (rentRecord.status === 'paid') return res.json({ message: 'Rent already paid', rentStatus: await getRentStatusForUser({ house, userId: memberId, month, now: new Date() }) })
 
 		rentRecord.status = 'paid'
@@ -760,6 +809,22 @@ const removeMember = async (req, res, next) => {
 
 			// unassign tasks
 			await Task.updateMany({ houseId: house._id, assignedTo: targetId }, { $unset: { assignedTo: '' } })
+
+			if (redis) {
+				try {
+					await clearKeysByPattern(`rent-status:${house._id}:*`)
+					await clearKeysByPattern(`rent-statuses:${house._id}:*`)
+					await clearKeysByPattern(`rent-history:${house._id}:*`)
+					await clearKeysByPattern(`expense-summary:${house._id}:*`)
+					await clearKeysByPattern(`expenses:${house._id}:*`)
+					await clearKeysByPattern(`tasks:${house._id}:*`)
+					await clearKeysByPattern(`tasks-dashboard:${house._id}:*`)
+					await clearKeysByPattern(`balance-raw:${house._id}:*`)
+					await clearKeysByPattern(`invite-code:${house._id}:*`)
+				} catch (err) {
+					console.warn('Redis cache invalidation failed after member removal', err && err.message)
+				}
+			}
 		}
 
 		// remove member from house

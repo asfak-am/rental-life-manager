@@ -4,6 +4,7 @@ const houseSchema = new mongoose.Schema({
   name:       { type: String, required: true, trim: true },
   inviteCode: { type: String, required: true, unique: true },
   monthlyRentAmount: { type: Number, default: 0, min: 0 },
+  rentReminderWindowDays: { type: Number, default: 5, min: 1, max: 31 },
   members: [{
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     role:   { type: String, enum: ['admin', 'member'], default: 'member' },

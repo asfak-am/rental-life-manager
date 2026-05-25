@@ -40,6 +40,7 @@ export default function ExpensesList() {
   const [rentPage, setRentPage] = useState(1)
   const [rentPageSize, setRentPageSize] = useState(10)
   const preferredCurrency = user?.currency || 'LKR'
+  const houseKey = house?._id || 'none'
   const isHouseBootstrapping = !!user && !house && !houseError && houseLoading
   const isNoHouse = !!user && !house && (!houseError || houseError.response?.status === 404)
 
@@ -65,7 +66,7 @@ export default function ExpensesList() {
   }, [rentFromDate, rentToDate])
 
   const { data, isLoading, error, refetch: refetchExpenses } = useQuery({
-    queryKey: ['expenses', activeTab, debouncedSearch, page, pageSize, expenseFromDate, expenseToDate],
+    queryKey: ['expenses', houseKey, activeTab, debouncedSearch, page, pageSize, expenseFromDate, expenseToDate],
     queryFn: () => expenseService.getAll({
       category: activeTab === 'All' ? undefined : activeTab,
       search:   debouncedSearch || undefined,
@@ -80,13 +81,13 @@ export default function ExpensesList() {
   })
 
   const { data: summaryData, error: summaryError, refetch: refetchSummary } = useQuery({
-    queryKey: ['expense-summary'],
+    queryKey: ['expense-summary', houseKey],
     queryFn: () => expenseService.summary().then(r => r.data),
     enabled: !!house,
   })
 
   const { data: rentHistoryData, error: rentHistoryError, refetch: refetchRentHistory } = useQuery({
-    queryKey: ['rent-history', rentPage, rentPageSize, rentFromDate, rentToDate],
+    queryKey: ['rent-history', houseKey, rentPage, rentPageSize, rentFromDate, rentToDate],
     queryFn: () => houseService.getRentHistory({
       page: rentPage,
       limit: rentPageSize,
@@ -104,7 +105,7 @@ export default function ExpensesList() {
     if (nextPage > totalPages) return
 
     queryClient.prefetchQuery({
-      queryKey: ['expenses', activeTab, debouncedSearch, nextPage, pageSize, expenseFromDate, expenseToDate],
+      queryKey: ['expenses', houseKey, activeTab, debouncedSearch, nextPage, pageSize, expenseFromDate, expenseToDate],
       queryFn: () => expenseService.getAll({
         category: activeTab === 'All' ? undefined : activeTab,
         search: debouncedSearch || undefined,
@@ -123,7 +124,7 @@ export default function ExpensesList() {
     if (nextPage > totalPages) return
 
     queryClient.prefetchQuery({
-      queryKey: ['rent-history', nextPage, rentPageSize, rentFromDate, rentToDate],
+      queryKey: ['rent-history', houseKey, nextPage, rentPageSize, rentFromDate, rentToDate],
       queryFn: () => houseService.getRentHistory({
         page: nextPage,
         limit: rentPageSize,

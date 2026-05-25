@@ -11,7 +11,7 @@ export const houseService = {
   getRentStatus: (month) => api.get('/house/rent-status', { params: { month } }),
   getRentStatuses: (months = []) => api.get('/house/rent-statuses', { params: { months: Array.isArray(months) ? months.join(',') : '' } }),
   getRentHistory: (params = {}) => api.get('/house/rent-history', { params }),
-  updateRentConfig: (monthlyRentAmount) => api.put('/house/rent-config', { monthlyRentAmount }),
+  updateRentConfig: (data) => api.put('/house/rent-config', typeof data === 'number' ? { monthlyRentAmount: data } : data),
   payRent: (month) => api.post('/house/pay-rent', { month }),
   payRentForMember: (userId, month) => api.post('/house/pay-rent/member', { userId, month }),
   leave:         ()     => api.delete('/house/leave'),

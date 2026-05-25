@@ -22,6 +22,11 @@ export default function DesktopSettingsView({
   onMonthlyRentInput,
   onUpdateMonthlyRent,
   updatingMonthlyRent,
+  reminderWindowDays = 5,
+  reminderWindowInput = '',
+  onReminderWindowInput,
+  onUpdateReminderWindow,
+  updatingReminderWindow,
 }) {
   return (
     <DesktopAppShell
@@ -105,6 +110,12 @@ export default function DesktopSettingsView({
             ))}
           </div>
 
+          <div className="bg-white rounded-[30px] p-5 border border-slate-200">
+            <h4 className="text-xl font-black tracking-tight mb-2">Rent Reminders</h4>
+            <p className="text-sm text-slate-500">All members get reminders during the last days of the month.</p>
+            <p className="mt-2 text-base font-semibold text-slate-900">Current setting: last {reminderWindowDays} days</p>
+          </div>
+
           {isAdmin ? (
             <div className="bg-white rounded-[30px] p-5 border border-slate-200">
               <h4 className="text-xl font-black tracking-tight mb-2">Monthly Rent</h4>
@@ -128,6 +139,33 @@ export default function DesktopSettingsView({
                   {updatingMonthlyRent ? 'Saving...' : 'Save Rent'}
                 </button>
               </div>
+            </div>
+          ) : null}
+
+          {isAdmin ? (
+            <div className="bg-white rounded-[30px] p-5 border border-slate-200">
+              <h4 className="text-xl font-black tracking-tight mb-2">Rent Reminders</h4>
+              <p className="text-sm text-slate-500">Choose how many days before month-end reminders should begin.</p>
+              <div className="mt-4 flex gap-3">
+                <input
+                  type="number"
+                  min="1"
+                  max="31"
+                  value={reminderWindowInput}
+                  onChange={e => onReminderWindowInput?.(e.target.value)}
+                  placeholder={`${reminderWindowDays}`}
+                  className="flex-1 rounded-xl border border-slate-200 bg-surface-container-low px-4 py-3 text-slate-900"
+                />
+                <button
+                  type="button"
+                  onClick={onUpdateReminderWindow}
+                  disabled={updatingReminderWindow}
+                  className="px-5 py-3 rounded-xl signature-gradient text-white font-semibold disabled:opacity-60"
+                >
+                  {updatingReminderWindow ? 'Saving...' : 'Save Window'}
+                </button>
+              </div>
+              <p className="mt-2 text-xs text-slate-500">Current setting: last {reminderWindowDays} days of the month.</p>
             </div>
           ) : null}
         </section>

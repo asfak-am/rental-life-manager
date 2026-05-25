@@ -31,10 +31,11 @@ const getCurrentBillMonth = () => {
 export default function AddExpense() {
   const navigate  = useNavigate()
   const { id } = useParams()
-  const { members } = useHouse()
+  const { house, members } = useHouse()
   const { user }  = useAuth()
   const qc        = useQueryClient()
   const isEditMode = Boolean(id)
+  const houseKey = house?._id || 'none'
 
   const [splitType, setSplitType]   = useState('equal')
   const [category, setCategory]     = useState('Food')
@@ -99,11 +100,31 @@ export default function AddExpense() {
 
   const mutation = useMutation({
     mutationFn: (data) => (isEditMode ? expenseService.update(id, data) : expenseService.add(data)),
-    onSuccess: () => {
+    onSuccess: (res) => {
+      const savedExpense = res?.data?.expense
       toast.success(isEditMode ? 'Expense updated!' : 'Expense added!')
-      qc.invalidateQueries({ queryKey: ['expenses'] })
-      qc.invalidateQueries({ queryKey: ['expense-summary'] })
-      qc.invalidateQueries({ queryKey: ['balance-raw'] })
+      qc.invalidateQueries({ queryKey: ['expenses', houseKey] })
+      qc.invalidateQueries({ queryKey: ['expense-summary', houseKey] })
+      qc.invalidateQueries({ queryKey: ['balance-raw', houseKey] })
+      qc.invalidateQueries({ queryKey: ['dashboard-utility-trend', houseKey] })
+      qc.invalidateQueries({ queryKey: ['expenses-recent', houseKey] })
+      qc.invalidateQueries({ queryKey: ['rent-status', houseKey] })
+      qc.invalidateQueries({ queryKey: ['rent-statuses', houseKey] })
+
+      if (!isEditMode && savedExpense) {
+        qc.setQueryData(['expenses-recent', houseKey], (previous) => {
+          if (!previous) return previous
+          if (Array.isArray(previous)) return [savedExpense, ...previous].slice(0, 5)
+          if (Array.isArray(previous.expenses)) {
+            return {
+              ...previous,
+              expenses: [savedExpense, ...previous.expenses].slice(0, 5),
+            }
+          }
+          return previous
+        })
+      }
+
       qc.invalidateQueries({ queryKey: ['expense', id] })
       navigate(isEditMode ? `/expenses/${id}` : '/expenses')
     },

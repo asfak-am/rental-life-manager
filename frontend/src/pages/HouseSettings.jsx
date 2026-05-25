@@ -1,4 +1,4 @@
-﻿import { useState } from 'react'
+﻿import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
@@ -14,14 +14,25 @@ import { buildInviteLink, buildInviteQrSrc } from '../utils/inviteLink'
 
 export default function HouseSettings() {
   const { user, logout, updateUser } = useAuth()
-  const { house, members } = useHouse()
+  const { house, members, refreshHouse } = useHouse()
   const navigate = useNavigate()
   const qc = useQueryClient()
   const [copied, setCopied] = useState(false)
   const [inviteOpen, setInviteOpen] = useState(false)
   const [inviteEmail, setInviteEmail] = useState('')
   const [monthlyRentInput, setMonthlyRentInput] = useState('')
+  const [reminderWindowInput, setReminderWindowInput] = useState('')
   const [notificationPrefs, setNotificationPrefs] = useState(user?.notifications || { expense: true, task: true, payment: true })
+  const inviteCodeQueryKey = ['invite-code', house?._id || 'none']
+
+  useEffect(() => {
+    if (house?.monthlyRentAmount !== undefined && house?.monthlyRentAmount !== null) {
+      setMonthlyRentInput(String(house.monthlyRentAmount))
+    }
+    if (house?.rentReminderWindowDays !== undefined && house?.rentReminderWindowDays !== null) {
+      setReminderWindowInput(String(house.rentReminderWindowDays))
+    }
+  }, [house?.monthlyRentAmount, house?.rentReminderWindowDays])
 
   const syncNotificationPrefs = async (nextPrefs) => {
     const res = await authService.updateProfile({ notifications: nextPrefs })
@@ -43,7 +54,7 @@ export default function HouseSettings() {
   }
 
   const { data: codeData } = useQuery({
-    queryKey: ['invite-code'],
+    queryKey: inviteCodeQueryKey,
     queryFn: () => houseService.getInviteCode().then(r => r.data),
     enabled: !!house,
   })
@@ -57,19 +68,29 @@ export default function HouseSettings() {
   })
 
   const updateRentMutation = useMutation({
-    mutationFn: (value) => houseService.updateRentConfig(value),
+    mutationFn: (value) => houseService.updateRentConfig({ monthlyRentAmount: value }),
     onSuccess: () => {
       toast.success('Monthly rent updated')
-      qc.invalidateQueries(['house'])
-      qc.invalidateQueries(['rent-status'])
+      refreshHouse().catch(() => {})
+      qc.invalidateQueries({ queryKey: ['rent-status'] })
     },
     onError: (err) => toast.error(err.response?.data?.message || 'Failed to update monthly rent'),
+  })
+
+  const updateReminderMutation = useMutation({
+    mutationFn: (value) => houseService.updateRentConfig({ rentReminderWindowDays: value }),
+    onSuccess: () => {
+      toast.success('Reminder window updated')
+      refreshHouse().catch(() => {})
+      qc.invalidateQueries({ queryKey: ['rent-status'] })
+    },
+    onError: (err) => toast.error(err.response?.data?.message || 'Failed to update reminder window'),
   })
   const inviteQrSrc = buildInviteQrSrc(inviteLink)
 
   const refreshMutation = useMutation({
     mutationFn: () => houseService.refreshCode(),
-    onSuccess: () => { toast.success('Invite code refreshed!'); qc.invalidateQueries(['invite-code']) },
+    onSuccess: () => { toast.success('Invite code refreshed!'); qc.invalidateQueries({ queryKey: inviteCodeQueryKey }) },
   })
 
   const inviteMutation = useMutation({
@@ -94,7 +115,17 @@ export default function HouseSettings() {
     mutationFn: ({ userId, confirm } = {}) => houseService.removeMember(userId, { confirm }),
     onSuccess: () => {
       toast.success('Member removed')
-      qc.invalidateQueries(['house'])
+      refreshHouse().catch(() => {})
+      qc.invalidateQueries({ queryKey: ['house'] })
+      qc.invalidateQueries({ queryKey: ['rent-status'] })
+      qc.invalidateQueries({ queryKey: ['rent-statuses'] })
+      qc.invalidateQueries({ queryKey: ['rent-history'] })
+      qc.invalidateQueries({ queryKey: ['expense-summary'] })
+      qc.invalidateQueries({ queryKey: ['expenses'] })
+      qc.invalidateQueries({ queryKey: ['balance-raw'] })
+      qc.invalidateQueries({ queryKey: ['tasks-dashboard'] })
+      qc.invalidateQueries({ queryKey: ['tasks'] })
+      qc.invalidateQueries({ queryKey: ['invite-code'] })
     },
     onError: (err, variables) => {
       const status = err?.response?.status
@@ -168,6 +199,9 @@ export default function HouseSettings() {
           monthlyRentAmount={rentStatus?.totalRentAmount || house?.monthlyRentAmount || 0}
           monthlyRentInput={monthlyRentInput}
           onMonthlyRentInput={setMonthlyRentInput}
+          reminderWindowDays={house?.rentReminderWindowDays || 5}
+          reminderWindowInput={reminderWindowInput}
+          onReminderWindowInput={setReminderWindowInput}
           onUpdateMonthlyRent={() => {
             const value = Number(monthlyRentInput || rentStatus?.totalRentAmount || 0)
             if (!Number.isFinite(value) || value < 0) {
@@ -177,6 +211,15 @@ export default function HouseSettings() {
             updateRentMutation.mutate(value)
           }}
           updatingMonthlyRent={updateRentMutation.isPending}
+          onUpdateReminderWindow={() => {
+            const value = Number(reminderWindowInput || house?.rentReminderWindowDays || 5)
+            if (!Number.isInteger(value) || value < 1 || value > 31) {
+              toast.error('Enter a reminder window between 1 and 31 days')
+              return
+            }
+            updateReminderMutation.mutate(value)
+          }}
+          updatingReminderWindow={updateReminderMutation.isPending}
         />
       </div>
 
@@ -275,6 +318,14 @@ export default function HouseSettings() {
           ))}
         </section>
 
+        <section className="space-y-4">
+          <h2 className="text-2xl font-bold tracking-tight">Rent Reminders</h2>
+          <div className="p-5 bg-surface-container-lowest rounded-2xl border border-outline-variant/10 space-y-2">
+            <p className="text-sm text-on-surface-variant">All members get reminders during the last days of the month.</p>
+            <p className="text-base font-semibold text-on-surface">Current setting: last {house?.rentReminderWindowDays || 5} days</p>
+          </div>
+        </section>
+
         {isAdmin && (
           <section className="space-y-4">
             <h2 className="text-2xl font-bold tracking-tight">Monthly Rent</h2>
@@ -305,6 +356,42 @@ export default function HouseSettings() {
                   {updateRentMutation.isPending ? 'Saving...' : 'Save Rent'}
                 </button>
               </div>
+            </div>
+          </section>
+        )}
+
+        {isAdmin && (
+          <section className="space-y-4">
+            <h2 className="text-2xl font-bold tracking-tight">Rent Reminders</h2>
+            <div className="p-5 bg-surface-container-lowest rounded-2xl border border-outline-variant/10 space-y-3">
+              <p className="text-sm text-on-surface-variant">Choose how many days before month-end rent reminders should begin.</p>
+              <div className="flex gap-3">
+                <input
+                  type="number"
+                  min="1"
+                  max="31"
+                  value={reminderWindowInput}
+                  onChange={e => setReminderWindowInput(e.target.value)}
+                  placeholder={`${house?.rentReminderWindowDays || 5}`}
+                  className="flex-1 bg-surface-container-low border-none rounded-xl px-4 py-3 text-on-surface"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    const value = Number(reminderWindowInput || house?.rentReminderWindowDays || 5)
+                    if (!Number.isInteger(value) || value < 1 || value > 31) {
+                      toast.error('Enter a reminder window between 1 and 31 days')
+                      return
+                    }
+                    updateReminderMutation.mutate(value)
+                  }}
+                  disabled={updateReminderMutation.isPending}
+                  className="px-5 py-3 signature-gradient text-on-primary font-bold rounded-xl disabled:opacity-60"
+                >
+                  {updateReminderMutation.isPending ? 'Saving...' : 'Save Window'}
+                </button>
+              </div>
+              <p className="text-xs text-on-surface-variant">Current setting: last {house?.rentReminderWindowDays || 5} days of the month.</p>
             </div>
           </section>
         )}

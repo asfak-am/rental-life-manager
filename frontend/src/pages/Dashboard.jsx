@@ -61,8 +61,10 @@ export default function Dashboard() {
   const qc = useQueryClient()
   const preferredCurrency = user?.currency || 'LKR'
   const [utilityRange, setUtilityRange] = useState('6M')
+  const houseKey = house?._id || 'none'
 
   const isHouseBootstrapping = !!user && !house && !houseError && (houseLoading || members.length === 0)
+  const inviteCodeQueryKey = ['invite-code', house?._id || 'none']
 
   const noHouseView = (
     <NoHouseState
@@ -85,46 +87,46 @@ export default function Dashboard() {
   )
 
   const { data: summaryData } = useQuery({
-    queryKey: ['expense-summary'],
+    queryKey: ['expense-summary', houseKey],
     queryFn: () => expenseService.summary().then(r => r.data),
     enabled: !!house,
   })
 
   const { data: balanceData } = useQuery({
-    queryKey: ['balance-raw'],
+    queryKey: ['balance-raw', houseKey],
     queryFn: () => balanceService.getRaw().then(r => r.data),
     enabled: !!house,
   })
 
   const { data: expensesData } = useQuery({
-    queryKey: ['expenses-recent'],
+    queryKey: ['expenses-recent', houseKey],
     queryFn: () => expenseService.getAll({ limit: 5 }).then(r => r.data),
     enabled: !!house,
   })
 
   const { data: utilityTrendResponse } = useQuery({
-    queryKey: ['dashboard-utility-trend', utilityRange],
+    queryKey: ['dashboard-utility-trend', houseKey, utilityRange],
     queryFn: () => expenseService.utilityTrend(utilityRange).then(r => r.data),
     enabled: !!house,
   })
 
   const { data: tasksData } = useQuery({
-    queryKey: ['tasks-dashboard'],
+    queryKey: ['tasks-dashboard', houseKey],
     queryFn: () => taskService.getAll().then(r => r.data),
     enabled: !!house,
   })
 
   const { data: inviteData } = useQuery({
-    queryKey: ['invite-code'],
+    queryKey: inviteCodeQueryKey,
     queryFn: () => houseService.getInviteCode().then(r => r.data),
     enabled: !!house,
   })
 
   const { data: rentHistory } = useQuery({
-    queryKey: ['rent-history'],
+    queryKey: ['rent-history', houseKey],
     queryFn: () => houseService.getRentHistory().then(r => r.data),
     enabled: !!user,
-    placeholderData: () => qc.getQueryData(['rent-history']),
+    placeholderData: () => qc.getQueryData(['rent-history', houseKey]),
   })
 
   const currentBillMonth = (() => {
@@ -134,23 +136,18 @@ export default function Dashboard() {
   })()
 
   const { data: rentStatus } = useQuery({
-    queryKey: ['rent-status', currentBillMonth],
+    queryKey: ['rent-status', houseKey, currentBillMonth],
     queryFn: () => houseService.getRentStatus(currentBillMonth).then(r => r.data),
     enabled: !!user,
-    placeholderData: () => qc.getQueryData(['rent-status', currentBillMonth]),
+    placeholderData: () => qc.getQueryData(['rent-status', houseKey, currentBillMonth]),
   })
 
-  const rentMonths = (() => {
-    const months = new Set([currentBillMonth, ...(rentHistory?.history || []).map(h => h.month)])
-    return Array.from(months).sort((a, b) => b.localeCompare(a)).slice(0, 6)
-  })()
-
   const { data: rentStatuses } = useQuery({
-    queryKey: ['rent-statuses', rentMonths.join(',')],
-    queryFn: () => houseService.getRentStatuses(rentMonths.length ? rentMonths : [currentBillMonth]).then(r => r.data?.statuses || []),
+    queryKey: ['rent-statuses', houseKey, currentBillMonth],
+    queryFn: () => houseService.getRentStatuses([currentBillMonth]).then(r => r.data?.statuses || []),
     enabled: Boolean(user),
     staleTime: 30 * 1000,
-    placeholderData: () => qc.getQueryData(['rent-statuses', rentMonths.join(',')]),
+    placeholderData: () => qc.getQueryData(['rent-statuses', houseKey, currentBillMonth]),
   })
 
   const isAdmin = house?.members?.find(m => String(m.userId) === String(user?._id))?.role === 'admin'
@@ -160,9 +157,9 @@ export default function Dashboard() {
     onSuccess: (res, month) => {
       const m = month || currentBillMonth
       toast.success('Monthly rent paid')
-      qc.invalidateQueries(['rent-status', m])
-      qc.invalidateQueries(['rent-statuses'])
-      qc.invalidateQueries(['balance-raw'])
+      qc.invalidateQueries({ queryKey: ['rent-status', houseKey] })
+      qc.invalidateQueries({ queryKey: ['rent-statuses', houseKey] })
+      qc.invalidateQueries({ queryKey: ['balance-raw', houseKey] })
     },
     onError: (err) => toast.error(err.response?.data?.message || 'Failed to pay rent'),
   })
@@ -212,12 +209,12 @@ export default function Dashboard() {
       const month = vars?.month || currentBillMonth
       const payload = res?.data || res
       if (payload?.rentStatus) {
-        qc.setQueryData(['rent-status', month], payload.rentStatus)
+        qc.setQueryData(['rent-status', houseKey, month], payload.rentStatus)
       }
       toast.success('Member rent marked as paid')
-      qc.invalidateQueries(['rent-status', month])
-      qc.invalidateQueries(['rent-statuses'])
-      qc.invalidateQueries(['balance-raw'])
+      qc.invalidateQueries({ queryKey: ['rent-status', houseKey] })
+      qc.invalidateQueries({ queryKey: ['rent-statuses', houseKey] })
+      qc.invalidateQueries({ queryKey: ['balance-raw', houseKey] })
     },
     onError: (err) => toast.error(err.response?.data?.message || 'Failed to mark member rent as paid'),
   })
@@ -230,8 +227,8 @@ export default function Dashboard() {
     mutationFn: (task) => taskService.update(task._id, { status: 'completed' }),
     onSuccess: () => {
       toast.success('Task marked complete')
-      qc.invalidateQueries(['tasks-dashboard'])
-      qc.invalidateQueries(['tasks'])
+      qc.invalidateQueries({ queryKey: ['tasks-dashboard', houseKey] })
+      qc.invalidateQueries({ queryKey: ['tasks'] })
     },
     onError: (err) => toast.error(err.response?.data?.message || 'Failed to update task'),
   })
@@ -240,7 +237,7 @@ export default function Dashboard() {
     mutationFn: () => houseService.refreshCode(),
     onSuccess: () => {
       toast.success('Invite code refreshed!')
-      qc.invalidateQueries(['invite-code'])
+      qc.invalidateQueries({ queryKey: inviteCodeQueryKey })
     },
     onError: () => toast.error('Failed to refresh invite code'),
   })
@@ -261,7 +258,8 @@ export default function Dashboard() {
   const inviteLink = inviteData?.inviteLink || buildInviteLink(inviteCode)
   const inviteQrSrc = buildInviteQrSrc(inviteLink)
   const rentPaid = rentStatus?.myRent?.status === 'paid'
-
+  const rentReminderWindowDays = house?.rentReminderWindowDays || 5
+  const displayRentStatuses = rentStatuses || []
   const utilityTrendData = useMemo(() => {
     const trend = utilityTrendResponse?.trend || []
 
@@ -325,6 +323,7 @@ export default function Dashboard() {
           inviteQrSrc={inviteQrSrc}
           utilityTrendData={utilityTrendData}
           utilityRange={utilityRange}
+          rentReminderWindowDays={rentReminderWindowDays}
           onUtilityRangeChange={setUtilityRange}
           onMarkTaskComplete={(task) => completeTaskMutation.mutate(task)}
           isMarkingTaskComplete={completeTaskMutation.isPending}
@@ -340,7 +339,7 @@ export default function Dashboard() {
           rentStatus={rentStatus}
           onPayRent={(month) => payRentMutation.mutate(month)}
           payingRent={payRentMutation.isPending}
-          rentStatuses={rentStatuses || []}
+          rentStatuses={displayRentStatuses}
           onPayMemberRent={(data) => payMemberRentMutation.mutate(data)}
           payingMemberRent={payMemberRentMutation.isPending}
           markingMemberKey={markingMemberKey}
@@ -369,6 +368,18 @@ export default function Dashboard() {
             </div>
           </section>
 
+          <section className="rounded-[1.75rem] bg-white/90 border border-outline-variant/15 px-5 py-4 shadow-[0_18px_40px_-30px_rgba(26,28,29,0.25)]">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="text-sm font-semibold text-on-surface">Rent reminder window</p>
+                <p className="text-xs text-on-surface-variant">All members get rent reminders during the last days of the month.</p>
+              </div>
+              <span className="rounded-full bg-primary-fixed/20 px-3 py-1 text-sm font-bold text-primary">
+                Last {rentReminderWindowDays} days
+              </span>
+            </div>
+          </section>
+
           {inviteCode ? (
             <InviteCodeCard
               code={inviteCode}
@@ -392,9 +403,9 @@ export default function Dashboard() {
             layout="mobile"
           />
 
-          {(rentStatuses || []).filter(s => s.unpaidCount > 0).length > 0 && (
+          {displayRentStatuses.length > 0 && (
             <section className="space-y-4">
-              {(rentStatuses || []).filter(s => s.unpaidCount > 0).map(status => (
+              {displayRentStatuses.map(status => (
                 <RentStatusCard
                   key={status.month}
                   status={status}

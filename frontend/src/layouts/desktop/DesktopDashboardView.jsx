@@ -21,6 +21,7 @@ export default function DesktopDashboardView({
   inviteQrSrc = '',
   utilityTrendData = [],
   utilityRange = '6M',
+  rentReminderWindowDays = 5,
   onUtilityRangeChange,
   onMarkTaskComplete,
   isMarkingTaskComplete = false,
@@ -80,6 +81,15 @@ export default function DesktopDashboardView({
             electricityFillOpacityStart={0.3}
             xAxisTickColor="#787586"
           />
+          <div className="mt-4 flex items-center justify-between gap-4 rounded-2xl bg-surface-container-low px-4 py-3 border border-slate-200">
+            <div>
+              <p className="text-sm font-semibold text-slate-900">Rent reminder window</p>
+              <p className="text-xs text-slate-500">All members get rent reminders during the last days of the month.</p>
+            </div>
+            <span className="rounded-full bg-primary/10 px-3 py-1 text-sm font-bold text-primary">
+              Last {rentReminderWindowDays} days
+            </span>
+          </div>
         </section>
 
         {inviteCode && (
@@ -115,9 +125,9 @@ export default function DesktopDashboardView({
         />
 
         {/* Rent */}
-        {(rentStatuses || []).filter(s => s.unpaidCount > 0).length > 0 && (
+        {(rentStatuses || []).length > 0 && (
           <section className="col-span-12 space-y-4">
-            {(rentStatuses || []).filter(s => s.unpaidCount > 0).map(status => (
+            {(rentStatuses || []).map(status => (
               <RentStatusCard
                 key={status.month}
                 status={status}

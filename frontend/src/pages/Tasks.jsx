@@ -71,9 +71,10 @@ export default function Tasks() {
   const { house, members } = useHouse()
   const qc = useQueryClient()
   const [showAdd, setShowAdd] = useState(false)
+  const houseKey = house?._id || 'none'
 
   const { data, isLoading } = useQuery({
-    queryKey: ['tasks'],
+    queryKey: ['tasks', houseKey],
     queryFn: () => taskService.getAll().then(r => r.data),
     enabled: !!house,
   })
@@ -82,7 +83,7 @@ export default function Tasks() {
 
   const addMutation = useMutation({
     mutationFn: (d) => taskService.add(d),
-    onSuccess: () => { toast.success('Task added!'); qc.invalidateQueries(['tasks']); setShowAdd(false); reset() },
+    onSuccess: () => { toast.success('Task added!'); qc.invalidateQueries({ queryKey: ['tasks', houseKey] }); qc.invalidateQueries({ queryKey: ['tasks-dashboard', houseKey] }); setShowAdd(false); reset() },
     onError: () => toast.error('Failed to add task'),
   })
 
@@ -90,12 +91,12 @@ export default function Tasks() {
     mutationFn: (task) => taskService.update(task._id, {
       status: task.status === 'completed' ? 'pending' : 'completed',
     }),
-    onSuccess: () => qc.invalidateQueries(['tasks']),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['tasks', houseKey] }); qc.invalidateQueries({ queryKey: ['tasks-dashboard', houseKey] }) },
   })
 
   const deleteMutation = useMutation({
     mutationFn: (id) => taskService.remove(id),
-    onSuccess: () => { toast.success('Task removed'); qc.invalidateQueries(['tasks']) },
+    onSuccess: () => { toast.success('Task removed'); qc.invalidateQueries({ queryKey: ['tasks', houseKey] }); qc.invalidateQueries({ queryKey: ['tasks-dashboard', houseKey] }) },
   })
 
   const tasks     = data?.tasks || []

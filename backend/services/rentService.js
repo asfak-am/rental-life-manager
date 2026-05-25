@@ -16,21 +16,62 @@ const roundMoney = (value) => Math.round((Number(value) + Number.EPSILON) * 100)
 
 const getTodayKey = (date = new Date()) => date.toISOString().slice(0, 10)
 
+const getReminderWindowDays = (house) => {
+  const value = Number(house?.rentReminderWindowDays ?? 5)
+  if (!Number.isFinite(value) || value < 1) return 5
+  return Math.min(Math.floor(value), 31)
+}
+
+const getReminderStartDay = (date, windowDays) => {
+  const endOfMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate()
+  return Math.max(1, endOfMonth - windowDays + 1)
+}
+
+const getMemberJoinedAt = async (house, member) => {
+  if (member?.joinedAt) {
+    const joinedAt = new Date(member.joinedAt)
+    if (!Number.isNaN(joinedAt.getTime())) return joinedAt
+  }
+
+  const firstPayment = await RentPayment.findOne({
+    houseId: house._id,
+    userId: member?.userId,
+  }).sort({ month: 1, createdAt: 1 })
+
+  if (firstPayment?.month && MONTH_REGEX.test(firstPayment.month)) {
+    const [yearStr, monthStr] = firstPayment.month.split('-')
+    return new Date(Number(yearStr), Number(monthStr) - 1, 1)
+  }
+
+  const today = new Date()
+  return new Date(today.getFullYear(), today.getMonth(), 1)
+}
+
+const getActiveMembersForMonth = async (house, month) => {
+  const [yearStr, monthStr] = String(month || '').split('-')
+  const year = Number(yearStr)
+  const monthIndex = Number(monthStr) - 1
+  const monthEnd = new Date(year, monthIndex + 1, 0, 23, 59, 59, 999)
+
+  const members = house.members || []
+  const joinedAtByMemberId = new Map()
+
+  await Promise.all(members.map(async member => {
+    const joinedAt = await getMemberJoinedAt(house, member)
+    joinedAtByMemberId.set(String(member.userId), joinedAt)
+  }))
+
+  return members.filter(member => {
+    const joinedAt = joinedAtByMemberId.get(String(member.userId))
+    return joinedAt ? joinedAt <= monthEnd : false
+  })
+}
+
 const ensureMonthlyRentRecords = async (house, month = toMonthKey()) => {
   if (!MONTH_REGEX.test(month)) throw new Error('Invalid month format')
   if (!house || !house._id) return []
 
-  // Consider only members who joined on or before the target month
-  const [yearStr, monthStr] = month.split('-')
-  const year = Number(yearStr)
-  const monthIndex = Number(monthStr) - 1 // 0-based
-  const monthStart = new Date(year, monthIndex, 1)
-  const monthEnd = new Date(year, monthIndex + 1, 0, 23, 59, 59, 999)
-
-  const activeMembers = (house.members || []).filter(member => {
-    const joined = member.joinedAt ? new Date(member.joinedAt) : new Date()
-    return joined <= monthEnd
-  })
+  const activeMembers = await getActiveMembersForMonth(house, month)
   const memberIds = activeMembers.map(member => String(member.userId))
   if (memberIds.length === 0) return []
 
@@ -76,7 +117,6 @@ const runRentRemindersForMonth = async ({ month = toMonthKey(), now = new Date()
   if (!MONTH_REGEX.test(month)) return { sent: 0 }
 
   const day = now.getDate()
-  if (day < 25) return { sent: 0 }
 
   const houseQuery = houseIds?.length ? { _id: { $in: houseIds } } : {}
   const houses = await House.find(houseQuery)
@@ -86,6 +126,10 @@ const runRentRemindersForMonth = async ({ month = toMonthKey(), now = new Date()
   const todayKey = getTodayKey(now)
 
   for (const house of houses) {
+    const reminderWindowDays = getReminderWindowDays(house)
+    const reminderStartDay = getReminderStartDay(now, reminderWindowDays)
+    if (day < reminderStartDay) continue
+
     const records = await ensureMonthlyRentRecords(house, month)
     const dueRecords = records.filter(record => record.status !== 'paid' && Number(record.amountDue) > 0)
     if (dueRecords.length === 0) continue
@@ -140,14 +184,18 @@ const runRentRemindersForMonth = async ({ month = toMonthKey(), now = new Date()
 const getRentStatusForUser = async ({ house, userId, month = toMonthKey(), now = new Date() }) => {
   const records = await ensureMonthlyRentRecords(house, month)
   const day = now.getDate()
+  const reminderStartDay = getReminderStartDay(now, getReminderWindowDays(house))
+  const activeMembers = await getActiveMembersForMonth(house, month)
+  const activeMemberIds = new Set(activeMembers.map(member => String(member.userId)))
 
   const myRecord = records.find(record => String(record.userId) === String(userId))
-  const paidCount = records.filter(record => record.status === 'paid').length
+  const activeRecords = records.filter(record => activeMemberIds.has(String(record.userId)))
+  const paidCount = activeRecords.filter(record => record.status === 'paid').length
   const memberUsers = await User.find({ _id: { $in: house.members.map(member => member.userId) } }).select('name displayName')
   const userMap = new Map(memberUsers.map(member => [String(member._id), member]))
-  const recordMap = new Map(records.map(record => [String(record.userId), record]))
+  const recordMap = new Map(activeRecords.map(record => [String(record.userId), record]))
 
-  const memberStatuses = house.members.map(member => {
+  const memberStatuses = activeMembers.map(member => {
     const memberId = String(member.userId)
     const memberUser = userMap.get(memberId)
     const memberRecord = recordMap.get(memberId)
@@ -163,8 +211,8 @@ const getRentStatusForUser = async ({ house, userId, month = toMonthKey(), now =
   return {
     month,
     totalRentAmount: Number(house.monthlyRentAmount || 0),
-    memberCount: house.members.length,
-    perPersonRent: roundMoney(Number(house.monthlyRentAmount || 0) / Math.max(house.members.length, 1)),
+    memberCount: activeMembers.length,
+    perPersonRent: roundMoney(Number(house.monthlyRentAmount || 0) / Math.max(activeMembers.length, 1)),
     myRent: myRecord
       ? {
           status: myRecord.status,
@@ -177,7 +225,7 @@ const getRentStatusForUser = async ({ house, userId, month = toMonthKey(), now =
     memberStatuses,
     payButtonVisible: day >= 20,
     earlyPayAllowed: true,
-    warningVisible: day >= 25 && myRecord?.status !== 'paid',
+    warningVisible: day >= reminderStartDay && myRecord?.status !== 'paid',
   }
 }
 
@@ -197,4 +245,5 @@ module.exports = {
   getRentStatusForUser,
   runRentRemindersForMonth,
   startRentReminderCron,
+  getActiveMembersForMonth,
 }

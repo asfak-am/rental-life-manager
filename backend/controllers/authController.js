@@ -57,6 +57,16 @@ const sendOtpEmail = async (email, otp, title = 'Verify your account') => {
 	})
 }
 
+const trySendOtpEmail = async (email, otp, title) => {
+	try {
+		await sendOtpEmail(email, otp, title)
+		return true
+	} catch (error) {
+		console.warn(`OTP email could not be delivered to ${email}: ${error.message}`)
+		return false
+	}
+}
+
 const register = async (req, res, next) => {
 	try {
 		const { name, email, password, inviteCode } = req.body
@@ -83,7 +93,7 @@ const register = async (req, res, next) => {
 
 		const otp = setOtp(user)
 		await user.save()
-		await sendOtpEmail(user.email, otp)
+		const otpDelivered = await trySendOtpEmail(user.email, otp)
 
 		if (house) {
 			house.members.push({ userId: user._id, role: 'member' })
@@ -101,6 +111,20 @@ const register = async (req, res, next) => {
 				}))
 
 			if (notifications.length > 0) await Notification.insertMany(notifications)
+		}
+
+		if (!otpDelivered) {
+			user.isVerified = true
+			user.otpCode = undefined
+			user.otpExpires = undefined
+			await user.save()
+
+			const token = signToken(user._id)
+			return res.status(201).json({
+				token,
+				user: getPublicUser(user),
+				message: 'Account created. Email delivery is temporarily unavailable, so you are signed in directly.',
+			})
 		}
 
 		return res.status(201).json({
@@ -317,7 +341,10 @@ const resendOtp = async (req, res, next) => {
 
 		const otp = setOtp(user)
 		await user.save()
-		await sendOtpEmail(user.email, otp)
+		const otpDelivered = await trySendOtpEmail(user.email, otp)
+		if (!otpDelivered) {
+			return res.status(503).json({ message: 'Email delivery is temporarily unavailable. Please try again later.' })
+		}
 
 		return res.json({ message: 'OTP sent successfully' })
 	} catch (error) {
@@ -337,7 +364,10 @@ const forgotPassword = async (req, res, next) => {
 
 		const resetOtp = setOtp(user, 'reset')
 		await user.save()
-		await sendOtpEmail(user.email, resetOtp, 'Reset your password')
+		const otpDelivered = await trySendOtpEmail(user.email, resetOtp, 'Reset your password')
+		if (!otpDelivered) {
+			return res.status(503).json({ message: 'Email delivery is temporarily unavailable. Please try again later.' })
+		}
 
 		return res.json({ exists: true, message: 'Reset code sent to email' })
 	} catch (error) {

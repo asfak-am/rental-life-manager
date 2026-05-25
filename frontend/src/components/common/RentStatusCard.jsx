@@ -13,6 +13,7 @@ export default function RentStatusCard({ status = {}, members = [], isAdmin = fa
   const month = status.month
   const unpaidCount = status.unpaidCount || 0
   const memberStatuses = status.memberStatuses || []
+  const allPaid = unpaidCount === 0
 
   return (
     <div className={(`bg-white rounded-[30px] p-6 border border-slate-200 ${className}`).trim()}>
@@ -20,8 +21,13 @@ export default function RentStatusCard({ status = {}, members = [], isAdmin = fa
         <div>
           <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Monthly Rent</p>
           <h3 className="text-2xl font-black mt-1">{month}</h3>
-          <p className="text-sm text-slate-500 mt-1">{unpaidCount} unpaid of {status.memberCount} members</p>
+          <p className={`text-sm mt-1 font-semibold ${allPaid ? 'text-emerald-600' : 'text-slate-500'}`}>
+            {allPaid ? 'All paid' : `${unpaidCount} unpaid of ${status.memberCount} members`}
+          </p>
         </div>
+        <span className={`px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-widest ${allPaid ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>
+          {allPaid ? 'Paid' : 'Pending'}
+        </span>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

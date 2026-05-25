@@ -19,9 +19,10 @@ export default function Balances() {
   const [settling, setSettling]     = useState(null)
   const preferredCurrency = user?.currency || 'LKR'
   const isAdmin = house?.members?.find(m => String(m.userId) === String(user?._id))?.role === 'admin'
+  const houseKey = house?._id || 'none'
 
   const { data: rawData } = useQuery({
-    queryKey: ['balance-raw'],
+    queryKey: ['balance-raw', houseKey],
     queryFn: () => balanceService.getRaw().then(r => r.data),
     refetchOnMount: 'always',
     enabled: !!house,
@@ -34,19 +35,19 @@ export default function Balances() {
   })()
 
   const { data: rentData } = useQuery({
-    queryKey: ['rent-expenses', currentBillMonth],
+    queryKey: ['rent-expenses', houseKey, currentBillMonth],
     queryFn: () => expenseService.getAll({ category: 'Rent' }).then(r => r.data),
     enabled: !!house,
   })
 
   const { data: rentHistory } = useQuery({
-    queryKey: ['rent-history'],
+    queryKey: ['rent-history', houseKey],
     queryFn: () => houseService.getRentHistory().then(r => r.data),
     enabled: !!house,
   })
 
   const { data: rentStatus } = useQuery({
-    queryKey: ['rent-status', currentBillMonth],
+    queryKey: ['rent-status', houseKey, currentBillMonth],
     queryFn: () => houseService.getRentStatus(currentBillMonth).then(r => r.data),
     enabled: !!house,
   })
@@ -65,11 +66,33 @@ export default function Balances() {
   })()
 
   const { data: rentStatuses } = useQuery({
-    queryKey: ['rent-statuses', rentMonths.join(',')],
+    queryKey: ['rent-statuses', houseKey, rentMonths.join(',')],
     queryFn: () => houseService.getRentStatuses(rentMonths.length ? rentMonths : [currentBillMonth]).then(r => r.data?.statuses || []),
     enabled: !!house,
     staleTime: 30 * 1000,
   })
+
+  const pushPaidRentToHistory = ({ userId, month, paidAt, amount }) => {
+    const nextItem = {
+      id: `${houseKey}:${String(userId)}:${String(month)}`,
+      month,
+      amount: Number(amount || 0),
+      paidAt: paidAt || new Date().toISOString(),
+      userId,
+      name: members.find(member => String(member._id) === String(userId))?.name || members.find(member => String(member._id) === String(userId))?.displayName || 'Member',
+    }
+
+    qc.setQueriesData({ queryKey: ['rent-history', houseKey] }, (previous) => {
+      if (!previous) return previous
+      const history = Array.isArray(previous.history) ? previous.history : []
+      const filtered = history.filter(item => !(String(item.userId) === String(userId) && String(item.month) === String(month)))
+      return {
+        ...previous,
+        history: [nextItem, ...filtered],
+        total: Math.max(Number(previous.total || 0) + 1, 1),
+      }
+    })
+  }
 
   const payMemberRentMutation = useMutation({
     mutationFn: ({ userId, month }) => houseService.payRentForMember(userId, month),
@@ -77,7 +100,7 @@ export default function Balances() {
       const targetMonth = month || currentBillMonth
       const uid = String(userId)
 
-      qc.setQueryData(['rent-status', targetMonth], (previous) => {
+      qc.setQueryData(['rent-status', houseKey, targetMonth], (previous) => {
         if (!previous || !Array.isArray(previous.memberStatuses)) return previous
         const memberStatuses = previous.memberStatuses.map(member => (
           String(member.userId) === uid
@@ -93,7 +116,7 @@ export default function Balances() {
         }
       })
 
-      qc.setQueriesData({ queryKey: ['rent-statuses'] }, (previous) => {
+      qc.setQueriesData({ queryKey: ['rent-statuses', houseKey] }, (previous) => {
         if (!Array.isArray(previous)) return previous
         return previous.map(status => {
           if (String(status?.month) !== String(targetMonth) || !Array.isArray(status.memberStatuses)) return status
@@ -117,20 +140,23 @@ export default function Balances() {
       try {
         const payload = res?.data || res
         if (payload?.rentStatus) {
-          qc.setQueryData(['rent-status', month], payload.rentStatus)
+          qc.setQueryData(['rent-status', houseKey, month], payload.rentStatus)
+            pushPaidRentToHistory({ userId: vars?.userId, month, paidAt: payload?.rentStatus?.myRent?.paidAt, amount: payload?.rentStatus?.myRent?.amountDue })
         } else {
-          qc.invalidateQueries(['rent-status', month])
+          qc.invalidateQueries(['rent-status', houseKey, month])
         }
-        qc.invalidateQueries(['rent-statuses'])
-        qc.invalidateQueries(['rent-expenses', month])
-        qc.invalidateQueries(['expenses-recent'])
+        qc.invalidateQueries({ queryKey: ['rent-statuses', houseKey] })
+        qc.invalidateQueries({ queryKey: ['rent-expenses', houseKey, month] })
+        qc.invalidateQueries({ queryKey: ['expenses-recent', houseKey] })
+        qc.invalidateQueries({ queryKey: ['rent-history', houseKey] })
         qc.invalidateQueries({ queryKey: ['expense'] })
-        qc.invalidateQueries(['balance-raw'])
+        qc.invalidateQueries({ queryKey: ['balance-raw', houseKey] })
       } catch (e) {
-        qc.invalidateQueries(['rent-statuses'])
-        qc.invalidateQueries(['rent-expenses', month])
-        qc.invalidateQueries(['expenses-recent'])
-        qc.invalidateQueries(['balance-raw'])
+        qc.invalidateQueries({ queryKey: ['rent-statuses', houseKey] })
+        qc.invalidateQueries({ queryKey: ['rent-expenses', houseKey, month] })
+        qc.invalidateQueries({ queryKey: ['expenses-recent', houseKey] })
+        qc.invalidateQueries({ queryKey: ['rent-history', houseKey] })
+        qc.invalidateQueries({ queryKey: ['balance-raw', houseKey] })
       }
       toast.success('Member rent marked as paid')
     },
@@ -145,7 +171,7 @@ export default function Balances() {
     mutationFn: (data) => balanceService.settle(data),
     onSuccess: () => {
       toast.success('Payment settled!')
-      qc.invalidateQueries(['balance-raw'])
+      qc.invalidateQueries({ queryKey: ['balance-raw', houseKey] })
       setSettling(null)
     },
     onError: () => toast.error('Failed to settle'),
@@ -158,20 +184,23 @@ export default function Balances() {
       try {
         const payload = res?.data || res
         if (payload?.rentStatus) {
-          qc.setQueryData(['rent-status', m], payload.rentStatus)
+          qc.setQueryData(['rent-status', houseKey, m], payload.rentStatus)
+          pushPaidRentToHistory({ userId: user?._id, month: m, paidAt: payload?.rentStatus?.myRent?.paidAt, amount: payload?.rentStatus?.myRent?.amountDue })
         } else {
-          qc.invalidateQueries(['rent-status', m])
+          qc.invalidateQueries(['rent-status', houseKey, m])
         }
-        qc.invalidateQueries(['rent-statuses'])
-        qc.invalidateQueries(['rent-expenses', m])
-        qc.invalidateQueries(['expenses-recent'])
+        qc.invalidateQueries({ queryKey: ['rent-statuses', houseKey] })
+        qc.invalidateQueries({ queryKey: ['rent-expenses', houseKey, m] })
+        qc.invalidateQueries({ queryKey: ['expenses-recent', houseKey] })
+        qc.invalidateQueries({ queryKey: ['rent-history', houseKey] })
         qc.invalidateQueries({ queryKey: ['expense'] })
-        qc.invalidateQueries(['balance-raw'])
+        qc.invalidateQueries({ queryKey: ['balance-raw', houseKey] })
       } catch (e) {
-        qc.invalidateQueries(['rent-statuses'])
-        qc.invalidateQueries(['rent-expenses', m])
-        qc.invalidateQueries(['expenses-recent'])
-        qc.invalidateQueries(['balance-raw'])
+        qc.invalidateQueries({ queryKey: ['rent-statuses', houseKey] })
+        qc.invalidateQueries({ queryKey: ['rent-expenses', houseKey, m] })
+        qc.invalidateQueries({ queryKey: ['expenses-recent', houseKey] })
+        qc.invalidateQueries({ queryKey: ['rent-history', houseKey] })
+        qc.invalidateQueries({ queryKey: ['balance-raw', houseKey] })
       }
       toast.success('Rent marked as paid')
     },
@@ -247,10 +276,10 @@ export default function Balances() {
         </section>
 
         {/* Member Rent Payment Status for unpaid months */}
-        {(rentStatuses || []).filter(s => s.unpaidCount > 0).length > 0 && (
+        {(rentStatuses || []).length > 0 && (
           <section className="md:col-span-12">
             <div className="space-y-4">
-              {(rentStatuses || []).filter(s => s.unpaidCount > 0).map(status => (
+              {(rentStatuses || []).map(status => (
                 <RentStatusCard
                   key={status.month}
                   status={status}

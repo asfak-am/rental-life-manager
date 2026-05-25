@@ -231,6 +231,7 @@ const addExpense = async (req, res, next) => {
 			clearKeysByPattern(`expenses:house:${house._id}:*`)
 			clearKeysByPattern(`expense-summary:${house._id}:*`)
 			clearKeysByPattern(`utility-trend:${house._id}:*`)
+			clearKeysByPattern(`balance-raw:${house._id}:*`)
 		}
 
 		return res.status(201).json({ expense })
@@ -473,6 +474,7 @@ const updateExpense = async (req, res, next) => {
 			clearKeysByPattern(`expense:${house._id}:${expense._id}`)
 			clearKeysByPattern(`expense-summary:${house._id}:*`)
 			clearKeysByPattern(`utility-trend:${house._id}:*`)
+			clearKeysByPattern(`balance-raw:${house._id}:*`)
 		}
 
 		return res.json({ expense })
@@ -495,6 +497,7 @@ const deleteExpense = async (req, res, next) => {
 			clearKeysByPattern(`expense:${house._id}:${expense._id}`)
 			clearKeysByPattern(`expense-summary:${house._id}:*`)
 			clearKeysByPattern(`utility-trend:${house._id}:*`)
+			clearKeysByPattern(`balance-raw:${house._id}:*`)
 		}
 
 		return res.json({ message: 'Expense deleted' })
@@ -529,6 +532,7 @@ const settleExpenseShare = async (req, res, next) => {
 			clearKeysByPattern(`expenses:house:${house._id}:*`)
 			clearKeysByPattern(`expense:${house._id}:${expense._id}`)
 			clearKeysByPattern(`expense-summary:${house._id}:*`)
+			clearKeysByPattern(`balance-raw:${house._id}:*`)
 		}
 
 		return res.json({ message: 'Expense settled successfully', expense })

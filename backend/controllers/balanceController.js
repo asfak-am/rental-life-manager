@@ -3,8 +3,10 @@ const House = require('../models/House')
 const User = require('../models/User')
 const Notification = require('../models/Notification')
 const { simplifyDebts } = require('../utils/debtSimplifier')
+const redis = require('../utils/redisClient')
 
 const roundMoney = (value) => Math.round((Number(value) + Number.EPSILON) * 100) / 100
+const BALANCE_CACHE_TTL = parseInt(process.env.BALANCE_CACHE_TTL || '30', 10)
 
 const normalizeParticipantId = (participant) => String(participant.userId || participant._id || participant)
 
@@ -81,6 +83,20 @@ const getBalances = async (houseId) => {
 	}
 }
 
+async function clearBalanceCache(houseId) {
+	if (!redis || !houseId) return
+	try {
+		const stream = redis.scanStream({ match: `balance-raw:${houseId}:*`, count: 100 })
+		const keys = []
+		for await (const resultKeys of stream) {
+			if (resultKeys.length) keys.push(...resultKeys)
+		}
+		if (keys.length) await redis.del(...keys)
+	} catch (err) {
+		console.warn('Redis clearBalanceCache failed for', houseId, err && err.message)
+	}
+}
+
 const getRawBalances = async (req, res, next) => {
 	try {
 		const house = await getHouseForUser(req.user._id)
@@ -88,7 +104,24 @@ const getRawBalances = async (req, res, next) => {
 			return res.json({ balances: [], debts: [], totalHouseExpenses: 0 })
 		}
 
+		const cacheKey = `balance-raw:${house._id}:raw`
+		if (redis) {
+			try {
+				const cached = await redis.get(cacheKey)
+				if (cached) return res.json(JSON.parse(cached))
+			} catch (err) {
+				console.warn('Redis get failed for', cacheKey, err && err.message)
+			}
+		}
+
 		const payload = await getBalances(house._id)
+		if (redis) {
+			try {
+				await redis.set(cacheKey, JSON.stringify(payload), 'EX', BALANCE_CACHE_TTL)
+			} catch (err) {
+				console.warn('Redis set failed for', cacheKey, err && err.message)
+			}
+		}
 		return res.json(payload)
 	} catch (error) {
 		next(error)
@@ -157,6 +190,8 @@ const settleDebt = async (req, res, next) => {
 
 			if (remaining <= 0) break
 		}
+
+		await clearBalanceCache(house._id)
 
 		await Notification.create({
 			userId: payerId,

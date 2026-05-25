@@ -260,6 +260,22 @@
     background: linear-gradient(135deg, rgba(var(--primary-rgb), 1) 0%, rgba(var(--primary-rgb), 0.82) 100%);
   }
 
+  .invite-code-card {
+    background-image: linear-gradient(135deg, rgba(var(--primary-rgb), 0.18) 0%, rgba(var(--primary-rgb), 0.08) 36%, rgba(255, 255, 255, 0.82) 66%, rgba(var(--primary-rgb), 0.14) 100%);
+  }
+
+  .dark .invite-code-card {
+    background-image: linear-gradient(135deg, rgba(var(--primary-rgb), 0.24) 0%, rgba(45, 45, 68, 0.94) 38%, rgba(31, 31, 46, 0.98) 100%);
+  }
+
+  .invite-code-shell {
+    background: rgba(255, 255, 255, 0.7);
+  }
+
+  .dark .invite-code-shell {
+    background: rgba(45, 45, 68, 0.82);
+  }
+
   .glass-halo {
     box-shadow: 0 0 0 4px rgba(var(--primary-rgb), 0.1);
   }

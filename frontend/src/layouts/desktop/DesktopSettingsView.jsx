@@ -175,9 +175,9 @@ export default function DesktopSettingsView({
             code={inviteCode}
             qrSrc={inviteQrSrc}
             onCopy={onCopyInvite}
-            onRefresh={isAdmin ? refreshCode : undefined}
+            onRefresh={refreshCode}
             refreshing={refreshing}
-            showRefresh={isAdmin}
+            showRefresh={true}
             copyLabel="Copy Code"
             refreshLabel="Refresh"
             className="self-start"

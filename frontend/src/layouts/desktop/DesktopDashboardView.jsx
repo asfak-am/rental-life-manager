@@ -6,6 +6,13 @@ import DashboardTasksSection from '../../components/dashboard/DashboardTasksSect
 import DashboardExpensesSection from '../../components/dashboard/DashboardExpensesSection'
 import { formatCurrency } from '../../utils/currency'
 
+function getTimeGreeting(date = new Date()) {
+  const hour = date.getHours()
+  if (hour < 12) return 'Good Morning'
+  if (hour < 18) return 'Good Afternoon'
+  return 'Good Evening'
+}
+
 export default function DesktopDashboardView({
   user,
   houseName,
@@ -56,7 +63,7 @@ export default function DesktopDashboardView({
 
   return (
     <DesktopAppShell
-      title={`Good Morning, ${shortName}`}
+      title={`${getTimeGreeting()}, ${shortName}`}
       // subtitle={houseName ? `${houseName} dashboard` : 'House dashboard overview'}
       searchPlaceholder="Search property or resident..."
     >
@@ -81,19 +88,10 @@ export default function DesktopDashboardView({
             electricityFillOpacityStart={0.3}
             xAxisTickColor="#787586"
           />
-          <div className="mt-4 flex items-center justify-between gap-4 rounded-2xl bg-surface-container-low px-4 py-3 border border-slate-200">
-            <div>
-              <p className="text-sm font-semibold text-slate-900">Rent reminder window</p>
-              <p className="text-xs text-slate-500">All members get rent reminders during the last days of the month.</p>
-            </div>
-            <span className="rounded-full bg-primary/10 px-3 py-1 text-sm font-bold text-primary">
-              Last {rentReminderWindowDays} days
-            </span>
-          </div>
         </section>
 
-        {inviteCode && (
-          <div className="col-span-4">
+        <div className="col-span-4 flex flex-col gap-5 h-full">
+          {inviteCode && (
             <InviteCodeCard
               code={inviteCode}
               qrSrc={inviteQrSrc}
@@ -101,11 +99,11 @@ export default function DesktopDashboardView({
               onRefresh={onOpenInvite}
               copyLabel="Copy Code"
               refreshLabel="Refresh"
-              className="h-full flex flex-col"
+              className="flex-1 flex flex-col"
               qrWrapperClassName="flex-1"
             />
-          </div>
-        )}
+          )}
+        </div>
 
         <DashboardExpensesSection
           expenses={expenses}

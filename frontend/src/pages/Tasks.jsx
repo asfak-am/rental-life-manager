@@ -16,7 +16,7 @@ const PRIORITY_STYLES = {
   low:    { bg: 'bg-secondary-container', text: 'text-on-secondary-container',label: 'Low Priority'   },
 }
 
-function TaskCard({ task, members, onToggle, onDelete }) {
+function TaskCard({ task, members, onToggle, onDelete, showAction = true }) {
   const assignee = members.find(m => m._id === task.assignedTo)
   const ps       = PRIORITY_STYLES[task.priority] || PRIORITY_STYLES.low
 
@@ -53,16 +53,14 @@ function TaskCard({ task, members, onToggle, onDelete }) {
               </span>
             </div>
           )}
-          <button
-            onClick={() => onToggle(task)}
-            className={`px-3 py-1 rounded-full text-xs font-bold transition-all ${
-              task.status === 'completed'
-                ? 'bg-secondary text-on-secondary'
-                : 'bg-primary-fixed text-primary hover:bg-primary hover:text-on-primary'
-            }`}
-          >
-            {task.status === 'completed' ? 'Done âœ“' : 'Mark done'}
-          </button>
+          {showAction && (
+            <button
+              onClick={() => onToggle(task)}
+              className="px-3 py-1 rounded-full text-xs font-bold transition-all bg-primary-fixed text-primary border border-primary/10 hover:!bg-primary hover:!text-on-primary hover:!border-primary shadow-sm"
+            >
+              Mark done
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -176,7 +174,13 @@ export default function Tasks() {
             )}
             {completed.map(t => (
               <div key={t._id} className="opacity-60">
-                <TaskCard task={t} members={members} onToggle={task => toggleMutation.mutate(task)} onDelete={id => deleteMutation.mutate(id)} />
+                <TaskCard
+                  task={t}
+                  members={members}
+                  onToggle={task => toggleMutation.mutate(task)}
+                  onDelete={id => deleteMutation.mutate(id)}
+                  showAction={false}
+                />
               </div>
             ))}
           </div>

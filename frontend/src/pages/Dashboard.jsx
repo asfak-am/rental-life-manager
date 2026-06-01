@@ -12,6 +12,7 @@ import DesktopDashboardView from '../layouts/desktop/DesktopDashboardView'
 import ThemeCustomizer from '../components/common/ThemeCustomizer'
 import InviteCodeCard from '../components/common/InviteCodeCard'
 import RentStatusCard from '../components/common/RentStatusCard'
+import RentPaymentsTable from '../components/common/RentPaymentsTable'
 import UtilityChart from '../components/common/UtilityChart'
 import DashboardTasksSection from '../components/dashboard/DashboardTasksSection'
 import DashboardExpensesSection from '../components/dashboard/DashboardExpensesSection'
@@ -54,6 +55,36 @@ function findMemberById(members, userId) {
   return members.find(member => String(member?._id || member?.id || '') === key)
 }
 
+function formatMonthKey(date) {
+  const month = `${date.getMonth() + 1}`.padStart(2, '0')
+  return `${date.getFullYear()}-${month}`
+}
+
+function getHouseJoinMonth(houseMembers = [], fallbackDate = new Date()) {
+  const joinedDates = houseMembers
+    .map(member => (member?.joinedAt ? new Date(member.joinedAt) : null))
+    .filter(date => date && !Number.isNaN(date.getTime()))
+
+  const earliestJoinedAt = joinedDates.length > 0
+    ? new Date(Math.min(...joinedDates.map(date => date.getTime())))
+    : fallbackDate
+
+  return new Date(earliestJoinedAt.getFullYear(), earliestJoinedAt.getMonth(), 1)
+}
+
+function buildRecentMonthKeys(startDate, endDate, limit = 8) {
+  const months = []
+  const cursor = new Date(endDate.getFullYear(), endDate.getMonth(), 1)
+  const earliestMonth = new Date(startDate.getFullYear(), startDate.getMonth(), 1)
+
+  while (cursor >= earliestMonth && months.length < limit) {
+    months.push(formatMonthKey(cursor))
+    cursor.setMonth(cursor.getMonth() - 1)
+  }
+
+  return months
+}
+
 export default function Dashboard() {
   const { user } = useAuth()
   const { house, members, loading: houseLoading, error: houseError, refreshHouse } = useHouse()
@@ -81,7 +112,7 @@ export default function Dashboard() {
       desktopSubtitle="Couldn’t load your house"
       primaryActionLabel="Try Again"
       secondaryActionLabel="Open Settings"
-      onPrimaryAction={() => refreshHouse().catch(() => {})}
+      onPrimaryAction={() => refreshHouse().catch(() => { })}
       onSecondaryAction={() => navigate('/settings')}
     />
   )
@@ -142,12 +173,18 @@ export default function Dashboard() {
     placeholderData: () => qc.getQueryData(['rent-status', houseKey, currentBillMonth]),
   })
 
+  const rentMonths = useMemo(() => {
+    const earliestMonth = getHouseJoinMonth(house?.members || [], house?.createdAt ? new Date(house.createdAt) : new Date())
+    const currentMonthDate = new Date()
+    return buildRecentMonthKeys(earliestMonth, currentMonthDate, 8)
+  }, [house?.createdAt, house?.members])
+
   const { data: rentStatuses } = useQuery({
-    queryKey: ['rent-statuses', houseKey, currentBillMonth],
-    queryFn: () => houseService.getRentStatuses([currentBillMonth]).then(r => r.data?.statuses || []),
+    queryKey: ['rent-statuses', houseKey, rentMonths.join(',')],
+    queryFn: () => houseService.getRentStatuses(rentMonths).then(r => r.data?.statuses || []),
     enabled: Boolean(user),
     staleTime: 30 * 1000,
-    placeholderData: () => qc.getQueryData(['rent-statuses', houseKey, currentBillMonth]),
+    placeholderData: () => qc.getQueryData(['rent-statuses', houseKey, rentMonths.join(',')]),
   })
 
   const isAdmin = house?.members?.find(m => String(m.userId) === String(user?._id))?.role === 'admin'
@@ -337,6 +374,7 @@ export default function Dashboard() {
             toast.success('Invite code copied')
           }}
           rentStatus={rentStatus}
+          houseKey={houseKey}
           onPayRent={(month) => payRentMutation.mutate(month)}
           payingRent={payRentMutation.isPending}
           rentStatuses={displayRentStatuses}
@@ -402,23 +440,6 @@ export default function Dashboard() {
             isMarkingTaskComplete={completeTaskMutation.isPending}
             layout="mobile"
           />
-
-          {displayRentStatuses.length > 0 && (
-            <section className="space-y-4">
-              {displayRentStatuses.map(status => (
-                <RentStatusCard
-                  key={status.month}
-                  status={status}
-                  members={members}
-                  isAdmin={isAdmin}
-                  onPayMemberRent={(data) => payMemberRentMutation.mutate(data)}
-                  payingMemberRent={payMemberRentMutation.isPending}
-                  markingMemberKey={markingMemberKey}
-                />
-              ))}
-            </section>
-          )}
-
           <DashboardExpensesSection
             expenses={expensesData?.expenses || []}
             members={members}
@@ -427,6 +448,18 @@ export default function Dashboard() {
             onExpenseClick={(id) => navigate(`/expenses/${id}`)}
             layout="mobile"
           />
+          {displayRentStatuses.length > 0 && (
+            <section>
+              <RentPaymentsTable
+                houseId={houseKey}
+                members={members}
+                isAdmin={isAdmin}
+                onPayMemberRent={(data) => payMemberRentMutation.mutate(data)}
+                markingMemberKey={markingMemberKey}
+              />
+            </section>
+          )}
+
         </main>
 
         <BottomNav />

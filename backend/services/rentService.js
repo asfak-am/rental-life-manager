@@ -33,18 +33,12 @@ const getMemberJoinedAt = async (house, member) => {
     if (!Number.isNaN(joinedAt.getTime())) return joinedAt
   }
 
-  const firstPayment = await RentPayment.findOne({
-    houseId: house._id,
-    userId: member?.userId,
-  }).sort({ month: 1, createdAt: 1 })
-
-  if (firstPayment?.month && MONTH_REGEX.test(firstPayment.month)) {
-    const [yearStr, monthStr] = firstPayment.month.split('-')
-    return new Date(Number(yearStr), Number(monthStr) - 1, 1)
+  if (house?.createdAt) {
+    const createdAt = new Date(house.createdAt)
+    if (!Number.isNaN(createdAt.getTime())) return createdAt
   }
 
-  const today = new Date()
-  return new Date(today.getFullYear(), today.getMonth(), 1)
+  return new Date()
 }
 
 const getActiveMembersForMonth = async (house, month) => {

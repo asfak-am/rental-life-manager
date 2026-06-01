@@ -1,6 +1,7 @@
 import DesktopAppShell from './DesktopAppShell'
 import InviteCodeCard from '../../components/common/InviteCodeCard'
 import RentStatusCard from '../../components/common/RentStatusCard'
+import RentPaymentsTable from '../../components/common/RentPaymentsTable'
 import UtilityChart from '../../components/common/UtilityChart'
 import DashboardTasksSection from '../../components/dashboard/DashboardTasksSection'
 import DashboardExpensesSection from '../../components/dashboard/DashboardExpensesSection'
@@ -38,6 +39,7 @@ export default function DesktopDashboardView({
   onOpenInvite,
   onCopyInvite,
   rentStatus,
+  houseKey,
   onPayRent,
   payingRent,
   rentStatuses = [],
@@ -123,21 +125,15 @@ export default function DesktopDashboardView({
         />
 
         {/* Rent */}
-        {(rentStatuses || []).length > 0 && (
-          <section className="col-span-12 space-y-4">
-            {(rentStatuses || []).map(status => (
-              <RentStatusCard
-                key={status.month}
-                status={status}
-                members={members}
-                isAdmin={isAdmin}
-                onPayMemberRent={onPayMemberRent}
-                payingMemberRent={payingMemberRent}
-                markingMemberKey={markingMemberKey}
-              />
-            ))}
-          </section>
-        )}
+        <section className="col-span-12">
+          <RentPaymentsTable
+            houseId={houseKey}
+            members={members}
+            isAdmin={isAdmin}
+            onPayMemberRent={onPayMemberRent}
+            markingMemberKey={markingMemberKey}
+          />
+        </section>
       </div>
     </DesktopAppShell>
   )
